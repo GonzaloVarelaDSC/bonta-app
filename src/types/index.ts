@@ -142,10 +142,11 @@ export interface InstallationInfo {
 
 export interface Job {
   id: string;
-  code: string; // TRB-2026-00458
+  code: string | null; // N° de trabajo / orden de Copernico — lo carga a mano un admin/coordinador, no se genera solo
   name: string;
   clientId: string;
   contactName: string;
+  createdByUserId: string | null;
   responsibleUserId: string;
   assignedUserIds: string[];
   createdAt: string;

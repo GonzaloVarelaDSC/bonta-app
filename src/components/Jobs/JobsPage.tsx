@@ -32,7 +32,7 @@ export function JobsPage() {
       if (search.trim()) {
         const q = search.toLowerCase();
         const client = clients.find((c) => c.id === j.clientId);
-        if (!(j.code.toLowerCase().includes(q) || j.name.toLowerCase().includes(q) || client?.name.toLowerCase().includes(q))) return false;
+        if (!((j.code ?? '').toLowerCase().includes(q) || j.name.toLowerCase().includes(q) || client?.name.toLowerCase().includes(q))) return false;
       }
       return true;
     });

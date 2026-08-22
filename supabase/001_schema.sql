@@ -65,10 +65,13 @@ create table if not exists materials (
 -- ============ TRABAJOS ============
 create table if not exists jobs (
   id uuid primary key default gen_random_uuid(),
-  code text not null unique,
+  -- N° de trabajo / orden de Copernico: se carga a mano después, no al crear el
+  -- trabajo (por eso no es "not null" — puede haber varios en null a la vez).
+  code text unique,
   name text not null,
   client_id uuid not null references clients(id),
   contact_name text not null default '',
+  created_by_user_id uuid references profiles(id),
   responsible_user_id uuid not null references profiles(id),
   created_at timestamptz not null default now(),
   requested_date timestamptz,

@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Flame, Zap, CalendarClock, TriangleAlert, Ban, Factory, CircleCheckBig, CircleHelp } from 'lucide-react';
+import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
-import { computeCounts, isOverdue, isBlocked, isDueToday, isMissingInfo, sortByPriority } from '../../lib/selectors';
+import { computeCounts, isOverdue, isDueToday, isMissingInfo, sortByPriority } from '../../lib/selectors';
 import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { JobsTable } from '../Jobs/JobsTable';
 
-type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'blocked' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
+type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
 export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
@@ -24,7 +24,6 @@ export function DashboardPage() {
       case 'urgent': base = jobs.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
       case 'dueToday': base = jobs.filter(isDueToday); break;
       case 'overdue': base = jobs.filter(isOverdue); break;
-      case 'blocked': base = jobs.filter(isBlocked); break;
       case 'inProduction': base = jobs.filter((j) => j.status === 'EN_PRODUCCION'); break;
       case 'readyToDeliver': base = jobs.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
       case 'waitingInfo': base = jobs.filter(isMissingInfo); break;
@@ -34,14 +33,15 @@ export function DashboardPage() {
     return sortByPriority(base);
   }, [jobs, filter]);
 
+  // Orden pedido por Gonzalo: lo más operativo (listos para entregar, en producción)
+  // primero, después el resto por urgencia.
   const cards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral' }[] = [
+    { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
+    { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
     { key: 'critical', label: 'Críticos', value: counts.critical, icon: Flame, tone: 'crit' },
     { key: 'urgent', label: 'Urgentes', value: counts.urgent, icon: Zap, tone: 'urg' },
     { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, icon: CalendarClock, tone: 'norm' },
     { key: 'overdue', label: 'Atrasados', value: counts.overdue, icon: TriangleAlert, tone: 'crit' },
-    { key: 'blocked', label: 'Bloqueados', value: counts.blocked, icon: Ban, tone: 'wait' },
-    { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
-    { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
     { key: 'waitingInfo', label: 'Esperando información', value: counts.waitingInfo, icon: CircleHelp, tone: 'wait' },
   ];
 
@@ -53,7 +53,7 @@ export function DashboardPage() {
       </div>
       <p className="text-sm text-ink-500 mb-5">Tocá una tarjeta para filtrar la tabla de abajo.</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
         {cards.map((c) => (
           <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
             active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />

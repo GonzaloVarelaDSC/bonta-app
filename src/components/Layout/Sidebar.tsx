@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canManageUsers } from '../../lib/permissions';
@@ -13,6 +13,7 @@ const ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/trabajos', label: 'Trabajos', icon: ListChecks },
   { to: '/kanban', label: 'Kanban', icon: Kanban },
+  { to: '/chequeo-archivos', label: 'Chequeo de archivos', icon: FileCheck2 },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {

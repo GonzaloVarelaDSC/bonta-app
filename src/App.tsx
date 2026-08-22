@@ -10,6 +10,7 @@ import { JobDetailPage } from './components/JobDetail/JobDetailPage';
 import { NewJobWizard } from './components/NewJob/NewJobWizard';
 import { UsersPage } from './components/Users/UsersPage';
 import { ConfigPage } from './components/Common/ConfigPage';
+import { ChequeoArchivosPage } from './components/Herramientas/ChequeoArchivosPage';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
 
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/trabajos/nuevo" element={<NewJobWizard />} />
           <Route path="/trabajos/:id" element={<JobDetailPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
+          <Route path="/chequeo-archivos" element={<ChequeoArchivosPage />} />
           <Route path="/clientes" element={<ClientsPage />} />
           <Route path="/usuarios" element={<UsersPage />} />
           <Route path="/configuracion" element={<ConfigPage />} />

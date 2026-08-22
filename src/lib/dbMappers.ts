@@ -67,7 +67,8 @@ function mapInstallation(row: any): InstallationInfo | undefined {
 /** Espera una fila de `jobs` con los embeds de 001/002 (ver lib/supabaseQueries.ts). */
 export function mapJob(row: any): Job {
   return {
-    id: row.id, code: row.code, name: row.name, clientId: row.client_id, contactName: row.contact_name ?? '',
+    id: row.id, code: row.code ?? null, name: row.name, clientId: row.client_id, contactName: row.contact_name ?? '',
+    createdByUserId: row.created_by_user_id ?? null,
     responsibleUserId: row.responsible_user_id,
     assignedUserIds: (row.job_assigned_users ?? []).map((a: any) => a.user_id),
     createdAt: row.created_at, requestedDate: row.requested_date ?? row.committed_date, committedDate: row.committed_date,

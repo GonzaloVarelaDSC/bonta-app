@@ -40,7 +40,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       const client = clients.find((c) => c.id === j.clientId);
       const responsible = users.find((u) => u.id === j.responsibleUserId);
       return (
-        j.code.toLowerCase().includes(q) ||
+        (j.code ?? '').toLowerCase().includes(q) ||
         j.name.toLowerCase().includes(q) ||
         client?.name.toLowerCase().includes(q) ||
         responsible?.name.toLowerCase().includes(q) ||
@@ -79,7 +79,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
               >
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-ink-900 truncate">{j.name}</div>
-                  <div className="text-xs text-ink-400">{j.code} · {clients.find((c) => c.id === j.clientId)?.name}</div>
+                  <div className="text-xs text-ink-400">{j.code ?? 'Sin N°'} · {clients.find((c) => c.id === j.clientId)?.name}</div>
                 </div>
               </button>
             ))}

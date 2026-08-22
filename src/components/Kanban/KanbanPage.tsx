@@ -3,19 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
-import { KANBAN_COLUMNS, STATUS_LABELS } from '../../data/catalog';
+import { KANBAN_COLUMNS } from '../../data/catalog';
 import { effectivePriority } from '../../lib/priority';
 import { PriorityBadge, Avatar, CountdownBadge, StatusSelect } from '../Common/Badges';
 import type { Job, JobStatus } from '../../types';
 import { isSilent } from '../../lib/risk';
-
-// Estados que se pueden elegir a mano desde la tarjeta — bloqueado y cancelado quedan
-// afuera porque tienen su propio flujo (motivo de bloqueo, etc.) y no son un simple cambio de estado.
-const SELECTABLE_STATUSES: JobStatus[] = [
-  'NUEVO', 'FALTA_INFORMACION', 'APROBADO', 'EN_DISENO', 'DISENO_LISTO',
-  'EN_PRODUCCION', 'EN_CONTROL_CALIDAD', 'LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION',
-  'EN_INSTALACION', 'TERMINADO',
-];
+import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
 
 function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: Job, status: JobStatus) => void }) {
   const navigate = useNavigate();
@@ -24,6 +17,7 @@ function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: J
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: job.id });
   const client = clients.find((c) => c.id === job.clientId);
   const resp = users.find((u) => u.id === job.responsibleUserId);
+  const creator = users.find((u) => u.id === job.createdByUserId);
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 } : undefined;
 
   return (
@@ -36,12 +30,18 @@ function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: J
         <PriorityBadge priority={effectivePriority(job)} manual={!!job.priorityManual} size="sm" />
         {isSilent(job) && <span title="Sin movimiento hace más de 48h">💤</span>}
       </div>
-      <div className="text-xs text-ink-400 font-mono">{job.code}</div>
+      <div className="text-xs text-ink-400 font-mono">{job.code ?? 'Sin N°'}</div>
       <div className="text-sm font-medium text-ink-900 leading-snug mt-0.5 mb-2">{job.name}</div>
       <div className="text-xs text-ink-500 mb-2">{client?.name}</div>
       <div className="mb-2">
         <StatusSelect status={job.status} options={SELECTABLE_STATUSES} onChange={(s) => onStatusChange(job, s)} />
       </div>
+      {creator && (
+        <div className="flex items-center gap-1.5 text-[11px] text-ink-400 mb-2">
+          <Avatar name={creator.name} color={creator.avatarColor} size={16} />
+          <span>Generado por {creator.name.split(' ')[0]}</span>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <CountdownBadge iso={job.committedDate} />
         {resp && <Avatar name={resp.name} color={resp.avatarColor} size={22} />}
@@ -77,18 +77,6 @@ export function KanbanPage() {
     return KANBAN_COLUMNS.find((c) => c.statuses.includes(job.status))?.key ?? 'nuevo';
   }
 
-  /** Bloquea el pase a "listo" si faltan ítems obligatorios del control de calidad — vale tanto para drag&drop como para el selector de la tarjeta. */
-  function tryChangeStatus(job: Job, targetStatus: JobStatus, targetLabel: string) {
-    if (targetStatus === 'LISTO_PARA_ENTREGA' || targetStatus === 'LISTO_PARA_INSTALACION') {
-      const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
-      if (requiredPending.length > 0) {
-        alert(`No se puede pasar a "${targetLabel}": faltan ${requiredPending.length} ítems obligatorios del control de calidad. Completalos desde la ficha del trabajo.`);
-        return;
-      }
-    }
-    setStatus(job.id, targetStatus, user.id);
-  }
-
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
@@ -98,11 +86,11 @@ export function KanbanPage() {
     if (!targetCol || targetCol.key === columnOf(job)) return;
     const targetStatus: JobStatus = targetCol.statuses[0];
     const finalStatus = job.requiresInstallation && targetCol.key === 'listo' ? 'LISTO_PARA_INSTALACION' : targetStatus;
-    tryChangeStatus(job, finalStatus, targetCol.label);
+    tryChangeJobStatus(job, finalStatus, setStatus, user.id);
   }
 
   function handleCardStatusChange(job: Job, status: JobStatus) {
-    tryChangeStatus(job, status, STATUS_LABELS[status]);
+    tryChangeJobStatus(job, status, setStatus, user.id);
   }
 
   return (

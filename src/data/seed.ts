@@ -245,6 +245,7 @@ export const JOBS: Job[] = S.map((s, idx) => {
     name: s.name,
     clientId: s.clientId,
     contactName: s.contactName,
+    createdByUserId: s.responsibleUserId,
     responsibleUserId: s.responsibleUserId,
     assignedUserIds: s.assignedUserIds,
     createdAt: daysAgo(s.createdDaysAgo),

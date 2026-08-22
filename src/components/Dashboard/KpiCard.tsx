@@ -10,13 +10,15 @@ interface Props {
   onClick?: () => void;
 }
 
-const TONE_RING: Record<string, string> = {
-  crit: 'ring-crit/20 hover:ring-crit/40',
-  urg: 'ring-urg/20 hover:ring-urg/40',
-  norm: 'ring-norm/20 hover:ring-norm/40',
-  plan: 'ring-plan/20 hover:ring-plan/40',
-  wait: 'ring-wait/20 hover:ring-wait/40',
-  neutral: 'ring-ink-200 hover:ring-ink-300',
+// Borde perimetral con el color del estado, siempre visible (no solo al pasar el
+// mouse) — así cada tarjeta se identifica por color de un vistazo, como semáforo.
+const TONE_BORDER: Record<string, string> = {
+  crit: 'border-crit/50 hover:border-crit',
+  urg: 'border-urg/60 hover:border-urg',
+  norm: 'border-norm/60 hover:border-norm',
+  plan: 'border-plan/50 hover:border-plan',
+  wait: 'border-wait/50 hover:border-wait',
+  neutral: 'border-ink-300 hover:border-ink-400',
 };
 
 const TONE_TEXT: Record<string, string> = {
@@ -34,9 +36,9 @@ export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Pro
     <button
       onClick={onClick}
       className={clsx(
-        'text-left bg-white rounded-xl border border-ink-100 shadow-card px-4 py-3.5 ring-1 transition-all',
-        TONE_RING[tone],
-        active && 'ring-2 ring-offset-1'
+        'text-left bg-white rounded-xl border-2 shadow-card px-4 py-3.5 transition-all',
+        TONE_BORDER[tone],
+        active && 'ring-2 ring-offset-1 ring-brand-400'
       )}
     >
       <div className="flex items-center gap-2.5">

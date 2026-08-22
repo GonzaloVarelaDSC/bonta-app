@@ -80,7 +80,7 @@ export function NewJobWizard() {
       priorityManual, clientImportant, quantity, measurements, materialIds, technique, finish, color,
       observations, specialRequirements, activeStageKeys: activeStages,
       requiresInstallation, installAddress, installContactPhone, installDate, installTime,
-      responsibleUserId, assignedUserIds,
+      createdByUserId: user.id, responsibleUserId, assignedUserIds,
     });
     navigate(`/trabajos/${job.id}`);
     } catch (err: any) {

@@ -9,10 +9,9 @@ import { mapProfile, mapClient, mapComment, mapActivity, mapNotification } from 
 import { JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from '../data/catalog';
 import type { Client } from '../types';
 
-function nextJobCode(existing: Job[]): string {
-  const nums = existing.map((j) => parseInt(j.code.split('-')[2], 10)).filter((n) => !Number.isNaN(n));
-  const next = (nums.length ? Math.max(...nums) : 458) + 1;
-  return `TRB-2026-${String(next).padStart(5, '0')}`;
+/** El número de trabajo puede no estar cargado todavía — para mensajes/logs mostramos el nombre igual. */
+function jobLabel(job: Pick<Job, 'code' | 'name'>): string {
+  return job.code ? `${job.code} — ${job.name}` : job.name;
 }
 
 interface StoreState {
@@ -61,7 +60,7 @@ export interface NewJobInput {
   technique: string; finish: string; color: string; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string; installTime: string;
-  responsibleUserId: string; assignedUserIds: string[];
+  createdByUserId: string; responsibleUserId: string; assignedUserIds: string[];
 }
 
 async function insertActivity(
@@ -163,10 +162,10 @@ export const useStore = create<StoreState>()((set, get) => ({
     const jobType = JOB_TYPES.find((t) => t.id === input.jobTypeId)!;
     const missing = !input.measurements.trim() || input.materialIds.length === 0 || !input.technique.trim() ||
       (input.requiresInstallation && !input.installAddress.trim());
-    const code = nextJobCode(get().jobs);
 
     const { data: jobRow, error } = await supabase.from('jobs').insert({
-      code, name: input.name, client_id: input.clientId, contact_name: input.contactName,
+      name: input.name, client_id: input.clientId, contact_name: input.contactName,
+      created_by_user_id: input.createdByUserId,
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
       job_type_id: input.jobTypeId, description: input.description, quantity: input.quantity, measurements: input.measurements,
       material_ids: input.materialIds, technique: input.technique, finish: input.finish, color: input.color,
@@ -192,8 +191,8 @@ export const useStore = create<StoreState>()((set, get) => ({
       });
     }
 
-    await insertActivity(set, jobId, input.responsibleUserId, 'crear', `Creó el trabajo ${code}.`);
-    await insertNotifications(input.assignedUserIds.filter((id) => id !== input.responsibleUserId), jobId, `Nuevo trabajo asignado: ${code} — ${input.name}.`);
+    await insertActivity(set, jobId, input.createdByUserId, 'crear', `Creó el trabajo — ${input.name}.`);
+    await insertNotifications(input.assignedUserIds.filter((id) => id !== input.responsibleUserId), jobId, `Nuevo trabajo asignado: ${input.name}.`);
 
     const job = await fetchJobById(jobId);
     if (!job) throw new Error('No se pudo leer el trabajo recién creado.');
@@ -213,7 +212,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       throw error;
     }
     await insertActivity(set, jobId, byUserId, 'estado', `Cambió el estado a ${status}.`);
-    if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${before.code} pasó a ${status}.`);
+    if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)} pasó a ${status}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -224,7 +223,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (!trimmed || trimmed === before.code) return;
     const { error } = await supabase.from('jobs').update({ code: trimmed, last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error.code === '23505' ? new Error('Ya existe otro trabajo con ese número.') : error;
-    await insertActivity(set, jobId, byUserId, 'numero', `Cambió el número de trabajo de ${before.code} a ${trimmed}.`);
+    await insertActivity(set, jobId, byUserId, 'numero', `Cambió el número de trabajo de "${before.code ?? 'sin número'}" a "${trimmed}".`);
     await refreshJob(set, jobId);
   },
 
@@ -235,7 +234,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     await insertActivity(set, jobId, byUserId, 'prioridad', priority
       ? `Cambió prioridad manual de ${before.priorityManual ?? before.priorityAuto} a ${priority}.`
       : `Volvió a prioridad automática (${before.priorityAuto}).`);
-    await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `Cambió la prioridad de ${before.code}.`);
+    await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `Cambió la prioridad de ${jobLabel(before)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -246,7 +245,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (assignedUserIds.length) await supabase.from('job_assigned_users').insert(assignedUserIds.map((userId) => ({ job_id: jobId, user_id: userId })));
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'asignacion', 'Actualizó los usuarios asignados.');
-    await insertNotifications(assignedUserIds.filter((id) => id !== byUserId), jobId, `Te asignaron a ${job?.code} — ${job?.name}.`);
+    await insertNotifications(assignedUserIds.filter((id) => id !== byUserId), jobId, `Te asignaron a ${job ? jobLabel(job) : 'un trabajo'}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -265,7 +264,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     await supabase.from('jobs').update({ status: 'BLOQUEADO', last_activity_at: new Date().toISOString() }).eq('id', jobId);
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'bloqueo', `Bloqueó el trabajo — ${description}`);
-    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `${job.code} está bloqueado.`);
+    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(job)} está bloqueado.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -301,7 +300,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     });
     await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
     await insertActivity(set, jobId, byUserId, 'archivo', `Subió ${fileName}.`);
-    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se cargó un nuevo archivo en ${job.code}.`);
+    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se cargó un nuevo archivo en ${jobLabel(job)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -312,7 +311,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     const job = await fetchJobById(jobId);
     const v = job?.files.find((f) => f.id === fileId)?.versions.find((vv) => vv.id === versionId);
     await insertActivity(set, jobId, byUserId, 'aprobacion', `Aprobó ${v?.fileName} para producción.`);
-    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se aprobó un archivo en ${job.code}.`);
+    if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se aprobó un archivo en ${jobLabel(job)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },
@@ -330,7 +329,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     await supabase.from('jobs').update({ status: 'TERMINADO', finished_at: new Date().toISOString(), last_activity_at: new Date().toISOString() }).eq('id', jobId);
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'instalacion', 'Registró la instalación como completada.');
-    if (job) await insertNotifications([job.responsibleUserId].filter((id) => id !== byUserId), jobId, `${job.code} — instalación completada.`);
+    if (job) await insertNotifications([job.responsibleUserId].filter((id) => id !== byUserId), jobId, `${jobLabel(job)} — instalación completada.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },

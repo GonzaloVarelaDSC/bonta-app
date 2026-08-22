@@ -4,23 +4,24 @@ import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob } from '../../lib/permissions';
-import { PriorityBadge, StatusBadge, CountdownBadge, Avatar } from '../Common/Badges';
+import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
 import { JOB_TYPES } from '../../data/catalog';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
+import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
 
 function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(job.code);
+  const [draft, setDraft] = useState(job.code ?? '');
 
-  if (!editable) return <span className="font-mono text-xs text-ink-500">{job.code}</span>;
+  if (!editable) return <span className="font-mono text-xs text-ink-500">{job.code ?? '—'}</span>;
 
   if (editing) {
     const save = () => { setEditing(false); if (draft.trim() && draft.trim() !== job.code) onSave(draft); };
     return (
       <input
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
-        onClick={(e) => e.stopPropagation()} onBlur={save}
+        onClick={(e) => e.stopPropagation()} onBlur={save} placeholder="N° de Copernico"
         onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
         className="font-mono text-xs w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
       />
@@ -30,11 +31,15 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
   return (
     <button
       type="button"
-      onClick={(e) => { e.stopPropagation(); setDraft(job.code); setEditing(true); }}
-      title="Editar número de trabajo / orden de Copernico"
-      className="font-mono text-xs text-ink-500 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300"
+      onClick={(e) => { e.stopPropagation(); setDraft(job.code ?? ''); setEditing(true); }}
+      title="Cargar número de trabajo / orden de Copernico"
+      className={
+        job.code
+          ? 'font-mono text-xs text-ink-500 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300'
+          : 'text-xs text-ink-400 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300'
+      }
     >
-      {job.code}
+      {job.code ?? 'Cargar N°'}
     </button>
   );
 }
@@ -45,6 +50,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
   const clients = useStore((s) => s.clients);
   const users = useStore((s) => s.users);
   const setJobCode = useStore((s) => s.setJobCode);
+  const setStatus = useStore((s) => s.setStatus);
   const canEditCode = !!currentUser && canEditAnyJob(currentUser.role);
 
   if (jobs.length === 0) {
@@ -88,7 +94,12 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                   {silent && <span className="ml-1.5 text-wait-text" title="Más de 48h sin movimiento">💤</span>}
                 </td>
                 {!compact && <td className="px-2 py-2.5 text-ink-500 whitespace-nowrap">{JOB_TYPES.find((t) => t.id === j.jobTypeId)?.label}</td>}
-                <td className="px-2 py-2.5"><StatusBadge status={j.status} /></td>
+                <td className="px-2 py-2.5">
+                  <StatusSelect
+                    status={j.status} options={SELECTABLE_STATUSES}
+                    onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
+                  />
+                </td>
                 <td className="px-2 py-2.5">
                   {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} /><span className="text-xs text-ink-600">{resp.name.split(' ')[0]}</span></div>}
                 </td>

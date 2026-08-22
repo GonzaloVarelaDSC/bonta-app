@@ -63,7 +63,7 @@ export function JobDetailPage() {
         <div className="sticky top-0 z-10 bg-white border-b border-ink-100 px-6 py-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="font-mono text-xs text-ink-400 mb-1">{job.code}</div>
+              <div className="font-mono text-xs text-ink-400 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
               <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
               <div className="text-sm text-ink-500 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
             </div>
