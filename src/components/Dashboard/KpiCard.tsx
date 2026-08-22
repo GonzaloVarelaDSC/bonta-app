@@ -1,9 +1,10 @@
 import clsx from 'clsx';
+import type { LucideIcon } from 'lucide-react';
 
 interface Props {
   label: string;
   value: number;
-  emoji: string;
+  icon: LucideIcon;
   tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral';
   active?: boolean;
   onClick?: () => void;
@@ -23,7 +24,12 @@ const TONE_TEXT: Record<string, string> = {
   plan: 'text-plan-text', wait: 'text-wait-text', neutral: 'text-ink-800',
 };
 
-export function KpiCard({ label, value, emoji, tone, active, onClick }: Props) {
+const TONE_ICON_BG: Record<string, string> = {
+  crit: 'bg-crit-bg text-crit-text', urg: 'bg-urg-bg text-urg-text', norm: 'bg-norm-bg text-norm-text',
+  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', neutral: 'bg-ink-100 text-ink-600',
+};
+
+export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Props) {
   return (
     <button
       onClick={onClick}
@@ -33,11 +39,13 @@ export function KpiCard({ label, value, emoji, tone, active, onClick }: Props) {
         active && 'ring-2 ring-offset-1'
       )}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-lg leading-none">{emoji}</span>
+      <div className="flex items-center gap-2.5">
+        <span className={clsx('inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0', TONE_ICON_BG[tone])}>
+          <Icon size={15} strokeWidth={2.25} />
+        </span>
         <span className={clsx('text-2xl font-display font-extrabold tabular', TONE_TEXT[tone])}>{value}</span>
       </div>
-      <div className="text-xs text-ink-500 mt-1 font-medium">{label}</div>
+      <div className="text-xs text-ink-500 mt-1.5 font-medium">{label}</div>
     </button>
   );
 }

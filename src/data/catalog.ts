@@ -83,12 +83,14 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
 };
 
 // Columnas del tablero Kanban — agrupan estados afines (ver especificación).
+// Orden pedido por Gonzalo: "Listo" y "Producción" primero (izquierda) porque son las
+// columnas que más se consultan de un vistazo — el resto sigue el flujo de trabajo.
 export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[] }[] = [
+  { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'] },
+  { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'] },
   { key: 'nuevo', label: 'Nuevo / Por revisar', statuses: ['NUEVO', 'FALTA_INFORMACION', 'APROBADO'] },
   { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'] },
-  { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'] },
   { key: 'terminacion', label: 'Terminación / QC', statuses: ['EN_CONTROL_CALIDAD'] },
-  { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'] },
   { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'] },
   { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'] },
 ];

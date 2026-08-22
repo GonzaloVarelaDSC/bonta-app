@@ -47,16 +47,44 @@ export function RiskBadge({ risk }: { risk: RiskLevel }) {
   );
 }
 
+export function statusTone(status: JobStatus): 'crit' | 'wait' | 'plan' | 'norm' {
+  if (status === 'BLOQUEADO') return 'crit';
+  if (status === 'CANCELADO') return 'wait';
+  if (status === 'TERMINADO') return 'plan';
+  return 'norm';
+}
+
+const STATUS_TONE_CLASSES: Record<'crit' | 'wait' | 'plan' | 'norm', string> = {
+  crit: 'border-crit/30 bg-crit-bg text-crit-text',
+  wait: 'border-wait/30 bg-wait-bg text-wait-text',
+  plan: 'border-plan/30 bg-plan-bg text-plan-text',
+  norm: 'border-ink-200 bg-ink-50 text-ink-600',
+};
+
 export function StatusBadge({ status }: { status: JobStatus }) {
-  const tone = status === 'BLOQUEADO' ? 'crit' : status === 'CANCELADO' ? 'wait' : status === 'TERMINADO' ? 'plan' : 'norm';
   return (
-    <span className={clsx('inline-flex items-center rounded-md text-xs font-medium px-2 py-1 border',
-      tone === 'crit' ? 'border-crit/30 bg-crit-bg text-crit-text' :
-      tone === 'wait' ? 'border-wait/30 bg-wait-bg text-wait-text' :
-      tone === 'plan' ? 'border-plan/30 bg-plan-bg text-plan-text' :
-      'border-ink-200 bg-ink-50 text-ink-600')}>
+    <span className={clsx('inline-flex items-center rounded-md text-xs font-medium px-2 py-1 border', STATUS_TONE_CLASSES[statusTone(status)])}>
       {STATUS_LABELS[status]}
     </span>
+  );
+}
+
+/** Select de estado con los mismos colores que StatusBadge — para cambiar el estado sin salir de la tarjeta/tabla. */
+export function StatusSelect({ status, options, onChange, disabled }: { status: JobStatus; options: JobStatus[]; onChange: (s: JobStatus) => void; disabled?: boolean }) {
+  return (
+    <select
+      value={status}
+      disabled={disabled}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as JobStatus)}
+      className={clsx(
+        'text-xs font-medium rounded-md border px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-400/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+        STATUS_TONE_CLASSES[statusTone(status)]
+      )}
+    >
+      {options.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+    </select>
   );
 }
 

@@ -34,6 +34,7 @@ interface StoreState {
   findOrCreateClient: (name: string) => Promise<string>;
   createJob: (input: NewJobInput) => Promise<Job>;
   setStatus: (jobId: string, status: JobStatus, movedByUserId: string) => Promise<void>;
+  setJobCode: (jobId: string, code: string, byUserId: string) => Promise<void>;
   setPriority: (jobId: string, priority: Priority | null, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
@@ -215,6 +216,16 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${before.code} pasó a ${status}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
+  },
+
+  setJobCode: async (jobId, code, byUserId) => {
+    const before = get().jobs.find((j) => j.id === jobId)!;
+    const trimmed = code.trim();
+    if (!trimmed || trimmed === before.code) return;
+    const { error } = await supabase.from('jobs').update({ code: trimmed, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error.code === '23505' ? new Error('Ya existe otro trabajo con ese número.') : error;
+    await insertActivity(set, jobId, byUserId, 'numero', `Cambió el número de trabajo de ${before.code} a ${trimmed}.`);
+    await refreshJob(set, jobId);
   },
 
   setPriority: async (jobId, priority, byUserId) => {

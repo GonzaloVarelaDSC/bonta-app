@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { Flame, Zap, CalendarClock, TriangleAlert, Ban, Factory, CircleCheckBig, CircleHelp } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { computeCounts, isOverdue, isBlocked, isDueToday, isMissingInfo, sortByPriority } from '../../lib/selectors';
@@ -32,15 +34,15 @@ export function DashboardPage() {
     return sortByPriority(base);
   }, [jobs, filter]);
 
-  const cards: { key: FilterKey; label: string; value: number; emoji: string; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral' }[] = [
-    { key: 'critical', label: 'Críticos', value: counts.critical, emoji: '🔴', tone: 'crit' },
-    { key: 'urgent', label: 'Urgentes', value: counts.urgent, emoji: '🟠', tone: 'urg' },
-    { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, emoji: '📅', tone: 'norm' },
-    { key: 'overdue', label: 'Atrasados', value: counts.overdue, emoji: '⚠️', tone: 'crit' },
-    { key: 'blocked', label: 'Bloqueados', value: counts.blocked, emoji: '⛔', tone: 'wait' },
-    { key: 'inProduction', label: 'En producción', value: counts.inProduction, emoji: '🏭', tone: 'neutral' },
-    { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, emoji: '✅', tone: 'plan' },
-    { key: 'waitingInfo', label: 'Esperando información', value: counts.waitingInfo, emoji: '❔', tone: 'wait' },
+  const cards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral' }[] = [
+    { key: 'critical', label: 'Críticos', value: counts.critical, icon: Flame, tone: 'crit' },
+    { key: 'urgent', label: 'Urgentes', value: counts.urgent, icon: Zap, tone: 'urg' },
+    { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, icon: CalendarClock, tone: 'norm' },
+    { key: 'overdue', label: 'Atrasados', value: counts.overdue, icon: TriangleAlert, tone: 'crit' },
+    { key: 'blocked', label: 'Bloqueados', value: counts.blocked, icon: Ban, tone: 'wait' },
+    { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
+    { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
+    { key: 'waitingInfo', label: 'Esperando información', value: counts.waitingInfo, icon: CircleHelp, tone: 'wait' },
   ];
 
   return (
@@ -53,7 +55,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-4">
         {cards.map((c) => (
-          <KpiCard key={c.key} label={c.label} value={c.value} emoji={c.emoji} tone={c.tone}
+          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
             active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
         ))}
       </div>

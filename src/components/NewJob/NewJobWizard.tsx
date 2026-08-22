@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { JOB_TYPES, MATERIALS, STAGE_LABELS } from '../../data/catalog';
+import { JOB_TYPES, STAGE_LABELS } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
 import type { JobTypeId, MaterialId, Priority, StageKey } from '../../types';
 
-const STEPS = ['Cliente y descripción', 'Entrega y prioridad', 'Características técnicas', 'Producción', 'Archivos', 'Confirmación'];
+const STEPS = ['Cliente y descripción', 'Entrega y prioridad', 'Producción', 'Archivos', 'Confirmación'];
 
 export function NewJobWizard() {
   const navigate = useNavigate();
@@ -25,14 +25,17 @@ export function NewJobWizard() {
   const [committedDate, setCommittedDate] = useState('');
   const [priorityManual, setPriorityManual] = useState<Priority | null>(null);
   const [clientImportant, setClientImportant] = useState(false);
-  const [quantity, setQuantity] = useState('');
-  const [measurements, setMeasurements] = useState('');
-  const [materialIds, setMaterialIds] = useState<MaterialId[]>([]);
-  const [technique, setTechnique] = useState('');
-  const [finish, setFinish] = useState('');
-  const [color, setColor] = useState('');
-  const [observations, setObservations] = useState('');
-  const [specialRequirements, setSpecialRequirements] = useState('');
+  // Estas características técnicas ya no se cargan en el alta: el trabajo se crea con
+  // estado "Falta información" y se completan después desde la ficha, si hace falta —
+  // la fuente real es el mail o WhatsApp del cliente, no este formulario.
+  const quantity = '';
+  const measurements = '';
+  const materialIds: MaterialId[] = [];
+  const technique = '';
+  const finish = '';
+  const color = '';
+  const observations = '';
+  const specialRequirements = '';
   const jobType = JOB_TYPES.find((t) => t.id === jobTypeId)!;
   const [activeStages, setActiveStages] = useState<StageKey[]>(jobType.defaultStages);
   const [requiresInstallation, setRequiresInstallation] = useState(false);
@@ -48,9 +51,6 @@ export function NewJobWizard() {
     setJobTypeId(id);
     setActiveStages(JOB_TYPES.find((t) => t.id === id)!.defaultStages);
   }
-  function toggleMaterial(id: MaterialId) {
-    setMaterialIds((m) => m.includes(id) ? m.filter((x) => x !== id) : [...m, id]);
-  }
   function toggleStage(k: StageKey) {
     setActiveStages((s) => s.includes(k) ? s.filter((x) => x !== k) : [...s, k]);
   }
@@ -61,7 +61,6 @@ export function NewJobWizard() {
   const canNext = [
     !!clientName.trim() && !!name.trim() && !!description.trim(),
     !!committedDate,
-    true,
     activeStages.length > 0,
     true,
     true,
@@ -95,17 +94,17 @@ export function NewJobWizard() {
   const labelCls = 'block text-xs font-medium text-ink-600 mb-1.5';
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-xl font-display font-bold text-ink-900 mb-1">Nuevo trabajo</h1>
-      <p className="text-sm text-ink-500 mb-5">Paso {step + 1} de {STEPS.length}: {STEPS[step]}</p>
+    <div className="p-5 max-w-2xl mx-auto">
+      <h1 className="text-lg font-display font-bold text-ink-900 mb-1">Nuevo trabajo</h1>
+      <p className="text-sm text-ink-500 mb-3">Paso {step + 1} de {STEPS.length}: {STEPS[step]}</p>
 
-      <div className="flex gap-1.5 mb-6">
+      <div className="flex gap-1.5 mb-4">
         {STEPS.map((_, i) => (
           <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-ink-950' : 'bg-ink-200'}`} />
         ))}
       </div>
 
-      <div className="bg-white border border-ink-100 rounded-xl shadow-card p-6 space-y-4">
+      <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
         {step === 0 && (
           <>
             <div><label className={labelCls}>Cliente</label>
@@ -169,32 +168,6 @@ export function NewJobWizard() {
 
         {step === 2 && (
           <>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className={labelCls}>Cantidad</label><input className={inputCls} value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-              <div><label className={labelCls}>Medidas</label><input className={inputCls} value={measurements} onChange={(e) => setMeasurements(e.target.value)} /></div>
-            </div>
-            <div><label className={labelCls}>Material</label>
-              <div className="flex flex-wrap gap-1.5">
-                {MATERIALS.map((m) => (
-                  <button type="button" key={m.id} onClick={() => toggleMaterial(m.id)}
-                    className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-brand-500 text-white border-brand-500' : 'border-ink-200 text-ink-600'}`}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className={labelCls}>Técnica de impresión</label><input className={inputCls} value={technique} onChange={(e) => setTechnique(e.target.value)} /></div>
-              <div><label className={labelCls}>Terminación</label><input className={inputCls} value={finish} onChange={(e) => setFinish(e.target.value)} /></div>
-            </div>
-            <div><label className={labelCls}>Color/es</label><input className={inputCls} value={color} onChange={(e) => setColor(e.target.value)} /></div>
-            <div><label className={labelCls}>Observaciones</label><textarea className={inputCls} rows={2} value={observations} onChange={(e) => setObservations(e.target.value)} /></div>
-            <div><label className={labelCls}>Requisitos especiales</label><input className={inputCls} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} /></div>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
             <div><label className={labelCls}>Etapas que incluye este trabajo</label>
               <div className="space-y-1.5">
                 {jobType.defaultStages.concat(activeStages.includes('instalacion') ? [] : []).filter((v, i, a) => a.indexOf(v) === i).map((k) => (
@@ -220,7 +193,7 @@ export function NewJobWizard() {
           </>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <>
             <p className="text-sm text-ink-500">Los archivos de referencia se pueden adjuntar ahora (simulado) o después desde la ficha del trabajo.</p>
             <button type="button" onClick={() => { const n = prompt('Nombre del archivo:'); if (n) setPendingFiles((f) => [...f, n]); }}
@@ -235,7 +208,7 @@ export function NewJobWizard() {
           </>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <div className="space-y-3 text-sm">
             <div className="text-ink-900 font-semibold">¿Todo correcto?</div>
             <SummaryRow label="Cliente" value={clientName} />
@@ -245,11 +218,9 @@ export function NewJobWizard() {
             <SummaryRow label="Prioridad" value={priorityManual ? PRIORITY_META[priorityManual].label : 'Automática'} />
             <SummaryRow label="Etapas" value={activeStages.map((k) => STAGE_LABELS[k]).join(', ')} />
             <SummaryRow label="Instalación" value={requiresInstallation ? installAddress || 'Sí (sin dirección aún)' : 'No'} />
-            {(!measurements || materialIds.length === 0 || !technique) && (
-              <div className="bg-wait-bg text-wait-text rounded-md px-3 py-2 text-xs">
-                ⚠️ El trabajo se va a crear con el estado "Falta información" porque faltan datos técnicos — se puede completar después.
-              </div>
-            )}
+            <div className="bg-wait-bg text-wait-text rounded-md px-3 py-2 text-xs">
+              ⚠️ El trabajo se va a crear con el estado "Falta información" — medidas, material y técnica se cargan después desde la ficha, si hacen falta.
+            </div>
           </div>
         )}
       </div>
