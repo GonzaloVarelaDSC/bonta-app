@@ -1,0 +1,29 @@
+/* Inter para toda la UI funcional; Cormorant Garamond solo para el wordmark de marca */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: #f8f4f4;
+  color: #2d2b2b;
+  font-feature-settings: 'tnum' 1;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #d7d3d3; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.dot-live { animation: pulse-dot 1.8s ease-in-out infinite; }
