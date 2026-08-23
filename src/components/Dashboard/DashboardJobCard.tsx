@@ -15,7 +15,7 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(job.code ?? '');
 
-  if (!editable) return <span className="font-mono text-xs text-ink-500">{job.code ?? '—'}</span>;
+  if (!editable) return <span className="font-mono text-sm font-semibold text-ink-900">{job.code ?? '—'}</span>;
 
   if (editing) {
     const save = () => { setEditing(false); if (draft.trim() && draft.trim() !== job.code) onSave(draft); };
@@ -24,7 +24,7 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
         onBlur={save} placeholder="N° de Copernico"
         onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-        className="font-mono text-xs w-24 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+        className="font-mono text-sm w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
       />
     );
   }
@@ -36,8 +36,8 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
       title="Cargar número de trabajo / orden de Copernico"
       className={
         job.code
-          ? 'font-mono text-xs text-ink-500 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
-          : 'text-xs text-ink-400 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
+          ? 'font-mono text-sm font-semibold text-ink-900 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
+          : 'text-sm text-ink-400 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
       }
     >
       {job.code ?? 'Cargar N°'}
@@ -45,15 +45,15 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
   );
 }
 
-// Trabajos urgentes/críticos se marcan con un borde de color a la izquierda —
-// mismo lenguaje que ya usan las tarjetas de KPI del Dashboard, para que salten
-// a la vista sin tener que leer la etiqueta de prioridad.
+// Cada ficha se marca con un borde de color a la izquierda según su prioridad —
+// mismo lenguaje que ya usan las tarjetas de KPI del Dashboard — para que se lea
+// el estado de todo el día de un vistazo, no solo lo urgente.
 const PRIORITY_ACCENT: Record<Priority, string> = {
   CRITICO: 'border-l-4 border-l-crit',
   URGENTE: 'border-l-4 border-l-urg',
-  NORMAL: 'border-l border-l-ink-100',
-  PLANIFICADO: 'border-l border-l-ink-100',
-  EN_ESPERA: 'border-l border-l-ink-100',
+  NORMAL: 'border-l-4 border-l-norm',
+  PLANIFICADO: 'border-l-4 border-l-plan',
+  EN_ESPERA: 'border-l-4 border-l-wait',
 };
 
 /**
@@ -92,7 +92,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
         <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />
-        <span className="text-xs text-ink-500 truncate max-w-[160px]">{client?.name}</span>
+        <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
 
         <div className="flex items-center gap-2 text-xs text-ink-800 font-medium ml-auto whitespace-nowrap">
           <span>Asignado {fmtDate(job.createdAt)}</span>

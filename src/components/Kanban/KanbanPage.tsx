@@ -1,14 +1,23 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import clsx from 'clsx';
 import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
-import { KANBAN_COLUMNS } from '../../data/catalog';
+import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
 import { effectivePriority } from '../../lib/priority';
 import { PriorityBadge, Avatar, CountdownBadge, StatusSelect } from '../Common/Badges';
 import type { Job, JobStatus } from '../../types';
 import { isSilent } from '../../lib/risk';
 import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
+
+// Mismo lenguaje de color que los badges de estado — cada columna se pinta con
+// el color de la etapa que representa, para que el estudio se lea de un vistazo.
+const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; count: string }> = {
+  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/50', count: 'bg-wait text-white' },
+  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/50', count: 'bg-info text-white' },
+  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/50', count: 'bg-plan text-white' },
+};
 
 function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: Job, status: JobStatus) => void }) {
   const navigate = useNavigate();
@@ -35,7 +44,7 @@ function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: J
         <PriorityBadge priority={effectivePriority(job)} manual={!!job.priorityManual} size="sm" />
         {isSilent(job) && <span title="Sin movimiento hace más de 48h">💤</span>}
       </div>
-      <div className="text-xs text-ink-400 font-mono">{job.code ?? 'Sin N°'}</div>
+      <div className="text-xs text-ink-500 font-mono font-medium">{job.code ?? 'Sin N°'}</div>
       <div className="text-sm font-medium text-ink-900 leading-snug mt-0.5 mb-2">{job.name}</div>
       <div className="text-xs text-ink-500 mb-2">{client?.name}</div>
       <div className="mb-2">
@@ -55,15 +64,24 @@ function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: J
   );
 }
 
-function KanbanColumnView({ colKey, label, jobs, onStatusChange }: { colKey: string; label: string; jobs: Job[]; onStatusChange: (job: Job, status: JobStatus) => void }) {
+function KanbanColumnView({ colKey, label, tone, jobs, onStatusChange }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[]; onStatusChange: (job: Job, status: JobStatus) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: colKey });
+  const toneCls = COLUMN_TONE_CLASSES[tone];
   return (
-    <div className="flex flex-col w-72 shrink-0">
-      <div className="flex items-center justify-between px-1 mb-2">
-        <span className="text-sm font-semibold text-ink-700">{label}</span>
-        <span className="text-xs text-ink-400 bg-ink-100 rounded-full px-1.5 py-0.5 tabular">{jobs.length}</span>
+    <div className="flex flex-col w-80 shrink-0">
+      <div className={clsx('flex items-center justify-between rounded-lg px-3 py-2 mb-2', toneCls.header)}>
+        <span className="text-sm font-semibold">{label}</span>
+        <span className={clsx('text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center tabular', toneCls.count)}>
+          {jobs.length}
+        </span>
       </div>
-      <div ref={setNodeRef} className={`flex-1 rounded-xl p-2 space-y-2 min-h-[200px] transition-colors ${isOver ? 'bg-brand-100/60' : 'bg-ink-100/50'}`}>
+      <div
+        ref={setNodeRef}
+        className={clsx(
+          'flex-1 rounded-xl p-2 space-y-2 min-h-[200px] transition-colors border-2',
+          isOver ? 'bg-brand-100/60 border-brand-300' : `${toneCls.body} border-transparent`
+        )}
+      >
         {jobs.map((j) => <KanbanCard key={j.id} job={j} onStatusChange={onStatusChange} />)}
         {jobs.length === 0 && <div className="text-xs text-ink-300 text-center py-6">Sin trabajos</div>}
       </div>
@@ -101,14 +119,20 @@ export function KanbanPage() {
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
+          <span className="text-xs font-semibold text-ink-500 bg-ink-100 rounded-full px-2 py-0.5 tabular">{jobs.length} trabajos activos</span>
+        </div>
         <span className="text-xs text-ink-400">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
       <div className="flex-1 overflow-x-auto mt-4">
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 h-full pb-4" style={{ minWidth: KANBAN_COLUMNS.length * 300 }}>
+          <div className="flex gap-4 h-full pb-4" style={{ minWidth: KANBAN_COLUMNS.length * 336 }}>
             {KANBAN_COLUMNS.map((col) => (
-              <KanbanColumnView key={col.key} colKey={col.key} label={col.label} jobs={jobs.filter((j) => columnOf(j) === col.key)} onStatusChange={handleCardStatusChange} />
+              <KanbanColumnView
+                key={col.key} colKey={col.key} label={col.label} tone={col.tone}
+                jobs={jobs.filter((j) => columnOf(j) === col.key)} onStatusChange={handleCardStatusChange}
+              />
             ))}
           </div>
         </DndContext>

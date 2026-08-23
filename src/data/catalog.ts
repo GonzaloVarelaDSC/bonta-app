@@ -83,17 +83,22 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   CANCELADO: 'Cancelado',
 };
 
+export type ColumnTone = 'wait' | 'info' | 'plan';
+
 // Columnas del tablero Kanban — agrupan estados afines (ver especificación).
 // Orden pedido por Gonzalo: "Listo" y "Producción" primero (izquierda) porque son las
 // columnas que más se consultan de un vistazo — el resto sigue el flujo de trabajo.
-export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[] }[] = [
-  { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'] },
-  { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'] },
-  { key: 'pendiente', label: 'Pendiente / Por revisar', statuses: ['PENDIENTE', 'NUEVO', 'FALTA_INFORMACION', 'APROBADO'] },
-  { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'] },
-  { key: 'terminacion', label: 'Terminación / QC', statuses: ['EN_CONTROL_CALIDAD'] },
-  { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'] },
-  { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'] },
+// `tone` es el mismo lenguaje de color que los badges de estado (gris = no
+// arrancado, azul = en curso, verde = listo) — así cada columna se pinta con el
+// color de la etapa que representa.
+export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]; tone: ColumnTone }[] = [
+  { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'], tone: 'plan' },
+  { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'], tone: 'info' },
+  { key: 'pendiente', label: 'Pendiente / Por revisar', statuses: ['PENDIENTE', 'NUEVO', 'FALTA_INFORMACION', 'APROBADO'], tone: 'wait' },
+  { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'], tone: 'info' },
+  { key: 'terminacion', label: 'Terminación / QC', statuses: ['EN_CONTROL_CALIDAD'], tone: 'info' },
+  { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'], tone: 'info' },
+  { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'], tone: 'plan' },
 ];
 
 export const QC_TEMPLATE = [
