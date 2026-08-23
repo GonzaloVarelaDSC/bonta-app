@@ -47,23 +47,40 @@ export function RiskBadge({ risk }: { risk: RiskLevel }) {
   );
 }
 
-export function statusTone(status: JobStatus): 'crit' | 'wait' | 'plan' | 'norm' {
-  if (status === 'BLOQUEADO') return 'crit';
-  if (status === 'CANCELADO') return 'wait';
-  if (status === 'TERMINADO') return 'plan';
-  return 'norm';
+type StatusTone = 'crit' | 'urg' | 'info' | 'wait' | 'plan';
+
+// Un color por macro-etapa (no por estado individual) para que se lea de un
+// vistazo, como en Linear/GitHub/Trello: gris = no arrancado, azul = en curso,
+// naranja = necesita atención, verde = listo/terminado, rojo = bloqueado.
+const STATUS_TONE: Record<JobStatus, StatusTone> = {
+  PENDIENTE: 'wait', NUEVO: 'wait', APROBADO: 'wait',
+  FALTA_INFORMACION: 'urg',
+  EN_DISENO: 'info', DISENO_LISTO: 'info', EN_PRODUCCION: 'info', EN_CONTROL_CALIDAD: 'info', EN_INSTALACION: 'info',
+  LISTO_PARA_ENTREGA: 'plan', LISTO_PARA_INSTALACION: 'plan', TERMINADO: 'plan',
+  BLOQUEADO: 'crit',
+  CANCELADO: 'wait',
+};
+
+export function statusTone(status: JobStatus): StatusTone {
+  return STATUS_TONE[status];
 }
 
-const STATUS_TONE_CLASSES: Record<'crit' | 'wait' | 'plan' | 'norm', string> = {
+const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
   crit: 'border-crit/30 bg-crit-bg text-crit-text',
+  urg: 'border-urg/30 bg-urg-bg text-urg-text',
+  info: 'border-info/30 bg-info-bg text-info-text',
   wait: 'border-wait/30 bg-wait-bg text-wait-text',
   plan: 'border-plan/30 bg-plan-bg text-plan-text',
-  norm: 'border-ink-200 bg-ink-50 text-ink-600',
+};
+
+const STATUS_DOT_CLASSES: Record<StatusTone, string> = {
+  crit: 'bg-crit', urg: 'bg-urg', info: 'bg-info', wait: 'bg-wait', plan: 'bg-plan',
 };
 
 export function StatusBadge({ status }: { status: JobStatus }) {
   return (
-    <span className={clsx('inline-flex items-center rounded-md text-xs font-medium px-2 py-1 border', STATUS_TONE_CLASSES[statusTone(status)])}>
+    <span className={clsx('inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 border', STATUS_TONE_CLASSES[statusTone(status)])}>
+      <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT_CLASSES[statusTone(status)])} aria-hidden />
       {STATUS_LABELS[status]}
     </span>
   );
@@ -79,11 +96,11 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
       onPointerDown={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value as JobStatus)}
       className={clsx(
-        'text-xs font-medium rounded-md border px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-400/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-400/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
         STATUS_TONE_CLASSES[statusTone(status)]
       )}
     >
-      {options.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+      {options.map((s) => <option key={s} value={s}>● {STATUS_LABELS[s]}</option>)}
     </select>
   );
 }

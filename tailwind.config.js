@@ -48,6 +48,10 @@ export default {
         norm: { DEFAULT: '#d1a417', bg: '#fdf6e0', text: '#7a5c05' },
         plan: { DEFAULT: '#2f9e5a', bg: '#e7f6ed', text: '#1a6538' },
         wait: { DEFAULT: '#8891a0', bg: '#eef0f3', text: '#4a5568' },
+        // Azul "en curso" — para que el estado de un trabajo se distinga de un
+        // vistazo del resto (gris = no arrancado, azul = en curso, verde = listo,
+        // rojo/naranja = necesita atención), como en Linear/GitHub/Trello.
+        info: { DEFAULT: '#3068e0', bg: '#eaf1fd', text: '#1d4ed8' },
       },
       boxShadow: {
         card: '0 1px 2px rgba(15,23,32,0.06), 0 1px 1px rgba(15,23,32,0.04)',
