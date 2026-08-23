@@ -48,7 +48,7 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-6 max-w-[1800px] mx-auto">
       <div className="flex items-baseline justify-between mb-1">
         <h1 className="text-xl font-display font-bold text-ink-900">Dashboard de producción</h1>
         <span className="text-xs text-ink-400">Actualizado en vivo</span>
@@ -91,7 +91,7 @@ export function DashboardPage() {
           No hay trabajos que coincidan con este filtro.
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-2.5">
           {filtered.map((j) => <DashboardJobCard key={j.id} job={j} />)}
         </div>
       )}
