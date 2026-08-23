@@ -52,6 +52,7 @@ export function JobDetailPage() {
   const missing = missingFields(job);
   const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
   const responsible = users.find((u) => u.id === job.responsibleUserId);
+  const creator = users.find((u) => u.id === job.createdByUserId);
 
   const visibleTabs = TABS.filter((t) => t !== 'Instalación' || job.requiresInstallation);
   const desktopOnlyTab = (t: string) => t !== 'Comentarios';
@@ -135,12 +136,13 @@ export function JobDetailPage() {
           {tab === 'General' && (
             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm max-w-3xl">
               <Field label="Cliente" value={client?.name} />
-              <Field label="Contacto" value={job.contactName} />
+              <Field label="Contacto" value={job.contactPhone ? `${job.contactName} · ${job.contactPhone}` : job.contactName} />
+              <Field label="Generado por" value={creator?.name ?? '—'} />
               <Field label="Responsable interno" value={responsible?.name} />
               <Field label="Asignados" value={job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean).join(', ') || '—'} />
               <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
-              <Field label="Fecha solicitada por cliente" value={fmtDateTime(job.requestedDate)} />
-              <Field label="Fecha comprometida" value={fmtDateTime(job.committedDate)} />
+              <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
+              <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
               <Field label="Tipo de trabajo" value={JOB_TYPES.find((t) => t.id === job.jobTypeId)?.label} />
               <div className="sm:col-span-2">
                 <Field label="Descripción" value={job.description} block />

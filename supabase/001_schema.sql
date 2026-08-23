@@ -71,6 +71,7 @@ create table if not exists jobs (
   name text not null,
   client_id uuid not null references clients(id),
   contact_name text not null default '',
+  contact_phone text not null default '',
   created_by_user_id uuid references profiles(id),
   responsible_user_id uuid not null references profiles(id),
   created_at timestamptz not null default now(),

@@ -23,7 +23,12 @@ function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: J
   return (
     <div
       ref={setNodeRef} style={style} {...listeners} {...attributes}
-      onClick={() => !isDragging && navigate(`/trabajos/${job.id}`)}
+      onClick={(e) => {
+        if (isDragging) return;
+        // No navegar si el click fue sobre el select de estado.
+        if ((e.target as HTMLElement).closest('select')) return;
+        navigate(`/trabajos/${job.id}`);
+      }}
       className={`bg-white rounded-lg border border-ink-100 shadow-card p-3 cursor-grab active:cursor-grabbing hover:shadow-pop transition-shadow ${isDragging ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center justify-between mb-1.5">
@@ -74,7 +79,7 @@ export function KanbanPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function columnOf(job: Job) {
-    return KANBAN_COLUMNS.find((c) => c.statuses.includes(job.status))?.key ?? 'nuevo';
+    return KANBAN_COLUMNS.find((c) => c.statuses.includes(job.status))?.key ?? 'pendiente';
   }
 
   function handleDragEnd(e: DragEndEvent) {

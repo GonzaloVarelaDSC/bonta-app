@@ -19,6 +19,7 @@ export function NewJobWizard() {
   const [step, setStep] = useState(0);
   const [clientName, setClientName] = useState('');
   const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [jobTypeId, setJobTypeId] = useState<JobTypeId>('carteleria');
@@ -75,8 +76,10 @@ export function NewJobWizard() {
     try {
     const clientId = await findOrCreateClient(clientName);
     const job = await createJob({
-      name, clientId, contactName, jobTypeId, description,
-      committedDate: new Date(committedDate).toISOString(),
+      name, clientId, contactName, contactPhone, jobTypeId, description,
+      // Solo se pide la fecha (no hora) — se completa con las 18:00 (cierre del día
+      // de trabajo) para que el cálculo de urgencia siga teniendo sentido por hora.
+      committedDate: new Date(`${committedDate}T18:00`).toISOString(),
       priorityManual, clientImportant, quantity, measurements, materialIds, technique, finish, color,
       observations, specialRequirements, activeStageKeys: activeStages,
       requiresInstallation, installAddress, installContactPhone, installDate, installTime,
@@ -120,8 +123,12 @@ export function NewJobWizard() {
                 Si ya lo cargaste antes te lo va a sugerir. Si es nuevo, se crea solo al guardar el trabajo.
               </p>
             </div>
-            <div><label className={labelCls}>Contacto del cliente</label>
-              <input className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pidió el trabajo" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className={labelCls}>Contacto del cliente</label>
+                <input className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pidió el trabajo" /></div>
+              <div><label className={labelCls}>Tel. / WhatsApp del contacto</label>
+                <input className={inputCls} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="11 2345 6789" /></div>
+            </div>
             <div><label className={labelCls}>Nombre del trabajo</label>
               <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
             <div><label className={labelCls}>Tipo de trabajo</label>
@@ -136,8 +143,8 @@ export function NewJobWizard() {
 
         {step === 1 && (
           <>
-            <div><label className={labelCls}>Fecha y hora de entrega comprometida</label>
-              <input type="datetime-local" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
+            <div><label className={labelCls}>Fecha de entrega comprometida</label>
+              <input type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
             <div><label className={labelCls}>Prioridad</label>
               <select className={inputCls} value={priorityManual ?? ''} onChange={(e) => setPriorityManual(e.target.value ? e.target.value as Priority : null)}>
                 <option value="">Calcular automáticamente según la fecha</option>
@@ -214,13 +221,19 @@ export function NewJobWizard() {
             <SummaryRow label="Cliente" value={clientName} />
             <SummaryRow label="Trabajo" value={name} />
             <SummaryRow label="Tipo" value={jobType.label} />
-            <SummaryRow label="Entrega" value={committedDate ? new Date(committedDate).toLocaleString('es-AR') : '—'} />
+            <SummaryRow label="Entrega" value={committedDate ? new Date(`${committedDate}T18:00`).toLocaleDateString('es-AR') : '—'} />
             <SummaryRow label="Prioridad" value={priorityManual ? PRIORITY_META[priorityManual].label : 'Automática'} />
             <SummaryRow label="Etapas" value={activeStages.map((k) => STAGE_LABELS[k]).join(', ')} />
             <SummaryRow label="Instalación" value={requiresInstallation ? installAddress || 'Sí (sin dirección aún)' : 'No'} />
-            <div className="bg-wait-bg text-wait-text rounded-md px-3 py-2 text-xs">
-              ⚠️ El trabajo se va a crear con el estado "Falta información" — medidas, material y técnica se cargan después desde la ficha, si hacen falta.
-            </div>
+            {requiresInstallation && !installAddress.trim() ? (
+              <div className="bg-wait-bg text-wait-text rounded-md px-3 py-2 text-xs">
+                ⚠️ El trabajo se va a crear con el estado "Falta información" porque requiere instalación y todavía no tiene dirección.
+              </div>
+            ) : (
+              <div className="bg-ink-50 text-ink-500 rounded-md px-3 py-2 text-xs">
+                El trabajo se va a crear como "Pendiente". Medidas, material y técnica se cargan después desde la ficha, si hacen falta.
+              </div>
+            )}
           </div>
         )}
       </div>

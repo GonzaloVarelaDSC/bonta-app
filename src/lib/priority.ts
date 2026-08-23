@@ -9,11 +9,13 @@ import { minutesRemaining } from './dates';
  */
 export function calculateAutoPriority(job: Job, now: Date = new Date()): Priority {
   const isBlocked = job.blockRecords.some((b) => !b.closedAt);
-  const missingInfo =
-    !job.measurements.trim() ||
-    job.materialIds.length === 0 ||
-    !job.technique.trim() ||
-    (job.requiresInstallation && !job.installation?.address);
+  // Medidas/material/técnica ya no se cargan al crear el trabajo (se sacan del
+  // mail/WhatsApp del cliente cuando hace falta), así que su ausencia NO debe tapar
+  // la urgencia real — si no, todo trabajo nuevo nacería "en espera" sin importar
+  // la fecha de entrega, que es justo lo que Gonzalo necesita ver de un vistazo.
+  // Solo pesa la instalación sin dirección (eso sí es un bloqueo real) y el estado
+  // "Falta información" puesto a mano cuando alguien detecta un problema concreto.
+  const missingInfo = job.requiresInstallation && !job.installation?.address;
 
   const mins = minutesRemaining(job.committedDate, now);
   const hours = mins / 60;

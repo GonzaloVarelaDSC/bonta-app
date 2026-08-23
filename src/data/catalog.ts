@@ -67,11 +67,12 @@ export const BLOCK_REASON_LABELS: Record<BlockReason, string> = {
 };
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
+  PENDIENTE: 'Pendiente',
   NUEVO: 'Nuevo',
   FALTA_INFORMACION: 'Falta información',
   APROBADO: 'Aprobado',
   EN_DISENO: 'En diseño',
-  DISENO_LISTO: 'Diseño listo',
+  DISENO_LISTO: 'Procesado',
   EN_PRODUCCION: 'En producción',
   EN_CONTROL_CALIDAD: 'En control de calidad',
   LISTO_PARA_ENTREGA: 'Listo para entrega',
@@ -88,7 +89,7 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
 export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[] }[] = [
   { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'] },
   { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'] },
-  { key: 'nuevo', label: 'Nuevo / Por revisar', statuses: ['NUEVO', 'FALTA_INFORMACION', 'APROBADO'] },
+  { key: 'pendiente', label: 'Pendiente / Por revisar', statuses: ['PENDIENTE', 'NUEVO', 'FALTA_INFORMACION', 'APROBADO'] },
   { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'] },
   { key: 'terminacion', label: 'Terminación / QC', statuses: ['EN_CONTROL_CALIDAD'] },
   { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'] },

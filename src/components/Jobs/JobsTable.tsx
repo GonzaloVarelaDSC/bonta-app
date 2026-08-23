@@ -81,7 +81,11 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
             return (
               <tr
                 key={j.id}
-                onClick={() => navigate(`/trabajos/${j.id}`)}
+                onClick={(e) => {
+                  // No navegar si el click fue sobre un control interactivo (select de estado, editor de N°).
+                  if ((e.target as HTMLElement).closest('select, button, input')) return;
+                  navigate(`/trabajos/${j.id}`);
+                }}
                 className="border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
               >
                 <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} manual={!!j.priorityManual} size="sm" /></td>

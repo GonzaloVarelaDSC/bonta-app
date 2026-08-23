@@ -65,7 +65,7 @@ export interface JobStage {
 }
 
 export type JobStatus =
-  | 'NUEVO' | 'FALTA_INFORMACION' | 'APROBADO' | 'EN_DISENO' | 'DISENO_LISTO'
+  | 'PENDIENTE' | 'NUEVO' | 'FALTA_INFORMACION' | 'APROBADO' | 'EN_DISENO' | 'DISENO_LISTO'
   | 'EN_PRODUCCION' | 'EN_CONTROL_CALIDAD' | 'LISTO_PARA_ENTREGA'
   | 'LISTO_PARA_INSTALACION' | 'EN_INSTALACION' | 'TERMINADO' | 'BLOQUEADO' | 'CANCELADO';
 
@@ -146,6 +146,7 @@ export interface Job {
   name: string;
   clientId: string;
   contactName: string;
+  contactPhone: string; // teléfono/WhatsApp de quien pidió este trabajo puntual
   createdByUserId: string | null;
   responsibleUserId: string;
   assignedUserIds: string[];

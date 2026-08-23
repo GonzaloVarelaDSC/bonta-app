@@ -68,6 +68,7 @@ function mapInstallation(row: any): InstallationInfo | undefined {
 export function mapJob(row: any): Job {
   return {
     id: row.id, code: row.code ?? null, name: row.name, clientId: row.client_id, contactName: row.contact_name ?? '',
+    contactPhone: row.contact_phone ?? '',
     createdByUserId: row.created_by_user_id ?? null,
     responsibleUserId: row.responsible_user_id,
     assignedUserIds: (row.job_assigned_users ?? []).map((a: any) => a.user_id),

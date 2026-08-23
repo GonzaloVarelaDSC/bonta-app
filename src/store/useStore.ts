@@ -53,7 +53,7 @@ interface StoreState {
 }
 
 export interface NewJobInput {
-  name: string; clientId: string; contactName: string;
+  name: string; clientId: string; contactName: string; contactPhone: string;
   jobTypeId: Job['jobTypeId']; description: string;
   committedDate: string; priorityManual: Priority | null; clientImportant: boolean;
   quantity: string; measurements: string; materialIds: Job['materialIds'];
@@ -160,17 +160,19 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   createJob: async (input) => {
     const jobType = JOB_TYPES.find((t) => t.id === input.jobTypeId)!;
-    const missing = !input.measurements.trim() || input.materialIds.length === 0 || !input.technique.trim() ||
-      (input.requiresInstallation && !input.installAddress.trim());
+    // Falta dirección de instalación es lo único que de verdad bloquea un trabajo
+    // recién creado — medidas/material/técnica se cargan después si hacen falta,
+    // no ameritan nacer en "Falta información".
+    const missingInstallAddress = input.requiresInstallation && !input.installAddress.trim();
 
     const { data: jobRow, error } = await supabase.from('jobs').insert({
-      name: input.name, client_id: input.clientId, contact_name: input.contactName,
+      name: input.name, client_id: input.clientId, contact_name: input.contactName, contact_phone: input.contactPhone,
       created_by_user_id: input.createdByUserId,
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
       job_type_id: input.jobTypeId, description: input.description, quantity: input.quantity, measurements: input.measurements,
       material_ids: input.materialIds, technique: input.technique, finish: input.finish, color: input.color,
       observations: input.observations, special_requirements: input.specialRequirements,
-      status: missing ? 'FALTA_INFORMACION' : 'NUEVO', priority_manual: input.priorityManual,
+      status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,
     }).select().single();
     if (error) throw error;

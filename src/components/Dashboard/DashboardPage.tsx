@@ -6,7 +6,7 @@ import { visibleJobs } from '../../lib/permissions';
 import { computeCounts, isOverdue, isDueToday, isMissingInfo, sortByPriority } from '../../lib/selectors';
 import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
-import { JobsTable } from '../Jobs/JobsTable';
+import { DashboardJobCard } from './DashboardJobCard';
 
 type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
@@ -16,6 +16,7 @@ export function DashboardPage() {
   const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
   const counts = useMemo(() => computeCounts(jobs), [jobs]);
   const [filter, setFilter] = useState<FilterKey>(null);
+  const [onlyMine, setOnlyMine] = useState(true);
 
   const filtered = useMemo(() => {
     let base = jobs;
@@ -30,8 +31,9 @@ export function DashboardPage() {
       case 'silent': base = jobs.filter((j) => isSilent(j)); break;
       default: base = jobs.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO');
     }
+    if (onlyMine) base = base.filter((j) => j.responsibleUserId === user.id || j.assignedUserIds.includes(user.id));
     return sortByPriority(base);
-  }, [jobs, filter]);
+  }, [jobs, filter, onlyMine, user.id]);
 
   // Orden pedido por Gonzalo: lo más operativo (listos para entregar, en producción)
   // primero, después el resto por urgencia.
@@ -51,7 +53,7 @@ export function DashboardPage() {
         <h1 className="text-xl font-display font-bold text-ink-900">Dashboard de producción</h1>
         <span className="text-xs text-ink-400">Actualizado en vivo</span>
       </div>
-      <p className="text-sm text-ink-500 mb-5">Tocá una tarjeta para filtrar la tabla de abajo.</p>
+      <p className="text-sm text-ink-500 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
         {cards.map((c) => (
@@ -70,15 +72,29 @@ export function DashboardPage() {
         </button>
       )}
 
-      <div className="bg-white rounded-xl border border-ink-100 shadow-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-ink-100 flex items-center justify-between">
-          <span className="text-sm font-semibold text-ink-800">
-            {filter ? `Filtrado: ${cards.find((c) => c.key === filter)?.label ?? 'sin movimiento'}` : 'Trabajos activos, ordenados por prioridad'}
-          </span>
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <span className="text-sm font-semibold text-ink-800">
+          {filter ? `Filtrado: ${cards.find((c) => c.key === filter)?.label ?? 'sin movimiento'}` : 'Trabajos activos, ordenados por prioridad'}
+          <span className="text-ink-400 font-normal"> · {filtered.length}</span>
+        </span>
+        <div className="flex items-center gap-3">
           {filter && <button onClick={() => setFilter(null)} className="text-xs text-brand-600 hover:underline">Ver todos</button>}
+          <label className="flex items-center gap-1.5 text-xs text-ink-600 cursor-pointer select-none">
+            <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} className="rounded" />
+            Solo asignados a mí
+          </label>
         </div>
-        <JobsTable jobs={filtered} compact />
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-xl border border-ink-100 shadow-card px-4 py-10 text-center text-sm text-ink-400">
+          No hay trabajos que coincidan con este filtro.
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {filtered.map((j) => <DashboardJobCard key={j.id} job={j} />)}
+        </div>
+      )}
     </div>
   );
 }

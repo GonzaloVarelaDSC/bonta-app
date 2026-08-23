@@ -5,7 +5,7 @@ import { STATUS_LABELS } from '../data/catalog';
 // quedan afuera porque tienen su propio flujo (motivo de bloqueo, etc.) y no son un
 // simple cambio de estado.
 export const SELECTABLE_STATUSES: JobStatus[] = [
-  'NUEVO', 'FALTA_INFORMACION', 'APROBADO', 'EN_DISENO', 'DISENO_LISTO',
+  'PENDIENTE', 'FALTA_INFORMACION', 'EN_DISENO', 'DISENO_LISTO',
   'EN_PRODUCCION', 'EN_CONTROL_CALIDAD', 'LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION',
   'EN_INSTALACION', 'TERMINADO',
 ];
