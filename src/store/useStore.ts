@@ -59,7 +59,7 @@ export interface NewJobInput {
   quantity: string; measurements: string; materialIds: Job['materialIds'];
   technique: string; finish: string; color: string; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
-  requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string; installTime: string;
+  requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[];
 }
 
@@ -189,7 +189,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (input.requiresInstallation) {
       await supabase.from('installations').insert({
         job_id: jobId, address: input.installAddress, contact_name: input.contactName,
-        contact_phone: input.installContactPhone, install_date: input.installDate || null, install_time: input.installTime || null,
+        contact_phone: input.installContactPhone, install_date: input.installDate || null,
       });
     }
 

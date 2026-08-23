@@ -302,7 +302,6 @@ function InstallationTab({ job, onComplete }: { job: import('../../types').Job; 
         <Field label="Dirección" value={inst.address} highlightMissing={!inst.address} />
         <Field label="Contacto" value={`${inst.contactName} · ${inst.contactPhone}`} />
         <Field label="Fecha" value={inst.date ? fmtDate(inst.date) : '—'} />
-        <Field label="Hora" value={inst.time || '—'} />
       </div>
       {inst.completed ? (
         <div className="bg-plan-bg text-plan-text rounded-lg p-4 text-sm">

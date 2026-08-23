@@ -43,7 +43,6 @@ export function NewJobWizard() {
   const [installAddress, setInstallAddress] = useState('');
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
-  const [installTime, setInstallTime] = useState('');
   const [responsibleUserId, setResponsibleUserId] = useState(user.id);
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
@@ -82,7 +81,7 @@ export function NewJobWizard() {
       committedDate: new Date(`${committedDate}T18:00`).toISOString(),
       priorityManual, clientImportant, quantity, measurements, materialIds, technique, finish, color,
       observations, specialRequirements, activeStageKeys: activeStages,
-      requiresInstallation, installAddress, installContactPhone, installDate, installTime,
+      requiresInstallation, installAddress, installContactPhone, installDate,
       createdByUserId: user.id, responsibleUserId, assignedUserIds,
     });
     navigate(`/trabajos/${job.id}`);
@@ -159,8 +158,13 @@ export function NewJobWizard() {
               <select className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
                 {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
+              <p className="text-[11px] text-ink-400 mt-1">
+                La persona principal a cargo de que este trabajo avance — quien lo va a ver en "Solo asignados a mí" del Dashboard.
+                {users.filter((u) => u.active).length === 1 && ' Por ahora solo aparecés vos porque el resto del equipo todavía no tiene cuenta creada.'}
+              </p>
             </div>
             <div><label className={labelCls}>Asignar a</label>
+              <p className="text-[11px] text-ink-400 mb-1.5">Gente que también puede ver y trabajar en este trabajo, además del responsable.</p>
               <div className="flex flex-wrap gap-1.5">
                 {users.filter((u) => u.active).map((u) => (
                   <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)}
@@ -193,8 +197,7 @@ export function NewJobWizard() {
               <div className="grid grid-cols-2 gap-4 bg-ink-50 rounded-lg p-3">
                 <div className="col-span-2"><label className={labelCls}>Dirección</label><input className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
                 <div><label className={labelCls}>Teléfono de contacto</label><input className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
-                <div><label className={labelCls}>Fecha</label><input type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
-                <div><label className={labelCls}>Hora</label><input type="time" className={inputCls} value={installTime} onChange={(e) => setInstallTime(e.target.value)} /></div>
+                <div className="col-span-2"><label className={labelCls}>Fecha</label><input type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
               </div>
             )}
           </>
@@ -231,7 +234,7 @@ export function NewJobWizard() {
               </div>
             ) : (
               <div className="bg-ink-50 text-ink-500 rounded-md px-3 py-2 text-xs">
-                El trabajo se va a crear como "Pendiente". Medidas, material y técnica se cargan después desde la ficha, si hacen falta.
+                Esto es normal, no es un error: el trabajo arranca en estado "Pendiente" (nadie lo procesó todavía). Si en algún momento necesitás cargar medidas, material o técnica, se hace después desde la ficha — no hace falta ahora.
               </div>
             )}
           </div>
