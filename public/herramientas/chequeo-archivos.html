@@ -68,19 +68,27 @@
 
   .tool-subtitle { color: #605d5d; font-size: 13.5px; margin-bottom: 20px; max-width: 700px; line-height: 1.7; }
   .tool-subtitle .line { display: block; margin-bottom: 2px; }
-  .tool-subtitle b.verde { color: #2f9e5a; } .tool-subtitle b.amarillo { color: #d1a417; } .tool-subtitle b.rojo { color: #e0393e; }
+  .tool-subtitle b.verde { color: #1a6538; } .tool-subtitle b.amarillo { color: #7a5c05; } .tool-subtitle b.rojo { color: #8f1d21; }
+
+  .tool-intro { margin-bottom: 22px; max-width: 760px; }
+  .tool-intro-lead { font-size: 15px; color: #2d2b2b; font-weight: 600; line-height: 1.5; margin-bottom: 14px; }
+  .tool-legend { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+  .tool-legend .legend-item { display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: #605d5d; line-height: 1.5; }
+  .tool-legend .legend-item .badge { flex-shrink: 0; }
+  .tool-intro-note { font-size: 12.5px; color: #7d7979; line-height: 1.6; border-top: 1px solid #eae7e7; padding-top: 12px; }
 
   .config {
     background: white; border-radius: 12px; margin-bottom: 16px;
     display: flex; gap: 0; flex-wrap: wrap; align-items: stretch;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden;
+    border: 1px solid #eae7e7; box-shadow: 0 1px 2px rgba(16,24,40,0.04); overflow: hidden;
   }
   .config-primary {
-    background: #f8f4f4; padding: 18px 26px; display: flex; align-items: center;
+    background: #fff3e4; padding: 18px 26px; display: flex; align-items: center;
     gap: 22px; flex: 1; min-width: 320px; border-right: 1px solid #eae7e7;
+    border-left: 3px solid #7d5411;
   }
   .config-primary-label {
-    font-size: 11px; font-weight: 700; color: #7d7979; letter-spacing: 0.09em;
+    font-size: 11px; font-weight: 700; color: #7d5411; letter-spacing: 0.09em;
     text-transform: uppercase; margin-bottom: 10px;
   }
   .config-primary-col { display: flex; flex-direction: column; }
@@ -88,26 +96,34 @@
   .config-primary-inputs { display: flex; align-items: flex-end; gap: 10px; }
   .dim-field { display: flex; flex-direction: column; gap: 5px; }
   .dim-field input {
-    border: none; border-bottom: 2px solid #2d2b2b; border-radius: 0; padding: 2px 2px 4px;
-    width: 76px; font-size: 19px; font-weight: 600; color: #2d2b2b; background: transparent;
-    font-variant-numeric: tabular-nums;
+    border: none; border-bottom: 2.5px solid #7d5411; border-radius: 0; padding: 2px 2px 4px;
+    width: 80px; font-size: 24px; font-weight: 700; color: #7d5411; background: transparent;
+    font-variant-numeric: tabular-nums; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   }
-  .dim-field input:focus { outline: none; border-bottom-color: #a06f24; }
-  .dim-field .dim-label { font-size: 10.5px; color: #7d7979; font-weight: 600; letter-spacing: 0.03em; }
-  .dim-x { font-size: 15px; color: #d7d3d3; font-weight: 400; padding-bottom: 9px; }
+  .dim-field input:focus { outline: none; border-bottom-color: #2d2b2b; }
+  .dim-field .dim-label { font-size: 10.5px; color: #7d5411; font-weight: 700; letter-spacing: 0.03em; }
+  .dim-x { font-size: 17px; color: #e1ad66; font-weight: 400; padding-bottom: 11px; }
   .config-secondary { display: flex; gap: 20px; align-items: center; padding: 16px 22px; flex-wrap: wrap; }
-  .config-field { display: flex; align-items: center; gap: 6px; }
+  .config-field { display: flex; align-items: center; gap: 8px; }
   .config label { display: flex; flex-direction: column; font-size: 12px; color: #605d5d; gap: 4px; font-weight: 600; }
-  .config input[type=number] { border: 1.5px solid #d7d3d3; border-radius: 7px; padding: 6px 8px; width: 90px; font-size: 14px; }
+  .config input[type=number] { border: 1.5px solid #d7d3d3; border-radius: 8px; padding: 6px 8px; width: 90px; font-size: 14px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
   .config input:disabled { background: #f0eded; color: #9b9797; border-color: #eae7e7; }
-  .lock-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; color: #bab6b6; align-self: flex-end; margin-bottom: 3px; }
-  .lock-btn.unlocked { color: #e0393e; }
+  .lock-btn {
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid #d7d3d3; border-radius: 8px; background: white; cursor: pointer;
+    color: #7d7979; padding: 0; align-self: flex-end; margin-bottom: 1px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .lock-btn svg { width: 14px; height: 14px; display: block; }
+  .lock-btn:hover { border-color: #7d7979; color: #605d5d; }
+  .lock-btn.unlocked { border-color: #7a5c05; color: #7a5c05; background: #fdf6e0; }
+  .lock-btn.unlocked:hover { border-color: #7a5c05; color: #7a5c05; }
 
   .dropzone {
-    border: 2.5px dashed #a06f24; border-radius: 12px; background: white; padding: 40px;
-    text-align: center; cursor: pointer; transition: background 0.15s; margin-bottom: 20px;
+    border: 1.5px dashed #a06f24; border-radius: 12px; background: #fff3e4; padding: 40px;
+    text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s; margin-bottom: 20px;
   }
-  .dropzone.dragover { background: #fff3e4; }
+  .dropzone.dragover { background: #fff3e4; border-color: #7d5411; }
   .dropzone p { margin: 0; color: #2d2b2b; font-size: 14.5px; }
   .dropzone .sub { color: #9b9797; font-size: 12px; margin-top: 6px; }
   .dropzone input { display: none; }
@@ -115,23 +131,29 @@
   #status { font-size: 13px; color: #605d5d; margin-bottom: 12px; min-height: 20px; display: flex; justify-content: space-between; align-items: center; }
   .clear-btn { background: none; border: none; color: #a06f24; font-size: 12.5px; cursor: pointer; text-decoration: underline; }
 
-  .card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; overflow: hidden; display: flex; }
-  .card .stripe { width: 6px; flex-shrink: 0; }
-  .stripe.verde { background: #2f9e5a; } .stripe.amarillo { background: #d1a417; } .stripe.rojo { background: #e0393e; }
+  .card { background: white; border-radius: 12px; border: 1px solid #f0eded; box-shadow: 0 1px 2px rgba(15,23,32,0.06), 0 1px 1px rgba(15,23,32,0.04); margin-bottom: 12px; overflow: hidden; display: flex; }
+  .card .stripe { width: 4px; flex-shrink: 0; }
+  .stripe.verde { background: #1a6538; } .stripe.amarillo { background: #7a5c05; } .stripe.rojo { background: #8f1d21; }
   .card .content { padding: 16px 18px; flex: 1; min-width: 0; position: relative; }
   .content { position: relative; }
   .card-close {
     position: absolute; top: 10px; right: 12px; background: none; border: none;
     font-size: 15px; color: #bab6b6; cursor: pointer; width: 26px; height: 26px;
-    border-radius: 50%; line-height: 1;
+    border-radius: 8px; line-height: 1;
   }
-  .card-close:hover { background: #fdecec; color: #e0393e; }
+  .card-close:hover { background: #f0eded; color: #8f1d21; }
 
 
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
   .filename { font-weight: 700; font-size: 14.5px; color: #2d2b2b; word-break: break-word; }
-  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .badge.verde { background: #e7f6ed; color: #1a6538; } .badge.amarillo { background: #fdf6e0; color: #7a5c05; } .badge.rojo { background: #fdecec; color: #8f1d21; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+    white-space: nowrap; border: 1px solid;
+  }
+  .badge.verde { color: #1a6538; border-color: rgba(47,158,90,.35); background: #e7f6ed; }
+  .badge.amarillo { color: #7a5c05; border-color: rgba(209,164,23,.35); background: #fdf6e0; }
+  .badge.rojo { color: #8f1d21; border-color: rgba(224,57,62,.35); background: #fdecec; }
   .reason-line { font-size: 12.5px; color: #605d5d; margin-bottom: 10px; }
 
   .visual-row { display: flex; gap: 16px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
@@ -141,21 +163,23 @@
   .fact-chips { display: flex; gap: 8px; flex-wrap: wrap; }
   .fact-chip { background: #f8f4f4; border: 1px solid #eae7e7; border-radius: 8px; padding: 7px 11px; font-size: 12.5px; color: #444141; display: flex; flex-direction: column; gap: 2px; min-width: 84px; }
   .fact-chip .label { font-size: 10.5px; color: #9b9797; text-transform: uppercase; letter-spacing: 0.03em; }
-  .fact-chip .value { font-weight: 700; color: #2d2b2b; font-size: 13.5px; }
-  .fact-chip.ok .value { color: #2f9e5a; } .fact-chip.bad .value { color: #e0393e; }
+  .fact-chip .value { font-weight: 700; color: #2d2b2b; font-size: 13.5px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+  .fact-chip.ok .value { color: #1a6538; } .fact-chip.bad .value { color: #8f1d21; }
   .fact-chip.suggested { background: #fff3e4; border-color: #e1ad66; }
-  .fact-chip .sub-note { font-size: 9.5px; color: #9b9797; }
+  .fact-chip .sub-note { font-size: 9.5px; color: #9b9797; font-family: inherit; }
 
-  .msg-box { display: flex; gap: 9px; align-items: flex-start; border-radius: 8px; padding: 11px 13px; font-size: 13px; line-height: 1.5; margin-top: 6px; }
-  .msg-box.warn { background: #fdf6e0; border: 1px solid #d1a417; color: #7a5c05; }
-  .msg-box.fail { background: #fdecec; border: 1px solid #e0393e; color: #8f1d21; }
-  .msg-box .icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+  .msg-box { display: flex; gap: 9px; align-items: flex-start; border-radius: 8px; padding: 11px 13px; font-size: 13px; line-height: 1.5; margin-top: 6px; border: 1px solid; border-left-width: 3px; }
+  .msg-box.warn { background: #fdf6e0; border-color: rgba(209,164,23,.35); color: #7a5c05; }
+  .msg-box.fail { background: #fdecec; border-color: rgba(224,57,62,.35); color: #8f1d21; }
+  .msg-box .icon { font-size: 13px; line-height: 1.4; flex-shrink: 0; font-weight: 800; }
 
   .actions { margin-top: 12px; display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
   .btn { border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .btn-export { background: #1a1817; color: white; } .btn-export:hover { background: #444141; }
+  .btn-export-force { background: white; color: #2d2b2b; border: 1.5px solid #2d2b2b; } .btn-export-force:hover { background: #fff3e4; }
+  .export-note { font-size: 11.5px; color: #7d7979; margin-top: 4px; width: 100%; }
   .btn-msg { background: #a06f24; color: white; } .btn-msg:hover { background: #7d5411; }
-  .btn-remove { background: #f0eded; color: #9b9797; } .btn-remove:hover { background: #fdecec; color: #e0393e; }
+  .btn-remove { background: #f0eded; color: #9b9797; } .btn-remove:hover { background: #fdecec; color: #8f1d21; }
 
   .empty-msg { color: #9b9797; font-size: 14px; padding: 28px; text-align: center; }
 
@@ -193,7 +217,7 @@
   .man-title { font-size: 26px; color: #2d2b2b; margin-bottom: 4px; }
   .man-subtitle { font-size: 13px; font-weight: 700; color: #2f9e5a; letter-spacing: 0.05em; margin-bottom: 10px; }
   .man-lead { font-size: 13.5px; color: #605d5d; font-style: italic; max-width: 560px; margin: 0 auto; line-height: 1.6; }
-  .man-hr { border: none; border-top: 1px solid #e2e6ea; margin: 22px 0 26px; }
+  .man-hr { border: none; border-top: 1px solid #eae7e7; margin: 22px 0 26px; }
 
   .man-h1 { font-size: 18px; color: #2d2b2b; border-bottom: 2px solid #a06f24; padding-bottom: 6px; margin: 30px 0 14px; }
   .man-h1:first-child { margin-top: 0; }
@@ -205,7 +229,7 @@
   .man-ol li::marker { font-weight: 700; color: #2d2b2b; }
 
   .man-img-wrap { text-align: center; margin: 14px auto 4px; }
-  .man-img-wrap img { max-width: 100%; border: 1px solid #d9dee4; border-radius: 6px; }
+  .man-img-wrap img { max-width: 100%; border: 1px solid #d7d3d3; border-radius: 6px; }
   .man-caption { text-align: center; font-size: 12px; color: #7d7979; font-style: italic; margin: 6px 0 16px; }
 
   .man-paso-banner {
@@ -215,14 +239,14 @@
 
   .man-callout { border-left: 5px solid; border-radius: 6px; padding: 12px 16px; margin: 14px 0; font-size: 13px; line-height: 1.6; }
   .man-callout-label { font-weight: 700; display: block; margin-bottom: 4px; font-size: 12.5px; letter-spacing: 0.02em; }
-  .man-callout-key { background: #eaf2ff; border-color: #2d2b2b; color: #2d2b2b; }
-  .man-callout-important { background: #fdf6e0; border-color: #d1a417; color: #9c6a0e; }
-  .man-callout-tip { background: #fff3e4; border-color: #a06f24; color: #1e6fa8; }
-  .man-callout-mandatory { background: #fbeaea; border-color: #e0393e; color: #a62e2e; }
+  .man-callout-key { background: #fff3e4; border-color: #2d2b2b; color: #2d2b2b; }
+  .man-callout-important { background: #fdf6e0; border-color: #d1a417; color: #7a5c05; }
+  .man-callout-tip { background: #fff3e4; border-color: #a06f24; color: #7d5411; }
+  .man-callout-mandatory { background: #fdecec; border-color: #e0393e; color: #8f1d21; }
 
   table.man-resumen { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 12.5px; }
   table.man-resumen th { background: #2d2b2b; color: white; padding: 8px 10px; text-align: left; }
-  table.man-resumen td { padding: 9px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  table.man-resumen td { padding: 9px 10px; border-bottom: 1px solid #f0eded; vertical-align: top; }
   .man-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; color: white; font-weight: 700; font-size: 11.5px; white-space: nowrap; }
   .man-badge-verde { background: #2f9e5a; }
   .man-badge-amarillo { background: #d1a417; }
@@ -495,17 +519,19 @@
     <h2>Chequeo de Archivos</h2>
   </div>
   <div class="sub-body">
-    <div class="tool-subtitle">
-      <span class="line">Arrastrá los archivos del cliente (PDF, JPG, PNG o TIFF) y definí la medida que pidió.</span>
-      <span class="line"><b class="verde">Verde</b> — el archivo está en condiciones, se sube directo.</span>
-      <span class="line"><b class="amarillo">Amarillo</b> — el color no es el esperado, revisar internamente antes de producir (no requiere avisar al cliente).</span>
-      <span class="line"><b class="rojo">Rojo</b> — hay que consultarle al cliente cómo seguir.</span>
-      <span class="line">"Exportar PDF" descarga el archivo a tu carpeta de Descargas — no sube nada al FTP.</span>
+    <div class="tool-intro">
+      <p class="tool-intro-lead">Chequea automáticamente si un archivo de cliente está en condiciones de imprimirse: valida medida, resolución y modo de color antes de que el trabajo llegue a producción.</p>
+      <div class="tool-legend">
+        <span class="legend-item"><span class="badge verde">Verde</span> el archivo está en condiciones, listo para impresión.</span>
+        <span class="legend-item"><span class="badge amarillo">Amarillo</span> el color no es el esperado — revisar internamente antes de producir, no hace falta avisar al cliente.</span>
+        <span class="legend-item"><span class="badge rojo">Rojo</span> hay que consultarle al cliente cómo seguir.</span>
+      </div>
+      <p class="tool-intro-note">Definí la medida pedida, arrastrá los archivos (PDF, JPG, PNG o TIFF) y mirá el color de cada tarjeta. "Exportar PDF" descarga a tu carpeta de Descargas — no sube nada al FTP.</p>
     </div>
 
     <div class="config">
       <div class="config-primary">
-        <svg id="configDiagram" class="dim-diagram" width="86" height="86" viewBox="0 0 86 86"></svg>
+        <svg id="configDiagram" class="dim-diagram" width="86" height="86" viewBox="0 0 96 96"></svg>
         <div class="config-primary-col">
           <div class="config-primary-label">Medida solicitada por el cliente</div>
           <div class="config-primary-inputs">
@@ -523,11 +549,11 @@
       </div>
       <div class="config-secondary">
         <div class="config-field">
-          <button class="lock-btn" id="lockDpi" title="Click para editar">🔒</button>
+          <button class="lock-btn" id="lockDpi" title="Click para editar"></button>
           <label>DPI mínimo de trabajo<input type="number" id="minDpi" value="100" step="1" disabled></label>
         </div>
         <div class="config-field">
-          <button class="lock-btn" id="lockTol" title="Click para editar">🔒</button>
+          <button class="lock-btn" id="lockTol" title="Click para editar"></button>
           <label>Tolerancia proporción (%)<input type="number" id="tolPct" value="1" step="0.5" disabled></label>
         </div>
       </div>
@@ -593,13 +619,18 @@ dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.
 fileInput.addEventListener('change', e => { handleFiles(e.target.files); fileInput.value = ''; });
 clearBtn.addEventListener('click', () => { results = []; renderCards(); setStatus('Lista vaciada.'); });
 
+const ICON_LOCK_CLOSED = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+const ICON_LOCK_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 7.2-2.4"/></svg>';
+
 function setupLock(lockId, inputId) {
   const lockBtn = document.getElementById(lockId);
   const input = document.getElementById(inputId);
+  lockBtn.innerHTML = ICON_LOCK_CLOSED;
   lockBtn.addEventListener('click', () => {
     const unlocked = input.disabled;
     input.disabled = !unlocked;
-    lockBtn.textContent = unlocked ? '🔓' : '🔒';
+    lockBtn.innerHTML = unlocked ? ICON_LOCK_OPEN : ICON_LOCK_CLOSED;
+    lockBtn.title = unlocked ? 'Click para volver al valor por defecto' : 'Click para editar';
     lockBtn.classList.toggle('unlocked', unlocked);
   });
 }
@@ -774,6 +805,63 @@ async function getPdfPageImage(file) {
   return { nativeW, nativeH, thumbUrl: thumbCanvas.toDataURL('image/png'), colorLabel, looksGrayscale: sampleIsGrayscale(canvas), pdfBytesForExport: bytes };
 }
 
+// --- Perfil de color embebido (ICC) ---
+// pdf-lib, al re-empaquetar una imagen dentro de un PDF nuevo, NO conserva el perfil ICC
+// que traía el archivo original (queda declarado como DeviceRGB/DeviceGray "genérico").
+// Si el archivo del cliente tenía un perfil embebido, el resultado exportado puede verse
+// levemente distinto al abrirlo, aunque los píxeles no se tocaron. Por eso extraemos el
+// perfil acá al leer el archivo, y lo reinyectamos manualmente al exportar (exportPdf).
+async function extractPngIccProfile(bytes) {
+  let off = 8; // saltar firma PNG (8 bytes)
+  while (off + 8 <= bytes.length) {
+    const len = (bytes[off] << 24 | bytes[off+1] << 16 | bytes[off+2] << 8 | bytes[off+3]) >>> 0;
+    const type = String.fromCharCode(bytes[off+4], bytes[off+5], bytes[off+6], bytes[off+7]);
+    const dataStart = off + 8;
+    if (type === 'iCCP') {
+      let nameEnd = dataStart;
+      while (bytes[nameEnd] !== 0 && nameEnd < dataStart + len) nameEnd++;
+      const compressed = bytes.slice(nameEnd + 2, dataStart + len); // compresión zlib (deflate)
+      try {
+        if (typeof DecompressionStream === 'undefined') return null; // navegador sin soporte: se omite, no rompe el export
+        const ds = new DecompressionStream('deflate');
+        const stream = new Blob([compressed]).stream().pipeThrough(ds);
+        const inflated = new Uint8Array(await new Response(stream).arrayBuffer());
+        return inflated;
+      } catch (e) { console.warn('No se pudo inflar el perfil ICC del PNG:', e); return null; }
+    }
+    if (type === 'IDAT' || type === 'IEND') return null; // iCCP siempre va antes de IDAT
+    off = dataStart + len + 4; // + CRC
+  }
+  return null;
+}
+
+function extractJpegIccProfile(bytes) {
+  let off = 2; // saltar SOI
+  const chunks = [];
+  while (off + 4 <= bytes.length) {
+    if (bytes[off] !== 0xFF) break;
+    const marker = bytes[off + 1];
+    if (marker === 0xD8 || marker === 0xD9) { off += 2; continue; }
+    if (marker === 0xDA) break; // SOS: arranca la data codificada, no hay más metadata
+    const len = (bytes[off + 2] << 8) | bytes[off + 3];
+    if (marker === 0xE2 && off + 16 <= bytes.length) {
+      const sig = String.fromCharCode(...bytes.slice(off + 4, off + 16));
+      if (sig === 'ICC_PROFILE\u0000') {
+        const seq = bytes[off + 16];
+        chunks.push({ seq, data: bytes.slice(off + 18, off + 2 + len) });
+      }
+    }
+    off += 2 + len;
+  }
+  if (!chunks.length) return null;
+  chunks.sort((a, b) => a.seq - b.seq);
+  const total = chunks.reduce((s, c) => s + c.data.length, 0);
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c.data, p); p += c.data.length; }
+  return out;
+}
+
 function getImageFromFile(file) {
   return new Promise(async (resolve) => {
     const buf = await file.arrayBuffer();
@@ -803,10 +891,11 @@ function getImageFromFile(file) {
     // Paso 2: miniatura + detección de "parece B/N" — best effort, puede fallar (CMYK) sin romper nada
     const url = URL.createObjectURL(file);
     const img = new Image();
+    const iccProfile = isPng ? await extractPngIccProfile(bytes) : extractJpegIccProfile(bytes);
     const finish = (thumbUrl, looksGrayscale, noPreview) => {
       resolve({
         nativeW: headerW, nativeH: headerH, thumbUrl, colorLabel, looksGrayscale,
-        rawBytes: bytes, isPng, isJpeg: !isPng, isTiff: false, noPreview,
+        rawBytes: bytes, isPng, isJpeg: !isPng, isTiff: false, noPreview, iccProfile,
       });
     };
     img.onload = () => {
@@ -866,18 +955,20 @@ function drawConfigDiagram(w, h) {
   const svg = document.getElementById('configDiagram');
   if (!w || !h || w <= 0 || h <= 0) { svg.innerHTML = ''; return; }
 
-  const maxBox = 44, minBox = 18;
+  // maxBox se achicó de 44 a 40: con 44, en piezas apaisadas la cota vertical
+  // (rotada 90°, a la derecha) quedaba pegada al borde del viewBox y se recortaba.
+  const maxBox = 40, minBox = 18;
   let boxW, boxH;
   if (w >= h) { boxW = maxBox; boxH = Math.max(minBox * (h / w), minBox * 0.35); }
   else { boxH = maxBox; boxW = Math.max(minBox * (w / h), minBox * 0.35); }
 
-  const ox = 18, oy = 14; // origen del rectángulo dentro del viewBox 86x86
+  const ox = 14, oy = 14; // origen del rectángulo dentro del viewBox (ver viewBox más abajo)
   const dimGap = 10;
-  const stroke = '#7d7979';
-  const strokeStrong = '#2d2b2b';
+  const stroke = '#5a9bc4';       // líneas de cota, en el mismo acento que resalta la medida pedida
+  const strokeStrong = '#7d5411';
 
   svg.innerHTML = `
-    <rect x="${ox}" y="${oy}" width="${boxW}" height="${boxH}" fill="#f8f4f4" stroke="${strokeStrong}" stroke-width="1.2"/>
+    <rect x="${ox}" y="${oy}" width="${boxW}" height="${boxH}" fill="#fff3e4" stroke="${strokeStrong}" stroke-width="1.2"/>
 
     <!-- cota inferior (ancho) -->
     <line x1="${ox}" y1="${oy + boxH + dimGap}" x2="${ox + boxW}" y2="${oy + boxH + dimGap}" stroke="${stroke}" stroke-width="0.8"/>
@@ -1049,12 +1140,36 @@ function evaluate(file, data, targetW, targetH, targetRatio, minDpi, tolPct) {
   if (rgbDeberiaSerCmyk) verdict = 'rojo';
   else if (deberiaSerGris && verdict === 'verde') verdict = 'amarillo';
 
-  if (verdict === 'verde' && !data.isTiff) exportData = { file, data, targetW, targetH };
-  else if (verdict === 'verde' && data.isTiff) { chips.push({ label: 'Exportar', value: 'no disponible para TIFF' }); }
+  // Se puede exportar en cualquier veredicto (verde/amarillo/rojo): si la proporción no
+  // cierra, exportPdf recorta al centro para llevarlo a la medida pedida — no se sube nada
+  // al FTP, así que descargar no implica dar por resuelto lo que haya quedado en amarillo/rojo.
+  if (!data.isTiff) exportData = { file, data, targetW, targetH, hasCrop: !!cropInfo };
+  else { chips.push({ label: 'Exportar', value: 'no disponible para TIFF' }); }
 
   const diagramSvg = buildDiagramSvg(nativeW, nativeH);
   const suggested = suggestedDpi(targetW, targetH);
   results.push({ id: nextId++, name: file.name, thumbUrl, diagramSvg, verdict, chips, boxes, exportData, message, colorMessage, suggested });
+}
+
+// Reinyecta el perfil ICC original (extraído al leer el archivo) en la imagen ya embebida.
+// Sin esto, pdf-lib declara la imagen como DeviceRGB/DeviceGray "genérico" y el visor/RIP
+// puede interpretar los mismos números de color de forma levemente distinta al original.
+async function attachIccProfile(pdfDoc, embeddedImage, iccBytes) {
+  try {
+    await embeddedImage.embed(); // fuerza el registro real del XObject en el PDF antes de guardarlo
+    const xObjStream = pdfDoc.context.lookup(embeddedImage.ref, PDFLib.PDFRawStream);
+    const xObjDict = xObjStream.dict;
+    const existingCs = xObjDict.lookup(PDFLib.PDFName.of('ColorSpace'));
+    const csName = existingCs && existingCs.asString ? existingCs.asString() : String(existingCs);
+    let n = 3;
+    if (csName.includes('Gray')) n = 1;
+    else if (csName.includes('CMYK')) n = 4;
+    const iccStream = PDFLib.PDFRawStream.of(pdfDoc.context.obj({ N: n, Length: iccBytes.length }), iccBytes);
+    const iccRef = pdfDoc.context.register(iccStream);
+    xObjDict.set(PDFLib.PDFName.of('ColorSpace'), pdfDoc.context.obj([PDFLib.PDFName.of('ICCBased'), iccRef]));
+  } catch (e) {
+    console.warn('No se pudo reinyectar el perfil ICC (el archivo se exporta igual, sin el perfil):', e);
+  }
 }
 
 async function exportPdf(resultId) {
@@ -1066,17 +1181,48 @@ async function exportPdf(resultId) {
     const wPt = targetW / CM_PER_INCH * 72;
     const hPt = targetH / CM_PER_INCH * 72;
     const page = pdfDoc.addPage([wPt, hPt]);
+
+    // Ajuste "cover": se escala manteniendo la proporción real del archivo hasta cubrir
+    // la medida pedida por completo. Si la proporción no coincide, el archivo queda más
+    // grande que la página en un eje — esa parte sobrante NO se dibuja (la página del PDF
+    // define el área visible) y produce el mismo efecto que un recorte al centro.
+    // Si la proporción ya coincidía (verde), drawW/drawH terminan siendo ~wPt x hPt y no hay recorte real.
+    const imgAspect = data.nativeW / data.nativeH;
+    const boxAspect = wPt / hPt;
+    let drawW, drawH;
+    if (imgAspect > boxAspect) { drawH = hPt; drawW = hPt * imgAspect; }
+    else { drawW = wPt; drawH = wPt / imgAspect; }
+    const drawX = (wPt - drawW) / 2;
+    const drawY = (hPt - drawH) / 2;
+
+    // Clip explícito del contenido al tamaño de página pedido. El MediaBox de la página ya
+    // acota el área "oficial", pero algunos software de flujo de impresión/RIP no recortan
+    // por el MediaBox solo — leen directamente la geometría del contenido. Sin este clip,
+    // cuando el archivo excede la proporción pedida, ese excedente queda igual dentro del
+    // PDF (invisible en un visor común, pero recuperable/medible en otro software) y puede
+    // aparecer como una medida más grande que la pedida. Con el clip, el excedente no existe
+    // como contenido pintable en ningún renderizador, sea cual sea el software que lo abra.
+    page.pushOperators(
+      PDFLib.pushGraphicsState(),
+      PDFLib.rectangle(0, 0, wPt, hPt),
+      PDFLib.clip(),
+      PDFLib.endPath(),
+    );
+
     if (data.isPdf) {
       const srcDoc = await PDFDocument.load(data.pdfBytesForExport);
       const [embeddedPage] = await pdfDoc.embedPages([srcDoc.getPage(0)]);
-      page.drawPage(embeddedPage, { x: 0, y: 0, width: wPt, height: hPt });
+      page.drawPage(embeddedPage, { x: drawX, y: drawY, width: drawW, height: drawH });
     } else if (data.isPng) {
       const embedded = await pdfDoc.embedPng(data.rawBytes);
-      page.drawImage(embedded, { x: 0, y: 0, width: wPt, height: hPt });
+      page.drawImage(embedded, { x: drawX, y: drawY, width: drawW, height: drawH });
+      if (data.iccProfile) await attachIccProfile(pdfDoc, embedded, data.iccProfile);
     } else {
       const embedded = await pdfDoc.embedJpg(data.rawBytes);
-      page.drawImage(embedded, { x: 0, y: 0, width: wPt, height: hPt });
+      page.drawImage(embedded, { x: drawX, y: drawY, width: drawW, height: drawH });
+      if (data.iccProfile) await attachIccProfile(pdfDoc, embedded, data.iccProfile);
     }
+    page.pushOperators(PDFLib.popGraphicsState());
     const outBytes = await pdfDoc.save();
     const blob = new Blob([outBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
@@ -1129,7 +1275,7 @@ function renderCards() {
     const div = document.createElement('div');
     div.className = 'card';
     const chipsHtml = (r.chips || []).map(c => `<div class="fact-chip ${c.cls || ''}"><span class="label">${c.label}</span><span class="value">${c.value}</span></div>`).join('');
-    const boxesHtml = (r.boxes || []).map(b => `<div class="msg-box ${b.type}"><span class="icon">${b.type === 'fail' ? '❌' : '⚠️'}</span><span>${b.text}</span></div>`).join('');
+    const boxesHtml = (r.boxes || []).map(b => `<div class="msg-box ${b.type}"><span class="icon">${b.type === 'fail' ? '✕' : '!'}</span><span>${b.text}</span></div>`).join('');
     const suggestedHtml = r.suggested
       ? `<div class="fact-chip suggested"><span class="label">DPI sugerido</span><span class="value">${r.suggested.dpi}dpi</span><span class="sub-note">${r.suggested.motivo}</span></div>`
       : '';
@@ -1149,10 +1295,12 @@ function renderCards() {
         </div>
         ${boxesHtml}
         <div class="actions">
-          ${r.exportData ? `<button class="btn btn-export" onclick="exportPdf(${r.id})">Exportar PDF a medida</button>` : ''}
+          ${r.exportData && r.verdict === 'verde' ? `<button class="btn btn-export" onclick="exportPdf(${r.id})">Exportar PDF a medida</button>` : ''}
+          ${r.exportData && r.verdict !== 'verde' ? `<button class="btn btn-export-force" onclick="exportPdf(${r.id})">Descargar de todos modos${r.exportData.hasCrop ? ' (recorta a medida)' : ''}</button>` : ''}
           ${r.message ? `<button class="btn btn-msg" onclick="openMessage(${r.id})">Mensaje para el cliente</button>` : ''}
           ${r.colorMessage ? `<button class="btn btn-msg" onclick="openMessage(${r.id}, 'color')">Pedir CMYK al cliente</button>` : ''}
         </div>
+        ${r.exportData && r.verdict !== 'verde' && r.exportData.hasCrop ? `<div class="export-note">El recorte se hace al centro, a partir de la medida pedida (${r.exportData.targetW}x${r.exportData.targetH}cm) — no soluciona lo demás marcado arriba.</div>` : ''}
       </div>
     `;
     cardsEl.appendChild(div);
