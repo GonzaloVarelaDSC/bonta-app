@@ -48,13 +48,19 @@ export function LoginPage() {
   return (
     <div className="min-h-screen w-full flex bg-ink-950">
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700/40">
-        <div>
-          <div className="font-brand font-extrabold text-2xl text-white tracking-tight">Estudio Bonta</div>
-          <div className="text-ink-400 text-sm mt-1">Sistema interno de gestión de producción</div>
+        <div className="flex items-center gap-3">
+          <img src="/logo-mark-blanco.png" alt="Estudio Bonta" className="w-10 h-10" />
+          <div>
+            <div className="font-brand font-extrabold text-2xl text-white tracking-tight">Estudio Bonta</div>
+            <div className="text-ink-400 text-sm">Sistema interno de gestión de producción</div>
+          </div>
         </div>
         <div>
-          <p className="text-ink-200 text-xl leading-relaxed font-brand max-w-md" style={{ textWrap: 'balance' as any }}>
-            "Del concepto a la pieza." Una ficha por trabajo, un solo lugar para coordinar diseño, producción e instalación.
+          <p className="text-white text-2xl font-brand font-semibold" style={{ textWrap: 'balance' as any }}>
+            "Del concepto a la pieza."
+          </p>
+          <p className="text-ink-200 text-base leading-relaxed mt-2 max-w-md" style={{ textWrap: 'balance' as any }}>
+            Soluciones especiales para marcas, espacios y proyectos que necesitan algo más que una impresión.
           </p>
           <p className="text-ink-500 text-sm mt-6">Impresión UV · Vinilo de corte · Vidrieras · Stands · Letras corpóreas · Impresión 3D</p>
         </div>
@@ -62,7 +68,8 @@ export function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden text-center mb-8">
+          <div className="lg:hidden flex items-center justify-center gap-2.5 mb-8">
+            <img src="/logo-mark.png" alt="Estudio Bonta" className="w-9 h-9" />
             <div className="font-brand font-extrabold text-xl text-ink-900">Estudio Bonta</div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-ink-100 p-7">
