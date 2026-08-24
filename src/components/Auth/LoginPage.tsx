@@ -47,15 +47,16 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex bg-ink-950">
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700/40">
-        <div className="flex items-center gap-3">
-          <img src="/logo-mark-blanco.png" alt="Estudio Bonta" className="w-10 h-10" />
-          <div>
-            <div className="font-brand font-extrabold text-2xl text-white tracking-tight">Estudio Bonta</div>
-            <div className="text-ink-400 text-sm">Sistema interno de gestión de producción</div>
+      <div className="hidden lg:flex lg:w-1/2 flex-col bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700/40">
+        <div className="flex-1 flex flex-col items-center justify-center px-12 text-center">
+          <div className="font-brand text-sm uppercase tracking-[0.3em] text-white/70 mb-7">Estudio Bonta</div>
+          <div className="relative mb-7">
+            <div className="absolute inset-0 bg-brand-400/25 blur-3xl rounded-full scale-150" aria-hidden />
+            <img src="/logo-mark-blanco.png" alt="Estudio Bonta" className="relative w-28 h-28 drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)]" />
           </div>
+          <div className="text-ink-300 text-sm font-medium tracking-wide">Sistema de gestión de producción</div>
         </div>
-        <div>
+        <div className="px-12 pb-12">
           <p className="text-white text-2xl font-brand font-semibold" style={{ textWrap: 'balance' as any }}>
             "Del concepto a la pieza."
           </p>
@@ -68,9 +69,10 @@ export function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center justify-center gap-2.5 mb-8">
-            <img src="/logo-mark.png" alt="Estudio Bonta" className="w-9 h-9" />
+          <div className="lg:hidden flex flex-col items-center text-center mb-8">
+            <img src="/logo-mark.png" alt="Estudio Bonta" className="w-14 h-14 mb-2.5" />
             <div className="font-brand font-extrabold text-xl text-ink-900">Estudio Bonta</div>
+            <div className="text-ink-400 text-xs mt-0.5">Sistema de gestión de producción</div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-ink-100 p-7">
             <h1 className="text-lg font-display font-bold text-ink-900 mb-1">Iniciar sesión</h1>
