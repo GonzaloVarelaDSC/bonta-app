@@ -35,12 +35,14 @@ interface StoreState {
   setStatus: (jobId: string, status: JobStatus, movedByUserId: string) => Promise<void>;
   setJobCode: (jobId: string, code: string, byUserId: string) => Promise<void>;
   setPriority: (jobId: string, priority: Priority, byUserId: string) => Promise<void>;
+  updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
   unblockJob: (jobId: string, byUserId: string) => Promise<void>;
   setStageStatus: (jobId: string, stageKey: StageKey, status: StageStatus, byUserId: string) => Promise<void>;
-  addFileVersion: (jobId: string, fileName: string, byUserId: string) => Promise<void>;
+  addFileVersion: (jobId: string, file: File, byUserId: string, targetFileId?: string) => Promise<void>;
+  deleteFileVersion: (jobId: string, fileId: string, versionId: string, byUserId: string) => Promise<void>;
   approveFileVersion: (jobId: string, fileId: string, versionId: string, byUserId: string) => Promise<void>;
   toggleQualityCheck: (jobId: string, key: string, byUserId: string) => Promise<void>;
   completeInstallation: (jobId: string, notes: string, byUserId: string) => Promise<void>;
@@ -50,6 +52,11 @@ interface StoreState {
   resetDemoData: () => Promise<void>;
   loadJobComments: (jobId: string) => Promise<void>;
   loadJobActivity: (jobId: string) => Promise<void>;
+}
+
+export interface JobSpecs {
+  quantity: string; measurements: string; materialIds: Job['materialIds'];
+  technique: string; finish: string; color: string; specialRequirements: string;
 }
 
 export interface NewJobInput {
@@ -244,6 +251,17 @@ export const useStore = create<StoreState>()((set, get) => ({
     await refreshMyNotifications(set, get);
   },
 
+  updateJobSpecs: async (jobId, specs, byUserId) => {
+    const { error } = await supabase.from('jobs').update({
+      quantity: specs.quantity, measurements: specs.measurements, material_ids: specs.materialIds,
+      technique: specs.technique, finish: specs.finish, color: specs.color,
+      special_requirements: specs.specialRequirements, last_activity_at: new Date().toISOString(),
+    }).eq('id', jobId);
+    if (error) throw error;
+    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó las especificaciones técnicas.');
+    await refreshJob(set, jobId);
+  },
+
   assignJob: async (jobId, assignedUserIds, responsibleUserId, byUserId) => {
     await supabase.from('jobs').update({ responsible_user_id: responsibleUserId, last_activity_at: new Date().toISOString() }).eq('id', jobId);
     await supabase.from('job_assigned_users').delete().eq('job_id', jobId);
@@ -290,24 +308,45 @@ export const useStore = create<StoreState>()((set, get) => ({
     await refreshJob(set, jobId);
   },
 
-  addFileVersion: async (jobId, fileName, byUserId) => {
+  // Sin `targetFileId` crea un archivo lógico nuevo (caso normal: cada archivo
+  // que se arrastra al dropzone es un documento distinto, no una versión del
+  // mismo). Con `targetFileId` agrega una versión nueva a un archivo existente
+  // (re-subir la misma pieza corregida). El tamaño es el real del archivo — no
+  // se sube el binario todavía (Fase 2), solo nombre y tamaño reales.
+  addFileVersion: async (jobId, file, byUserId, targetFileId) => {
     const job = get().jobs.find((j) => j.id === jobId);
-    let fileId = job?.files[0]?.id;
+    let fileId = targetFileId;
     if (!fileId) {
-      const { data, error } = await supabase.from('job_files').insert({ job_id: jobId, logical_name: fileName.split('.')[0], kind: fileName.split('.').pop() ?? 'archivo' }).select().single();
+      const dot = file.name.lastIndexOf('.');
+      const logicalName = dot > 0 ? file.name.slice(0, dot) : file.name;
+      const kind = dot > 0 ? file.name.slice(dot + 1).toUpperCase() : 'Archivo';
+      const { data, error } = await supabase.from('job_files').insert({ job_id: jobId, logical_name: logicalName, kind }).select().single();
       if (error) throw error;
       fileId = data.id;
     }
-    const nextVersion = (job?.files[0]?.versions.length ?? 0) + 1;
+    const existing = job?.files.find((f) => f.id === fileId);
+    const nextVersion = (existing?.versions.length ?? 0) + 1;
     await supabase.from('file_versions').insert({
-      file_id: fileId, version: nextVersion, file_name: fileName,
-      size_kb: 1200 + Math.round(Math.random() * 4000), uploaded_by: byUserId,
+      file_id: fileId, version: nextVersion, file_name: file.name,
+      size_kb: Math.max(1, Math.round(file.size / 1024)), uploaded_by: byUserId,
     });
     await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
-    await insertActivity(set, jobId, byUserId, 'archivo', `Subió ${fileName}.`);
+    await insertActivity(set, jobId, byUserId, 'archivo', `Subió ${file.name}.`);
     if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se cargó un nuevo archivo en ${jobLabel(job)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
+  },
+
+  deleteFileVersion: async (jobId, fileId, versionId, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    const file = job?.files.find((f) => f.id === fileId);
+    const versionName = file?.versions.find((v) => v.id === versionId)?.fileName ?? 'un archivo';
+    await supabase.from('file_versions').delete().eq('id', versionId);
+    // Si era la última versión de ese archivo, no dejar el grupo vacío colgado.
+    if (file && file.versions.length <= 1) await supabase.from('job_files').delete().eq('id', fileId);
+    await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    await insertActivity(set, jobId, byUserId, 'archivo', `Eliminó ${versionName}.`);
+    await refreshJob(set, jobId);
   },
 
   approveFileVersion: async (jobId, fileId, versionId, byUserId) => {

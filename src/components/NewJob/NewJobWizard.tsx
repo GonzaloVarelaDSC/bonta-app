@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, UploadCloud, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { JOB_TYPES, STAGE_LABELS } from '../../data/catalog';
+import { JOB_TYPES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
-import type { JobTypeId, MaterialId, Priority, StageKey } from '../../types';
+import type { JobTypeId, MaterialId, Priority } from '../../types';
 
-const STEPS = ['Cliente y descripción', 'Entrega y prioridad', 'Producción', 'Archivos', 'Confirmación'];
+const STEPS = ['Cliente y descripción', 'Entrega y prioridad', 'Instalación', 'Archivos', 'Confirmación'];
+
+function fmtFileSize(bytes: number): string {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 export function NewJobWizard() {
   const navigate = useNavigate();
@@ -38,30 +42,31 @@ export function NewJobWizard() {
   const observations = '';
   const specialRequirements = '';
   const jobType = JOB_TYPES.find((t) => t.id === jobTypeId)!;
-  const [activeStages, setActiveStages] = useState<StageKey[]>(jobType.defaultStages);
   const [requiresInstallation, setRequiresInstallation] = useState(false);
   const [installAddress, setInstallAddress] = useState('');
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
   const [responsibleUserId, setResponsibleUserId] = useState(user.id);
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
-  const [pendingFiles, setPendingFiles] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function selectJobType(id: JobTypeId) {
-    setJobTypeId(id);
-    setActiveStages(JOB_TYPES.find((t) => t.id === id)!.defaultStages);
-  }
-  function toggleStage(k: StageKey) {
-    setActiveStages((s) => s.includes(k) ? s.filter((x) => x !== k) : [...s, k]);
-  }
   function toggleAssigned(id: string) {
     setAssignedUserIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id]);
+  }
+  function addFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    setPendingFiles((f) => [...f, ...Array.from(fileList)]);
+  }
+  function removeFile(i: number) {
+    setPendingFiles((f) => f.filter((_, idx) => idx !== i));
   }
 
   const canNext = [
     !!clientName.trim() && !!name.trim() && !!description.trim(),
     !!committedDate,
-    activeStages.length > 0,
+    requiresInstallation ? !!installAddress.trim() : true,
     true,
     true,
   ][step];
@@ -80,7 +85,7 @@ export function NewJobWizard() {
       // de trabajo) para que el cálculo de urgencia siga teniendo sentido por hora.
       committedDate: new Date(`${committedDate}T18:00`).toISOString(),
       priorityManual: priority, clientImportant, quantity, measurements, materialIds, technique, finish, color,
-      observations, specialRequirements, activeStageKeys: activeStages,
+      observations, specialRequirements, activeStageKeys: jobType.defaultStages,
       requiresInstallation, installAddress, installContactPhone, installDate,
       createdByUserId: user.id, responsibleUserId, assignedUserIds,
     });
@@ -131,7 +136,7 @@ export function NewJobWizard() {
             <div><label className={labelCls}>Nombre del trabajo</label>
               <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
             <div><label className={labelCls}>Tipo de trabajo</label>
-              <select className={inputCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
+              <select className={inputCls} value={jobTypeId} onChange={(e) => setJobTypeId(e.target.value as JobTypeId)}>
                 {JOB_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
@@ -179,40 +184,47 @@ export function NewJobWizard() {
 
         {step === 2 && (
           <>
-            <div><label className={labelCls}>Etapas que incluye este trabajo</label>
-              <div className="space-y-1.5">
-                {jobType.defaultStages.concat(activeStages.includes('instalacion') ? [] : []).filter((v, i, a) => a.indexOf(v) === i).map((k) => (
-                  <label key={k} className="flex items-center gap-2.5 text-sm text-ink-700 bg-ink-50 rounded-lg px-3 py-2">
-                    <input type="checkbox" checked={activeStages.includes(k)} onChange={() => toggleStage(k)} className="rounded" />
-                    {STAGE_LABELS[k]}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-ink-700 pt-2 border-t border-ink-100">
-              <input type="checkbox" checked={requiresInstallation} onChange={(e) => { setRequiresInstallation(e.target.checked); if (e.target.checked) toggleStage('instalacion'); }} className="rounded" />
+            <label className="flex items-center gap-2.5 text-sm text-ink-700 bg-ink-50 rounded-lg px-3 py-2.5">
+              <input type="checkbox" checked={requiresInstallation} onChange={(e) => setRequiresInstallation(e.target.checked)} className="rounded" />
               Este trabajo requiere instalación en sitio
             </label>
-            {requiresInstallation && (
+            {requiresInstallation ? (
               <div className="grid grid-cols-2 gap-4 bg-ink-50 rounded-lg p-3">
-                <div className="col-span-2"><label className={labelCls}>Dirección</label><input className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
+                <div className="col-span-2"><label className={labelCls}>Dirección *</label><input className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
                 <div><label className={labelCls}>Teléfono de contacto</label><input className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
                 <div className="col-span-2"><label className={labelCls}>Fecha</label><input type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
               </div>
+            ) : (
+              <p className="text-sm text-ink-400">Este trabajo se entrega en el estudio — no hace falta cargar ningún dato de instalación.</p>
             )}
           </>
         )}
 
         {step === 3 && (
           <>
-            <p className="text-sm text-ink-500">Los archivos de referencia se pueden adjuntar ahora (simulado) o después desde la ficha del trabajo.</p>
-            <button type="button" onClick={() => { const n = prompt('Nombre del archivo:'); if (n) setPendingFiles((f) => [...f, n]); }}
-              className="text-sm font-medium text-brand-600 border border-dashed border-brand-300 rounded-lg px-4 py-3 w-full hover:bg-brand-50">
-              + Adjuntar archivo
-            </button>
+            <p className="text-sm text-ink-500">Los archivos de referencia se pueden adjuntar ahora o después desde la ficha del trabajo.</p>
+            <input
+              ref={fileInputRef} type="file" multiple className="hidden"
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+              className={`flex flex-col items-center justify-center gap-1.5 text-center border border-dashed rounded-lg px-4 py-8 w-full cursor-pointer transition-colors ${dragOver ? 'bg-brand-100 border-brand-400' : 'border-brand-300 hover:bg-brand-50'}`}
+            >
+              <UploadCloud size={22} className="text-brand-500" />
+              <span className="text-sm font-medium text-brand-600">Arrastrá archivos acá, o hacé click para elegirlos</span>
+            </div>
             {pendingFiles.length > 0 && (
               <ul className="text-sm text-ink-700 space-y-1">
-                {pendingFiles.map((f, i) => <li key={i} className="bg-ink-50 rounded-md px-3 py-1.5">{f}</li>)}
+                {pendingFiles.map((f, i) => (
+                  <li key={i} className="bg-ink-50 rounded-md px-3 py-1.5 flex items-center justify-between gap-2">
+                    <span className="truncate">{f.name} <span className="text-xs text-ink-400">({fmtFileSize(f.size)})</span></span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-ink-400 hover:text-crit-text shrink-0"><X size={14} /></button>
+                  </li>
+                ))}
               </ul>
             )}
           </>
@@ -226,17 +238,11 @@ export function NewJobWizard() {
             <SummaryRow label="Tipo" value={jobType.label} />
             <SummaryRow label="Entrega" value={committedDate ? new Date(`${committedDate}T18:00`).toLocaleDateString('es-AR') : '—'} />
             <SummaryRow label="Prioridad" value={PRIORITY_META[priority].label} />
-            <SummaryRow label="Etapas" value={activeStages.map((k) => STAGE_LABELS[k]).join(', ')} />
-            <SummaryRow label="Instalación" value={requiresInstallation ? installAddress || 'Sí (sin dirección aún)' : 'No'} />
-            {requiresInstallation && !installAddress.trim() ? (
-              <div className="bg-wait-bg text-wait-text rounded-md px-3 py-2 text-xs">
-                ⚠️ El trabajo se va a crear con el estado "Falta información" porque requiere instalación y todavía no tiene dirección.
-              </div>
-            ) : (
-              <div className="bg-ink-50 text-ink-500 rounded-md px-3 py-2 text-xs">
-                Esto es normal, no es un error: el trabajo arranca en estado "Pendiente" (nadie lo procesó todavía). Si en algún momento necesitás cargar medidas, material o técnica, se hace después desde la ficha — no hace falta ahora.
-              </div>
-            )}
+            <SummaryRow label="Instalación" value={requiresInstallation ? installAddress : 'No'} />
+            <SummaryRow label="Archivos" value={pendingFiles.length ? `${pendingFiles.length} adjunto${pendingFiles.length !== 1 ? 's' : ''}` : '—'} />
+            <div className="bg-ink-50 text-ink-700 rounded-md px-3 py-2 text-xs">
+              Esto es normal, no es un error: el trabajo arranca en estado "Pendiente" (nadie lo procesó todavía). Si en algún momento necesitás cargar medidas, material o técnica, se hace después desde la ficha — no hace falta ahora.
+            </div>
           </div>
         )}
       </div>

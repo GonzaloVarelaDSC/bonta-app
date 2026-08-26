@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { SlidersHorizontal, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors,
@@ -9,8 +10,9 @@ import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
 import { CountdownBadge } from '../Common/Badges';
-import type { Client, Job, JobStatus } from '../../types';
+import type { Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
+import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { fmtDate } from '../../lib/dates';
 
 // Mismo lenguaje de color que los badges de estado, más dos tonos nuevos
@@ -125,12 +127,91 @@ function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label
   );
 }
 
+// Botón "Filtros" con un desplegable de prioridad + responsable — antes el
+// Kanban no tenía forma de acotar la vista más que mirando columna por columna.
+function FiltersButton({
+  priorityFilter, setPriorityFilter, respFilter, setRespFilter, users,
+}: {
+  priorityFilter: Priority | 'all'; setPriorityFilter: (p: Priority | 'all') => void;
+  respFilter: string | 'all'; setRespFilter: (r: string) => void;
+  users: { id: string; name: string; active: boolean }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const activeCount = (priorityFilter !== 'all' ? 1 : 0) + (respFilter !== 'all' ? 1 : 0);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button" onClick={() => setOpen((v) => !v)}
+        className={clsx(
+          'inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5 border transition-colors',
+          activeCount > 0 ? 'bg-brand-100 text-brand-600 border-brand-300' : 'bg-white text-ink-600 border-ink-200 hover:border-ink-300'
+        )}
+      >
+        <SlidersHorizontal size={13} /> Filtros
+        {activeCount > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-brand-500 text-white text-[10px] font-bold tabular">{activeCount}</span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-lg shadow-pop border border-ink-100 z-30 p-3 space-y-3">
+          <div>
+            <label className="block text-[11px] font-medium text-ink-500 mb-1">Prioridad</label>
+            <select
+              value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
+              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+            >
+              <option value="all">Toda prioridad</option>
+              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-ink-500 mb-1">Responsable</label>
+            <select
+              value={respFilter} onChange={(e) => setRespFilter(e.target.value)}
+              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+            >
+              <option value="all">Todo responsable</option>
+              {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          {activeCount > 0 && (
+            <button
+              type="button" onClick={() => { setPriorityFilter('all'); setRespFilter('all'); }}
+              className="w-full inline-flex items-center justify-center gap-1 text-xs font-medium text-ink-500 hover:text-crit-text py-1"
+            >
+              <X size={12} /> Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function KanbanPage() {
   const user = useStore((s) => s.currentUser)!;
   const allJobs = useStore((s) => s.jobs);
   const clients = useStore((s) => s.clients);
+  const users = useStore((s) => s.users);
   const setStatus = useStore((s) => s.setStatus);
-  const jobs = useMemo(() => visibleJobs(user, allJobs).filter((j) => j.status !== 'CANCELADO'), [user, allJobs]);
+  const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
+  const [respFilter, setRespFilter] = useState<string>('all');
+  const jobs = useMemo(() => {
+    return visibleJobs(user, allJobs)
+      .filter((j) => j.status !== 'CANCELADO')
+      .filter((j) => priorityFilter === 'all' || effectivePriority(j) === priorityFilter)
+      .filter((j) => respFilter === 'all' || j.responsibleUserId === respFilter);
+  }, [user, allJobs, priorityFilter, respFilter]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeJob, setActiveJob] = useState<Job | null>(null);
 
@@ -161,8 +242,12 @@ export function KanbanPage() {
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
           <span className="text-xs font-semibold text-ink-500 bg-ink-100 rounded-full px-2 py-0.5 tabular">{jobs.length} trabajos activos</span>
+          <FiltersButton
+            priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
+            respFilter={respFilter} setRespFilter={setRespFilter} users={users}
+          />
         </div>
-        <span className="text-xs text-ink-400">Arrastrá una tarjeta para cambiar el estado</span>
+        <span className="text-xs text-ink-400 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
       <div className="flex-1 min-h-0 mt-4 overflow-x-auto">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>

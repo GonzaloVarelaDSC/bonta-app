@@ -5,7 +5,6 @@ import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
-import { JOB_TYPES } from '../../data/catalog';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
@@ -66,7 +65,6 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
             <th className="px-2 py-2.5 font-medium">N°</th>
             <th className="px-2 py-2.5 font-medium">Cliente</th>
             <th className="px-2 py-2.5 font-medium">Trabajo</th>
-            {!compact && <th className="px-2 py-2.5 font-medium">Tipo</th>}
             <th className="px-2 py-2.5 font-medium">Estado</th>
             <th className="px-2 py-2.5 font-medium">Responsable</th>
             <th className="px-2 py-2.5 font-medium">Entrega</th>
@@ -97,7 +95,6 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                   {j.name}
                   {silent && <span className="ml-1.5 text-wait-text" title="Más de 48h sin movimiento">💤</span>}
                 </td>
-                {!compact && <td className="px-2 py-2.5 text-ink-500 whitespace-nowrap">{JOB_TYPES.find((t) => t.id === j.jobTypeId)?.label}</td>}
                 <td className="px-2 py-2.5">
                   <StatusSelect
                     status={j.status} options={SELECTABLE_STATUSES}

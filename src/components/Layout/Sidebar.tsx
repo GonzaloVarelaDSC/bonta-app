@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canManageUsers } from '../../lib/permissions';
+import { canManageUsers, canCreateJobs } from '../../lib/permissions';
 
 // "Clientes" se sacó del menú a pedido: los clientes no se administran acá, viven en
 // Copernico. La ruta /clientes y la tabla siguen existiendo (el wizard las usa para
@@ -26,6 +26,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div className="text-[11px] text-ink-400 mt-0.5 uppercase tracking-wide">Gestión de producción</div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
+        {user && canCreateJobs(user.role) && (
+          <NavLink
+            to="/trabajos/rapido"
+            className={({ isActive }) => clsx(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-1',
+              isActive ? 'bg-brand-500/20 text-white' : 'text-brand-300 hover:bg-white/5 hover:text-white'
+            )}
+          >
+            <Zap size={17} strokeWidth={2} /> Carga rápida
+          </NavLink>
+        )}
         {ITEMS.map((item) => (
           <NavLink
             key={item.to}
