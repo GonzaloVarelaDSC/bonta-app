@@ -28,17 +28,18 @@ const TONE_TEXT: Record<string, string> = {
 
 const TONE_ICON_BG: Record<string, string> = {
   crit: 'bg-crit-bg text-crit-text', urg: 'bg-urg-bg text-urg-text', norm: 'bg-norm-bg text-norm-text',
-  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', neutral: 'bg-ink-100 text-ink-600',
+  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', neutral: 'bg-ink-100 text-ink-700',
 };
 
 export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Props) {
   return (
     <button
       onClick={onClick}
+      aria-pressed={!!active}
       className={clsx(
         'text-left bg-white rounded-xl border-2 shadow-card px-4 py-3.5 transition-all',
         TONE_BORDER[tone],
-        active && 'ring-2 ring-offset-1 ring-brand-400'
+        active && 'ring-2 ring-offset-1 ring-brand-500'
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -47,7 +48,7 @@ export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Pro
         </span>
         <span className={clsx('text-2xl font-display font-extrabold tabular', TONE_TEXT[tone])}>{value}</span>
       </div>
-      <div className="text-xs text-ink-500 mt-1.5 font-medium">{label}</div>
+      <div className="text-xs text-ink-700 mt-1.5 font-medium">{label}</div>
     </button>
   );
 }

@@ -47,7 +47,7 @@ export function JobDetailPage() {
 
   if (!job) return <Navigate to="/trabajos" replace />;
   if (!canViewJob(user, job)) {
-    return <div className="p-10 text-center text-ink-500">No tenés acceso a este trabajo — no está asignado a vos.</div>;
+    return <div className="p-10 text-center text-ink-700">No tenés acceso a este trabajo — no está asignado a vos.</div>;
   }
 
   const activeBlock = job.blockRecords.find((b) => !b.closedAt);
@@ -66,9 +66,9 @@ export function JobDetailPage() {
         <div className="sticky top-0 z-10 bg-white border-b border-ink-100 px-6 py-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="font-mono text-xs text-ink-400 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
+              <div className="font-mono text-xs text-ink-700 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
               <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
-              <div className="text-sm text-ink-500 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
+              <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <PriorityBadge priority={effectivePriority(job)} />
@@ -123,17 +123,19 @@ export function JobDetailPage() {
             )}
           </div>
 
-          <div className="flex gap-1 mt-4 -mb-4 border-b border-ink-100 overflow-x-auto">
+          <div role="tablist" aria-label="Secciones de la ficha" className="flex gap-1 mt-4 -mb-4 border-b border-ink-100 overflow-x-auto">
             {visibleTabs.map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${tab === t ? 'border-ink-950 text-ink-900' : 'border-transparent text-ink-400 hover:text-ink-600'}`}>
+              <button
+                key={t} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls={`tabpanel-${t}`}
+                onClick={() => setTab(t)}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${tab === t ? 'border-ink-950 text-ink-900' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
                 {t}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6" role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
           {tab === 'General' && (
             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm max-w-3xl">
               <Field label="Cliente" value={client?.name} />
@@ -195,7 +197,7 @@ export function JobDetailPage() {
 
           {tab === 'Historial' && (
             <div className="max-w-2xl space-y-3">
-              {activityLog.length === 0 && <div className="text-sm text-ink-400">Sin actividad registrada.</div>}
+              {activityLog.length === 0 && <div className="text-sm text-ink-700">Sin actividad registrada.</div>}
               {activityLog.map((a) => {
                 const actor = users.find((u) => u.id === a.userId);
                 return (
@@ -203,7 +205,7 @@ export function JobDetailPage() {
                     <Avatar name={actor?.name ?? '?'} color={actor?.avatarColor ?? '#999'} size={26} />
                     <div>
                       <div className="text-sm text-ink-800"><strong>{actor?.name}</strong> — {a.detail}</div>
-                      <div className="text-xs text-ink-400">{fmtDateTime(a.createdAt)}</div>
+                      <div className="text-xs text-ink-700">{fmtDateTime(a.createdAt)}</div>
                     </div>
                   </div>
                 );
@@ -227,7 +229,7 @@ export function JobDetailPage() {
 function Field({ label, value, block, highlightMissing }: { label: string; value?: string; block?: boolean; highlightMissing?: boolean }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-ink-400 font-medium mb-0.5">{label}</div>
+      <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">{label}</div>
       <div className={`text-ink-800 ${block ? 'leading-relaxed' : ''} ${highlightMissing ? 'text-wait-text italic' : ''}`}>
         {value || (highlightMissing ? 'Falta completar' : '—')}
       </div>
@@ -276,7 +278,7 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
         <span className="text-sm font-medium text-brand-600">Arrastrá archivos acá, o hacé click para elegirlos</span>
       </div>
 
-      {job.files.length === 0 && <div className="text-sm text-ink-400 text-center">Todavía no se subieron archivos.</div>}
+      {job.files.length === 0 && <div className="text-sm text-ink-700 text-center">Todavía no se subieron archivos.</div>}
       {job.files.map((f) => (
         <div key={f.id} className="bg-white border border-ink-100 rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-ink-100 flex items-center justify-between gap-2">
@@ -292,8 +294,8 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
             {[...f.versions].reverse().map((v) => (
               <div key={v.id} className="flex items-center justify-between px-4 py-2.5 gap-2">
                 <div className="min-w-0">
-                  <div className="text-sm text-ink-800 font-medium truncate">{v.fileName} <span className="text-xs text-ink-400">v{v.version}</span></div>
-                  <div className="text-xs text-ink-400">{fmtFileSize(v.sizeKb)} · subido por {nameOf(v.uploadedBy)} · {fmtDate(v.uploadedAt)}</div>
+                  <div className="text-sm text-ink-800 font-medium truncate">{v.fileName} <span className="text-xs text-ink-700">v{v.version}</span></div>
+                  <div className="text-xs text-ink-700">{fmtFileSize(v.sizeKb)} · subido por {nameOf(v.uploadedBy)} · {fmtDate(v.uploadedAt)}</div>
                 </div>
                 <div className="flex items-center gap-2.5 shrink-0">
                   {v.approved ? (
@@ -303,7 +305,7 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
                   )}
                   <button
                     onClick={() => { if (confirm(`¿Eliminar "${v.fileName}"?`)) onDelete(f.id, v.id); }}
-                    className="text-ink-400 hover:text-crit-text" title="Eliminar archivo" aria-label={`Eliminar ${v.fileName}`}
+                    className="text-ink-700 hover:text-crit-text" title="Eliminar archivo" aria-label={`Eliminar ${v.fileName}`}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -342,8 +344,8 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
     finally { setSaving(false); }
   }
 
-  const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/30';
-  const labelCls = 'block text-xs font-medium text-ink-600 mb-1.5';
+  const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
+  const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
 
   return (
     <div className="max-w-3xl space-y-4 text-sm">
@@ -363,8 +365,8 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
         <span className={labelCls}>Material</span>
         <div className="flex flex-wrap gap-1.5">
           {MATERIALS.map((m) => (
-            <button type="button" key={m.id} onClick={() => setMaterialIds((ids) => ids.includes(m.id) ? ids.filter((x) => x !== m.id) : [...ids, m.id])}
-              className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-600'}`}>
+            <button type="button" key={m.id} onClick={() => setMaterialIds((ids) => ids.includes(m.id) ? ids.filter((x) => x !== m.id) : [...ids, m.id])} aria-pressed={materialIds.includes(m.id)}
+              className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
               {m.label}
             </button>
           ))}
@@ -379,7 +381,7 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
-        {!dirty && <span className="text-xs text-ink-400">Sin cambios sin guardar</span>}
+        {!dirty && <span className="text-xs text-ink-700">Sin cambios sin guardar</span>}
       </div>
     </div>
   );

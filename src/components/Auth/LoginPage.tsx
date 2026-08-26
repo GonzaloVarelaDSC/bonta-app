@@ -36,7 +36,7 @@ export function LoginPage() {
       <div className="min-h-screen w-full flex items-center justify-center bg-ink-950 p-6">
         <div className="max-w-md bg-white rounded-2xl shadow-pop p-6">
           <h1 className="font-display font-bold text-ink-900 text-lg mb-2">Falta configurar Supabase</h1>
-          <p className="text-sm text-ink-600 leading-relaxed">
+          <p className="text-sm text-ink-700 leading-relaxed">
             No encontré <code className="bg-ink-50 px-1 rounded">VITE_SUPABASE_URL</code> ni <code className="bg-ink-50 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>.
             Creá un archivo <code className="bg-ink-50 px-1 rounded">.env.local</code> con esos dos valores (ver <code className="bg-ink-50 px-1 rounded">supabase/README.md</code>) y reiniciá <code className="bg-ink-50 px-1 rounded">npm run dev</code>.
           </p>
@@ -72,33 +72,35 @@ export function LoginPage() {
           <div className="lg:hidden flex flex-col items-center text-center mb-8">
             <img src="/logo-mark.png" alt="Estudio Bonta" className="w-14 h-14 mb-2.5" />
             <div className="font-brand font-extrabold text-xl text-ink-900">Estudio Bonta</div>
-            <div className="text-ink-400 text-xs mt-0.5">Sistema de gestión de producción</div>
+            <div className="text-ink-700 text-xs mt-0.5">Sistema de gestión de producción</div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-ink-100 p-7">
             <h1 className="text-lg font-display font-bold text-ink-900 mb-1">Iniciar sesión</h1>
-            <p className="text-sm text-ink-400 mb-6">Ingresá con tu cuenta de Estudio Bonta.</p>
+            <p className="text-sm text-ink-700 mb-6">Ingresá con tu cuenta de Estudio Bonta.</p>
 
             {!showRecover ? (
               <form onSubmit={submit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-ink-600 mb-1.5">Usuario o email</label>
+                  <label htmlFor="login-email" className="block text-xs font-medium text-ink-700 mb-1.5">Usuario o email</label>
                   <input
+                    id="login-email" autoFocus
                     value={email} onChange={(e) => setEmail(e.target.value)} type="text" autoComplete="username"
                     placeholder="nombre@estudiobonta.com"
-                    className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400"
+                    className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-ink-600 mb-1.5">Contraseña</label>
+                  <label htmlFor="login-password" className="block text-xs font-medium text-ink-700 mb-1.5">Contraseña</label>
                   <input
+                    id="login-password"
                     value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password"
                     placeholder="••••••••"
-                    className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400"
+                    className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400"
                   />
                 </div>
-                {error && <div className="text-xs text-crit-text bg-crit-bg rounded-md px-3 py-2">{error}</div>}
+                {error && <div role="alert" className="text-xs text-crit-text bg-crit-bg rounded-md px-3 py-2">{error}</div>}
                 <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 text-ink-600">
+                  <label className="flex items-center gap-2 text-ink-700">
                     <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="rounded" />
                     Recordarme
                   </label>
@@ -119,11 +121,12 @@ export function LoginPage() {
                 ) : (
                   <>
                     <div>
-                      <label className="block text-xs font-medium text-ink-600 mb-1.5">Tu email</label>
+                      <label htmlFor="recover-email" className="block text-xs font-medium text-ink-700 mb-1.5">Tu email</label>
                       <input
+                        id="recover-email"
                         value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} type="email"
                         placeholder="nombre@estudiobonta.com"
-                        className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400"
+                        className="w-full px-3 py-2.5 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400"
                       />
                     </div>
                     <button onClick={sendRecovery} className="w-full py-2.5 rounded-lg bg-ink-950 text-white text-sm font-semibold hover:bg-ink-800 transition-colors">
@@ -138,7 +141,7 @@ export function LoginPage() {
             )}
           </div>
 
-          <p className="text-[11px] text-ink-400 mt-4 text-center">
+          <p className="text-[11px] text-ink-700 mt-4 text-center">
             ¿No tenés cuenta todavía? Pedile a un administrador que te dé de alta desde Supabase.
           </p>
         </div>

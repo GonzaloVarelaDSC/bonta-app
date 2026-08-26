@@ -6,15 +6,15 @@ import { JOB_TYPES, MATERIALS } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
 import type { JobTypeId, MaterialId, Priority } from '../../types';
 
-const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/30';
-const labelCls = 'block text-xs font-medium text-ink-600 mb-1.5';
+const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
+const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
       <div>
         <h2 className="text-sm font-semibold text-ink-900">{title}</h2>
-        {hint && <p className="text-xs text-ink-400 mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-ink-700 mt-0.5">{hint}</p>}
       </div>
       {children}
     </div>
@@ -101,7 +101,7 @@ export function QuickJobPage() {
         <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-brand-100 text-brand-600 shrink-0"><Zap size={15} /></span>
         <h1 className="text-lg font-display font-bold text-ink-900">Carga rápida</h1>
       </div>
-      <p className="text-sm text-ink-500 mb-4">Todo en una sola pantalla — pensada para cargar un trabajo mientras estás al teléfono o el cliente está al lado.</p>
+      <p className="text-sm text-ink-700 mb-4">Todo en una sola pantalla — pensada para cargar un trabajo mientras estás al teléfono o el cliente está al lado.</p>
 
       <div className="space-y-4">
         <Section title="Cliente y trabajo">
@@ -154,8 +154,8 @@ export function QuickJobPage() {
             <span className={labelCls}>Material</span>
             <div className="flex flex-wrap gap-1.5">
               {MATERIALS.map((m) => (
-                <button type="button" key={m.id} onClick={() => toggleMaterial(m.id)}
-                  className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-600'}`}>
+                <button type="button" key={m.id} onClick={() => toggleMaterial(m.id)} aria-pressed={materialIds.includes(m.id)}
+                  className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                   {m.label}
                 </button>
               ))}
@@ -200,8 +200,8 @@ export function QuickJobPage() {
             <span className={labelCls}>Asignar a</span>
             <div className="flex flex-wrap gap-1.5">
               {users.filter((u) => u.active).map((u) => (
-                <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)}
-                  className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-600'}`}>
+                <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)} aria-pressed={assignedUserIds.includes(u.id)}
+                  className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                   {u.name}
                 </button>
               ))}
@@ -211,7 +211,7 @@ export function QuickJobPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-5 py-3 flex items-center justify-between gap-3 z-20">
-        <span className="text-xs text-ink-400">{canSubmit ? 'Listo para crear' : 'Completá cliente, nombre, descripción y fecha de entrega'}</span>
+        <span className="text-xs text-ink-700">{canSubmit ? 'Listo para crear' : 'Completá cliente, nombre, descripción y fecha de entrega'}</span>
         <div className="flex items-center gap-2">
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button

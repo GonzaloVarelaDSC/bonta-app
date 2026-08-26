@@ -38,7 +38,7 @@ export function JobsPage() {
     });
   }, [jobs, priorityFilter, statusFilter, clientFilter, respFilter, search, clients]);
 
-  const selectCls = 'text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-400/30';
+  const selectCls = 'text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
@@ -54,7 +54,7 @@ export function JobsPage() {
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..."
-          className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+          className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <select className={selectCls} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}>
           <option value="all">Toda prioridad</option>
@@ -72,7 +72,7 @@ export function JobsPage() {
           <option value="all">Todo responsable</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
-        <span className="ml-auto text-xs text-ink-400 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
+        <span className="ml-auto text-xs text-ink-700 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="bg-white rounded-xl border border-ink-100 shadow-card overflow-hidden">

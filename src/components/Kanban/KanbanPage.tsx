@@ -18,14 +18,17 @@ import { fmtDate } from '../../lib/dates';
 // Mismo lenguaje de color que los badges de estado, más dos tonos nuevos
 // (review, site) para que cada columna tenga su propia identidad — ver
 // comentario en data/catalog.ts sobre el mapeo completo.
+// El contador usa el mismo par fondo-pastel/texto-oscuro que ya prueba tener
+// contraste de sobra en los badges de estado (5.6-7.8:1) — antes era texto
+// blanco sobre el tono sólido, que en 4 de los 6 tonos no llegaba a 4.5:1.
 const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; count: string }> = {
-  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/40', count: 'bg-wait text-white' },
-  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/40', count: 'bg-info text-white' },
-  norm: { header: 'bg-norm-bg text-norm-text', body: 'bg-norm-bg/40', count: 'bg-norm text-white' },
-  review: { header: 'bg-review-bg text-review-text', body: 'bg-review-bg/40', count: 'bg-review text-white' },
-  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/40', count: 'bg-plan text-white' },
-  site: { header: 'bg-site-bg text-site-text', body: 'bg-site-bg/40', count: 'bg-site text-white' },
-  done: { header: 'bg-ink-100 text-ink-700', body: 'bg-ink-100/50', count: 'bg-ink-600 text-white' },
+  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/40', count: 'bg-wait-bg text-wait-text border border-wait/30' },
+  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/40', count: 'bg-info-bg text-info-text border border-info/30' },
+  norm: { header: 'bg-norm-bg text-norm-text', body: 'bg-norm-bg/40', count: 'bg-norm-bg text-norm-text border border-norm/30' },
+  review: { header: 'bg-review-bg text-review-text', body: 'bg-review-bg/40', count: 'bg-review-bg text-review-text border border-review/30' },
+  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/40', count: 'bg-plan-bg text-plan-text border border-plan/30' },
+  site: { header: 'bg-site-bg text-site-text', body: 'bg-site-bg/40', count: 'bg-site-bg text-site-text border border-site/30' },
+  done: { header: 'bg-ink-100 text-ink-700', body: 'bg-ink-100/50', count: 'bg-ink-200 text-ink-700 border border-ink-300' },
 };
 
 const READY_STATUSES: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
@@ -47,7 +50,7 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
       <div className="flex items-center justify-between gap-2 min-w-0">
         <span className={clsx(
           'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
-          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-400 border border-ink-200'
+          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
         )}>
           {job.code ?? 'Sin N°'}
         </span>
@@ -55,10 +58,10 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
       </div>
       <div className="mt-2 text-sm leading-snug truncate">
         <span className="font-bold text-ink-900">{client?.name ?? 'Sin cliente'}</span>
-        <span className="text-ink-300 mx-1">·</span>
-        <span className="text-ink-500 font-normal">{job.name}</span>
+        <span className="text-ink-700 mx-1">·</span>
+        <span className="text-ink-700 font-normal">{job.name}</span>
       </div>
-      <div className="mt-1 text-[10px] text-ink-300 text-right truncate">{dateLabel(job)}</div>
+      <div className="mt-1 text-[10px] text-ink-700 text-right truncate">{dateLabel(job)}</div>
     </>
   );
 }
@@ -81,8 +84,21 @@ function KanbanCard({ job }: { job: Job }) {
         if (isDragging) return;
         navigate(`/trabajos/${job.id}`);
       }}
+      // dnd-kit ya deja el div focuseable (tabIndex vía `attributes`), pero sin esto
+      // Enter/Espacio no hacían nada — solo el mouse podía abrir una ficha o
+      // arrastrarla. El cambio de columna sigue siendo por mouse (no hay
+      // KeyboardSensor configurado), pero desde teclado ahora se puede al menos
+      // abrir la ficha y cambiar el estado desde ahí.
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/trabajos/${job.id}`);
+        }
+      }}
+      aria-label={`Abrir ficha — ${client?.name ?? 'Sin cliente'}, ${job.name}`}
       className={clsx(
         'bg-white rounded-lg border border-ink-100 shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
         isDragging && 'opacity-30'
       )}
     >
@@ -121,7 +137,7 @@ function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label
         )}
       >
         {jobs.map((j) => <KanbanCard key={j.id} job={j} />)}
-        {jobs.length === 0 && <div className="text-xs text-ink-300 text-center py-6">Sin trabajos</div>}
+        {jobs.length === 0 && <div className="text-xs text-ink-700 text-center py-6">Sin trabajos</div>}
       </div>
     </div>
   );
@@ -154,7 +170,7 @@ function FiltersButton({
         type="button" onClick={() => setOpen((v) => !v)}
         className={clsx(
           'inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5 border transition-colors',
-          activeCount > 0 ? 'bg-brand-100 text-brand-600 border-brand-300' : 'bg-white text-ink-600 border-ink-200 hover:border-ink-300'
+          activeCount > 0 ? 'bg-brand-100 text-brand-600 border-brand-300' : 'bg-white text-ink-700 border-ink-200 hover:border-ink-300'
         )}
       >
         <SlidersHorizontal size={13} /> Filtros
@@ -165,20 +181,20 @@ function FiltersButton({
       {open && (
         <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-lg shadow-pop border border-ink-100 z-30 p-3 space-y-3">
           <div>
-            <label className="block text-[11px] font-medium text-ink-500 mb-1">Prioridad</label>
+            <label className="block text-[11px] font-medium text-ink-700 mb-1">Prioridad</label>
             <select
               value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
-              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">Toda prioridad</option>
               {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-ink-500 mb-1">Responsable</label>
+            <label className="block text-[11px] font-medium text-ink-700 mb-1">Responsable</label>
             <select
               value={respFilter} onChange={(e) => setRespFilter(e.target.value)}
-              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">Todo responsable</option>
               {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -187,7 +203,7 @@ function FiltersButton({
           {activeCount > 0 && (
             <button
               type="button" onClick={() => { setPriorityFilter('all'); setRespFilter('all'); }}
-              className="w-full inline-flex items-center justify-center gap-1 text-xs font-medium text-ink-500 hover:text-crit-text py-1"
+              className="w-full inline-flex items-center justify-center gap-1 text-xs font-medium text-ink-700 hover:text-crit-text py-1"
             >
               <X size={12} /> Limpiar filtros
             </button>
@@ -241,13 +257,13 @@ export function KanbanPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
-          <span className="text-xs font-semibold text-ink-500 bg-ink-100 rounded-full px-2 py-0.5 tabular">{jobs.length} trabajos activos</span>
+          <span className="text-xs font-semibold text-ink-700 bg-ink-100 rounded-full px-2 py-0.5 tabular">{jobs.length} trabajos activos</span>
           <FiltersButton
             priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
             respFilter={respFilter} setRespFilter={setRespFilter} users={users}
           />
         </div>
-        <span className="text-xs text-ink-400 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
+        <span className="text-xs text-ink-700 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
       <div className="flex-1 min-h-0 mt-4 overflow-x-auto">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>

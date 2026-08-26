@@ -51,9 +51,9 @@ export function DashboardPage() {
     <div className="p-6 max-w-[1800px] mx-auto">
       <div className="flex items-baseline justify-between mb-1">
         <h1 className="text-xl font-display font-bold text-ink-900">Dashboard de producción</h1>
-        <span className="text-xs text-ink-400">Actualizado en vivo</span>
+        <span className="text-xs text-ink-700">Actualizado en vivo</span>
       </div>
-      <p className="text-sm text-ink-500 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
+      <p className="text-sm text-ink-700 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
         {cards.map((c) => (
@@ -75,11 +75,11 @@ export function DashboardPage() {
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
         <span className="text-sm font-semibold text-ink-800">
           {filter ? `Filtrado: ${cards.find((c) => c.key === filter)?.label ?? 'sin movimiento'}` : 'Trabajos activos, ordenados por prioridad'}
-          <span className="text-ink-400 font-normal"> · {filtered.length}</span>
+          <span className="text-ink-700 font-normal"> · {filtered.length}</span>
         </span>
         <div className="flex items-center gap-3">
           {filter && <button onClick={() => setFilter(null)} className="text-xs text-brand-600 hover:underline">Ver todos</button>}
-          <label className="flex items-center gap-1.5 text-xs text-ink-600 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 text-xs text-ink-700 cursor-pointer select-none">
             <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} className="rounded" />
             Solo asignados a mí
           </label>
@@ -87,7 +87,7 @@ export function DashboardPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-ink-100 shadow-card px-4 py-10 text-center text-sm text-ink-400">
+        <div className="bg-white rounded-xl border border-ink-100 shadow-card px-4 py-10 text-center text-sm text-ink-700">
           No hay trabajos que coincidan con este filtro.
         </div>
       ) : (

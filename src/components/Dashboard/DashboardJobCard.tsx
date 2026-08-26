@@ -24,7 +24,7 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
         onBlur={save} placeholder="N° de Copernico"
         onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-        className="font-mono text-sm w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+        className="font-mono text-sm w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
     );
   }
@@ -37,7 +37,7 @@ function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; 
       className={
         job.code
           ? 'font-mono text-sm font-semibold text-ink-900 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
-          : 'text-sm text-ink-400 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
+          : 'text-sm text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
       }
     >
       {job.code ?? 'Cargar N°'}
@@ -96,7 +96,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
 
         <div className="flex items-center gap-2 text-xs text-ink-800 font-medium ml-auto whitespace-nowrap">
           <span>Asignado {fmtDate(job.createdAt)}</span>
-          <span className="text-ink-300 font-normal">·</span>
+          <span className="text-ink-700 font-normal">·</span>
           <span>Entrega {fmtDate(job.committedDate)}</span>
           <CountdownBadge iso={job.committedDate} />
         </div>
@@ -118,10 +118,10 @@ export function DashboardJobCard({ job }: { job: Job }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-ink-500 shrink-0">
+        <div className="flex items-center gap-4 text-xs text-ink-700 shrink-0">
           {(job.contactName || job.contactPhone) && (
             <div className="flex items-center gap-1.5">
-              <Phone size={12} className="text-ink-400 shrink-0" />
+              <Phone size={12} className="text-ink-700 shrink-0" />
               <span className="truncate max-w-[160px]">{job.contactName}{job.contactName && job.contactPhone ? ' · ' : ''}{job.contactPhone}</span>
             </div>
           )}

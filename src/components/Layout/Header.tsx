@@ -57,11 +57,11 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
   return (
     <header className="h-16 shrink-0 bg-white border-b border-ink-100 flex items-center gap-2 sm:gap-4 px-3 sm:px-6" ref={boxRef}>
-      <button onClick={onMenuClick} className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-ink-50 text-ink-600 shrink-0">
+      <button onClick={onMenuClick} aria-label="Abrir menú" className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-ink-50 text-ink-700 shrink-0">
         <Menu size={20} />
       </button>
       <div className="relative flex-1 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-700" />
         <input
           value={query}
           onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
@@ -79,7 +79,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
               >
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-ink-900 truncate">{j.name}</div>
-                  <div className="text-xs text-ink-400">{j.code ?? 'Sin N°'} · {clients.find((c) => c.id === j.clientId)?.name}</div>
+                  <div className="text-xs text-ink-700">{j.code ?? 'Sin N°'} · {clients.find((c) => c.id === j.clientId)?.name}</div>
                 </div>
               </button>
             ))}
@@ -90,7 +90,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       <div className="flex-1" />
 
       <div className="relative">
-        <button onClick={() => setShowNotifs((v) => !v)} className="relative p-2 rounded-lg hover:bg-ink-50 text-ink-500">
+        <button onClick={() => setShowNotifs((v) => !v)} aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`} className="relative p-2 rounded-lg hover:bg-ink-50 text-ink-700">
           <Bell size={19} />
           {unread > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-crit text-white text-[10px] font-bold flex items-center justify-center">
@@ -107,7 +107,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
               )}
             </div>
             <div className="max-h-80 overflow-y-auto">
-              {myNotifs.length === 0 && <div className="px-4 py-6 text-sm text-ink-400 text-center">Sin notificaciones.</div>}
+              {myNotifs.length === 0 && <div className="px-4 py-6 text-sm text-ink-700 text-center">Sin notificaciones.</div>}
               {myNotifs.map((n) => (
                 <button
                   key={n.id}
@@ -117,7 +117,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                   <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${!n.read ? 'bg-brand-500' : 'bg-transparent'}`} />
                   <div>
                     <div className="text-sm text-ink-800">{n.text}</div>
-                    <div className="text-xs text-ink-400 mt-0.5">{fmtShort(n.createdAt)}</div>
+                    <div className="text-xs text-ink-700 mt-0.5">{fmtShort(n.createdAt)}</div>
                   </div>
                 </button>
               ))}
@@ -131,9 +131,9 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           <Avatar name={user.name} color={user.avatarColor} size={32} />
           <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-ink-900 leading-tight">{user.name}</div>
-            <div className="text-[11px] text-ink-400 leading-tight">{ROLES.find((r) => r.id === user.role)?.label}</div>
+            <div className="text-[11px] text-ink-700 leading-tight">{ROLES.find((r) => r.id === user.role)?.label}</div>
           </div>
-          <ChevronDown size={14} className="text-ink-400" />
+          <ChevronDown size={14} className="text-ink-700" />
         </button>
         {showAccount && (
           <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">

@@ -89,7 +89,7 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
       onPointerDown={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value as JobStatus)}
       className={clsx(
-        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-400/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
         STATUS_TONE_CLASSES[statusTone(status)]
       )}
     >

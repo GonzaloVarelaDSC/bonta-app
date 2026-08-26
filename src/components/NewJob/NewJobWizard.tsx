@@ -97,13 +97,13 @@ export function NewJobWizard() {
     }
   }
 
-  const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/30';
-  const labelCls = 'block text-xs font-medium text-ink-600 mb-1.5';
+  const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
+  const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
 
   return (
     <div className="p-5 max-w-2xl mx-auto">
       <h1 className="text-lg font-display font-bold text-ink-900 mb-1">Nuevo trabajo</h1>
-      <p className="text-sm text-ink-500 mb-3">Paso {step + 1} de {STEPS.length}: {STEPS[step]}</p>
+      <p className="text-sm text-ink-700 mb-3">Paso {step + 1} de {STEPS.length}: {STEPS[step]}</p>
 
       <div className="flex gap-1.5 mb-4">
         {STEPS.map((_, i) => (
@@ -114,66 +114,66 @@ export function NewJobWizard() {
       <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
         {step === 0 && (
           <>
-            <div><label className={labelCls}>Cliente</label>
+            <div><label htmlFor="nj-client" className={labelCls}>Cliente</label>
               <input
-                className={inputCls} list="clientes-existentes" value={clientName}
+                id="nj-client" className={inputCls} list="clientes-existentes" value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Escribí el nombre tal cual figura en Copernico"
               />
               <datalist id="clientes-existentes">
                 {clients.map((c) => <option key={c.id} value={c.name} />)}
               </datalist>
-              <p className="text-[11px] text-ink-400 mt-1">
+              <p className="text-[11px] text-ink-700 mt-1">
                 Si ya lo cargaste antes te lo va a sugerir. Si es nuevo, se crea solo al guardar el trabajo.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className={labelCls}>Contacto del cliente</label>
-                <input className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pidió el trabajo" /></div>
-              <div><label className={labelCls}>Tel. / WhatsApp del contacto</label>
-                <input className={inputCls} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="11 2345 6789" /></div>
+              <div><label htmlFor="nj-contact-name" className={labelCls}>Contacto del cliente</label>
+                <input id="nj-contact-name" className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pidió el trabajo" /></div>
+              <div><label htmlFor="nj-contact-phone" className={labelCls}>Tel. / WhatsApp del contacto</label>
+                <input id="nj-contact-phone" className={inputCls} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="11 2345 6789" /></div>
             </div>
-            <div><label className={labelCls}>Nombre del trabajo</label>
-              <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
-            <div><label className={labelCls}>Tipo de trabajo</label>
-              <select className={inputCls} value={jobTypeId} onChange={(e) => setJobTypeId(e.target.value as JobTypeId)}>
+            <div><label htmlFor="nj-name" className={labelCls}>Nombre del trabajo</label>
+              <input id="nj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
+            <div><label htmlFor="nj-type" className={labelCls}>Tipo de trabajo</label>
+              <select id="nj-type" className={inputCls} value={jobTypeId} onChange={(e) => setJobTypeId(e.target.value as JobTypeId)}>
                 {JOB_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
-            <div><label className={labelCls}>Descripción — qué hay que producir</label>
-              <textarea className={inputCls} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+            <div><label htmlFor="nj-description" className={labelCls}>Descripción — qué hay que producir</label>
+              <textarea id="nj-description" className={inputCls} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           </>
         )}
 
         {step === 1 && (
           <>
-            <div><label className={labelCls}>Fecha de entrega comprometida</label>
-              <input type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
-            <div><label className={labelCls}>Prioridad</label>
-              <select className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+            <div><label htmlFor="nj-date" className={labelCls}>Fecha de entrega comprometida</label>
+              <input id="nj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
+            <div><label htmlFor="nj-priority" className={labelCls}>Prioridad</label>
+              <select id="nj-priority" className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
                 {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
               </select>
-              <p className="text-[11px] text-ink-400 mt-1">Vos elegís la urgencia — ya no se calcula sola por la fecha de entrega.</p>
+              <p className="text-[11px] text-ink-700 mt-1">Vos elegís la urgencia — ya no se calcula sola por la fecha de entrega.</p>
             </div>
             <label className="flex items-center gap-2 text-sm text-ink-700">
               <input type="checkbox" checked={clientImportant} onChange={(e) => setClientImportant(e.target.checked)} className="rounded" />
               Cliente prioritario (solo para tenerlo marcado en la ficha)
             </label>
-            <div><label className={labelCls}>Responsable interno</label>
-              <select className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
+            <div><label htmlFor="nj-responsible" className={labelCls}>Responsable interno</label>
+              <select id="nj-responsible" className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
                 {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
-              <p className="text-[11px] text-ink-400 mt-1">
+              <p className="text-[11px] text-ink-700 mt-1">
                 La persona principal a cargo de que este trabajo avance — quien lo va a ver en "Solo asignados a mí" del Dashboard.
                 {users.filter((u) => u.active).length === 1 && ' Por ahora solo aparecés vos porque el resto del equipo todavía no tiene cuenta creada.'}
               </p>
             </div>
             <div><label className={labelCls}>Asignar a</label>
-              <p className="text-[11px] text-ink-400 mb-1.5">Gente que también puede ver y trabajar en este trabajo, además del responsable.</p>
+              <p className="text-[11px] text-ink-700 mb-1.5">Gente que también puede ver y trabajar en este trabajo, además del responsable.</p>
               <div className="flex flex-wrap gap-1.5">
                 {users.filter((u) => u.active).map((u) => (
-                  <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)}
-                    className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-600'}`}>
+                  <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)} aria-pressed={assignedUserIds.includes(u.id)}
+                    className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                     {u.name}
                   </button>
                 ))}
@@ -190,19 +190,19 @@ export function NewJobWizard() {
             </label>
             {requiresInstallation ? (
               <div className="grid grid-cols-2 gap-4 bg-ink-50 rounded-lg p-3">
-                <div className="col-span-2"><label className={labelCls}>Dirección *</label><input className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
-                <div><label className={labelCls}>Teléfono de contacto</label><input className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
-                <div className="col-span-2"><label className={labelCls}>Fecha</label><input type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
+                <div className="col-span-2"><label htmlFor="nj-install-address" className={labelCls}>Dirección *</label><input id="nj-install-address" className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
+                <div><label htmlFor="nj-install-phone" className={labelCls}>Teléfono de contacto</label><input id="nj-install-phone" className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
+                <div className="col-span-2"><label htmlFor="nj-install-date" className={labelCls}>Fecha</label><input id="nj-install-date" type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
               </div>
             ) : (
-              <p className="text-sm text-ink-400">Este trabajo se entrega en el estudio — no hace falta cargar ningún dato de instalación.</p>
+              <p className="text-sm text-ink-700">Este trabajo se entrega en el estudio — no hace falta cargar ningún dato de instalación.</p>
             )}
           </>
         )}
 
         {step === 3 && (
           <>
-            <p className="text-sm text-ink-500">Los archivos de referencia se pueden adjuntar ahora o después desde la ficha del trabajo.</p>
+            <p className="text-sm text-ink-700">Los archivos de referencia se pueden adjuntar ahora o después desde la ficha del trabajo.</p>
             <input
               ref={fileInputRef} type="file" multiple className="hidden"
               onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
@@ -221,8 +221,8 @@ export function NewJobWizard() {
               <ul className="text-sm text-ink-700 space-y-1">
                 {pendingFiles.map((f, i) => (
                   <li key={i} className="bg-ink-50 rounded-md px-3 py-1.5 flex items-center justify-between gap-2">
-                    <span className="truncate">{f.name} <span className="text-xs text-ink-400">({fmtFileSize(f.size)})</span></span>
-                    <button type="button" onClick={() => removeFile(i)} className="text-ink-400 hover:text-crit-text shrink-0"><X size={14} /></button>
+                    <span className="truncate">{f.name} <span className="text-xs text-ink-700">({fmtFileSize(f.size)})</span></span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-ink-700 hover:text-crit-text shrink-0"><X size={14} /></button>
                   </li>
                 ))}
               </ul>
@@ -248,7 +248,7 @@ export function NewJobWizard() {
       </div>
 
       <div className="flex justify-between mt-5">
-        <button onClick={() => step === 0 ? navigate('/trabajos') : setStep((s) => s - 1)} className="inline-flex items-center gap-1 text-sm text-ink-600 px-3 py-2 rounded-lg hover:bg-ink-100">
+        <button onClick={() => step === 0 ? navigate('/trabajos') : setStep((s) => s - 1)} className="inline-flex items-center gap-1 text-sm text-ink-700 px-3 py-2 rounded-lg hover:bg-ink-100">
           <ChevronLeft size={16} /> {step === 0 ? 'Cancelar' : 'Atrás'}
         </button>
         {step < STEPS.length - 1 ? (
@@ -269,7 +269,7 @@ export function NewJobWizard() {
 function SummaryRow({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex justify-between border-b border-ink-50 pb-2">
-      <span className="text-ink-400">{label}</span>
+      <span className="text-ink-700">{label}</span>
       <span className="text-ink-800 font-medium text-right max-w-[60%]">{value || '—'}</span>
     </div>
   );
