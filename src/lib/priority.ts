@@ -1,34 +1,10 @@
 import type { Job, Priority } from '../types';
-import { minutesRemaining } from './dates';
 
-/**
- * Cascada de reglas — la primera que aplica gana. Deliberadamente NO es un
- * score ponderado: cada resultado tiene que poder explicarse en una frase,
- * porque un cálculo que nadie entiende es un cálculo que el equipo ignora.
- * Ver "Sistema de prioridad" en la especificación.
- */
-export function calculateAutoPriority(job: Job, now: Date = new Date()): Priority {
-  const isBlocked = job.blockRecords.some((b) => !b.closedAt);
-  // Medidas/material/técnica ya no se cargan al crear el trabajo (se sacan del
-  // mail/WhatsApp del cliente cuando hace falta), así que su ausencia NO debe tapar
-  // la urgencia real — si no, todo trabajo nuevo nacería "en espera" sin importar
-  // la fecha de entrega, que es justo lo que Gonzalo necesita ver de un vistazo.
-  // Solo pesa la instalación sin dirección (eso sí es un bloqueo real) y el estado
-  // "Falta información" puesto a mano cuando alguien detecta un problema concreto.
-  const missingInfo = job.requiresInstallation && !job.installation?.address;
-
-  const mins = minutesRemaining(job.committedDate, now);
-  const hours = mins / 60;
-
-  // Regla 5 pisa a las demás: si no puede avanzar, no importa la fecha.
-  if (missingInfo || job.status === 'FALTA_INFORMACION') return 'EN_ESPERA';
-
-  if (hours <= 24 || (isBlocked && hours <= 24)) return 'CRITICO';
-  if (hours <= 48 || (isBlocked && hours <= 72) || job.clientImportant) return 'URGENTE';
-  if (hours <= 72) return 'NORMAL';
-  return 'PLANIFICADO';
-}
-
+// La prioridad ya NO se calcula sola por fecha/bloqueo/cliente importante — Gonzalo
+// pidió (25/08, segunda ronda) que la urgencia sea siempre una decisión manual suya,
+// elegida al crear el trabajo y editable después desde la ficha. `priorityAuto` sigue
+// existiendo en el esquema como respaldo (default 'NORMAL' en la base) solo para los
+// pocos trabajos viejos que quedaran sin `priorityManual` cargado.
 export function effectivePriority(job: Job): Priority {
   return job.priorityManual ?? job.priorityAuto;
 }

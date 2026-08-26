@@ -17,22 +17,15 @@ const PRIORITY_TONE: Record<Priority, keyof typeof TONE_CLASSES> = {
   CRITICO: 'crit', URGENTE: 'urg', NORMAL: 'norm', PLANIFICADO: 'plan', EN_ESPERA: 'wait',
 };
 
-export function PriorityBadge({ priority, manual, size = 'md' }: { priority: Priority; manual?: boolean; size?: 'sm' | 'md' }) {
+export function PriorityBadge({ priority, size = 'md' }: { priority: Priority; size?: 'sm' | 'md' }) {
   const meta = PRIORITY_META[priority];
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={clsx(
-        'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
-        TONE_CLASSES[PRIORITY_TONE[priority]],
-        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
-      )}>
-        <span aria-hidden>{meta.emoji}</span>{meta.label}
-      </span>
-      {manual && (
-        <span className="text-[10px] uppercase tracking-wide text-ink-400 font-medium" title="Prioridad modificada manualmente, pisa el cálculo automático">
-          manual
-        </span>
-      )}
+    <span className={clsx(
+      'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
+      TONE_CLASSES[PRIORITY_TONE[priority]],
+      size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+    )}>
+      <span aria-hidden>{meta.emoji}</span>{meta.label}
     </span>
   );
 }

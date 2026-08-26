@@ -88,7 +88,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 }}
                 className="border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
               >
-                <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} manual={!!j.priorityManual} size="sm" /></td>
+                <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /></td>
                 <td className="px-2 py-2.5 whitespace-nowrap">
                   <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} />
                 </td>

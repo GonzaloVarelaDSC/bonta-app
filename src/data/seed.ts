@@ -7,7 +7,6 @@ import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobStage, StageKey,
 } from '../types';
 import { JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from './catalog';
-import { calculateAutoPriority } from '../lib/priority';
 
 // ---------- Usuarios ----------
 export const USERS: User[] = [
@@ -293,9 +292,9 @@ export const JOBS: Job[] = S.map((s, idx) => {
   return job;
 });
 
-// Calcula la prioridad automática de cada trabajo y fuerza dos casos a "prioridad manual"
-// para que se vea en el demo la diferencia entre calculada y editada a mano.
-JOBS.forEach((j) => { j.priorityAuto = calculateAutoPriority(j); });
+// La prioridad es siempre manual (ver lib/priority.ts) — priorityAuto queda en 'NORMAL'
+// como respaldo, igual que el default de la columna en la base real.
+JOBS.forEach((j) => { j.priorityAuto = 'NORMAL'; });
 JOBS.find((j) => j.code === 'TRB-2026-00463')!.priorityManual = 'URGENTE'; // Gonzalo subió prioridad del stand
 JOBS.find((j) => j.code === 'TRB-2026-00465')!.priorityManual = 'EN_ESPERA'; // prototipo exploratorio, bajado a propósito
 

@@ -600,3 +600,62 @@ pida de nuevo explícitamente.
   donde se sacaron el logo (`assets/img/logo-mark(-blanco).png`) y la frase del hero
   ("Del concepto a la pieza." + la bajada). Si hace falta más contenido/assets de
   marca en el futuro, ese es el lugar para buscarlos.
+
+---
+
+## 9. Actualización 25/08 (segunda sesión del mismo día — Kanban v2 y prioridad manual)
+
+Dos rondas de cambios sobre el Kanban en la misma tarde, más un cambio que Gonzalo
+aclaró que "no es del Kanban" pero pidió en el mismo intercambio. Reemplaza/actualiza
+lo que decían las secciones 2 y 4 sobre estos temas puntuales.
+
+1. **Columnas del Kanban — 7, no 6, en orden de cadena real**: Pendiente → Diseño →
+   Producción → Control de calidad → Listo → Instalación → Terminado
+   (`data/catalog.ts`, `KANBAN_COLUMNS`). Diseño y Producción se unieron en la
+   primera ronda y se volvieron a separar en la segunda a pedido de Gonzalo — son
+   tramos bien distintos del trabajo. Cada columna tiene su propio color (`ColumnTone`
+   ahora tiene 7 valores, no 3) — se agregaron los tokens `review` (violeta, control
+   de calidad) y `site` (verde azulado, instalación) en `tailwind.config.js`;
+   Terminado usa grises `ink-*` en vez de un token nuevo.
+2. **El board ya no scrollea horizontal con ancho fijo por columna** — es una grilla
+   (`grid-cols-7`) que reparte el ancho disponible, con scroll vertical por columna
+   (no por el board entero) para que todo entre en una sola vista en una pantalla de
+   escritorio normal. El drag&drop usa `DragOverlay` de `@dnd-kit` (la tarjeta
+   arrastrada se renderiza en un portal aparte) — sin esto, la tarjeta quedaba
+   recortada por el `overflow-y-auto` de su columna de origen en vez de pasar por
+   encima del resto del board.
+3. **Ficha del Kanban, mucho más chica que la ficha completa**: código de Copernico +
+   countdown arriba (dos chips en los extremos), cliente y nombre del trabajo en una
+   sola línea horizontal (cliente en negrita y oscuro, nombre en gris de apoyo), y
+   fecha en su propia línea abajo, sola, para que nunca desborde el ancho de la
+   tarjeta. No muestra estado/prioridad/avatares — el estado ya lo dice la columna.
+4. **Trazabilidad de fechas por columna** (`Job.readyAt` / columna `jobs.ready_at`,
+   migración `008_job_ready_at.sql`): se graba sola, una única vez, la primera vez
+   que un trabajo llega a Listo o Instalación (`store/useStore.ts`, `setStatus` —
+   no se pisa después). La ficha del Kanban muestra esa fecha ("Listo dd/mm") en
+   las columnas Listo/Instalación, y la fecha de asignación (`createdAt`, "Asignado
+   dd/mm") en el resto. **Si en algún momento cambiar el estado de un trabajo tira un
+   error de columna inexistente, lo primero a chequear es si la migración 008 ya se
+   corrió** (mismo patrón que el bug de `contact_phone`, sección 5).
+5. **El gate de control de calidad para pasar a Listo (decisión 8, sección 4) sigue
+   vigente y es intencional, no un bug** — `createJob` siembra los ítems de
+   `QC_TEMPLATE` sin tildar para todo trabajo nuevo, así que CUALQUIER trabajo recién
+   creado va a rechazar el pase a Listo hasta que se tilden los ítems obligatorios
+   desde la ficha completa (tab Control de calidad). Si Gonzalo reporta "no me deja
+   pasar una ficha a Listo", esto es lo primero a explicar/revisar antes de asumir
+   que es un bug.
+6. **`supabase/seed_test_job.sql`** — script opcional (no numerado, no es parte de
+   la cadena de migraciones) que crea un trabajo de prueba (`PRUEBA-001`) con todos
+   los ítems de control de calidad ya tildados, para poder arrastrarlo libremente
+   por las 7 columnas sin que el gate del punto 5 lo frene. Tiene el DELETE
+   comentado al final para borrarlo cuando ya no haga falta.
+7. **La prioridad de un trabajo ya NO se calcula automáticamente por fecha** —
+   Gonzalo pidió que sea *siempre* una decisión manual suya. `calculateAutoPriority()`
+   se borró de `lib/priority.ts` (en los hechos ya era código muerto: nunca se
+   llamaba desde `createJob`, que solo mandaba `priority_manual`; `priority_auto`
+   vivía siempre en el default `'NORMAL'` de la columna). El wizard ahora pide la
+   prioridad como campo obligatorio (sin opción "calcular sola"), y la ficha completa
+   ya no tiene la opción "volver a prioridad automática" — siempre hay que elegir una
+   de las 5. El badge de prioridad ya no muestra la etiqueta "manual" (todas lo son).
+   `priorityAuto`/`priority_auto` se dejaron en el esquema como respaldo silencioso
+   para trabajos viejos sin `priorityManual` cargado, nada más.

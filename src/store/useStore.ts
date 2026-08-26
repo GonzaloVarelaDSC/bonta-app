@@ -34,7 +34,7 @@ interface StoreState {
   createJob: (input: NewJobInput) => Promise<Job>;
   setStatus: (jobId: string, status: JobStatus, movedByUserId: string) => Promise<void>;
   setJobCode: (jobId: string, code: string, byUserId: string) => Promise<void>;
-  setPriority: (jobId: string, priority: Priority | null, byUserId: string) => Promise<void>;
+  setPriority: (jobId: string, priority: Priority, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -55,7 +55,7 @@ interface StoreState {
 export interface NewJobInput {
   name: string; clientId: string; contactName: string; contactPhone: string;
   jobTypeId: Job['jobTypeId']; description: string;
-  committedDate: string; priorityManual: Priority | null; clientImportant: boolean;
+  committedDate: string; priorityManual: Priority; clientImportant: boolean;
   quantity: string; measurements: string; materialIds: Job['materialIds'];
   technique: string; finish: string; color: string; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
@@ -238,9 +238,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     const before = get().jobs.find((j) => j.id === jobId)!;
     const { error } = await supabase.from('jobs').update({ priority_manual: priority, last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error;
-    await insertActivity(set, jobId, byUserId, 'prioridad', priority
-      ? `Cambió prioridad manual de ${before.priorityManual ?? before.priorityAuto} a ${priority}.`
-      : `Volvió a prioridad automática (${before.priorityAuto}).`);
+    await insertActivity(set, jobId, byUserId, 'prioridad', `Cambió la prioridad de ${before.priorityManual ?? before.priorityAuto} a ${priority}.`);
     await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `Cambió la prioridad de ${jobLabel(before)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);

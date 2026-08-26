@@ -24,7 +24,7 @@ export function NewJobWizard() {
   const [description, setDescription] = useState('');
   const [jobTypeId, setJobTypeId] = useState<JobTypeId>('carteleria');
   const [committedDate, setCommittedDate] = useState('');
-  const [priorityManual, setPriorityManual] = useState<Priority | null>(null);
+  const [priority, setPriority] = useState<Priority>('NORMAL');
   const [clientImportant, setClientImportant] = useState(false);
   // Estas características técnicas ya no se cargan en el alta: el trabajo se crea con
   // estado "Falta información" y se completan después desde la ficha, si hace falta —
@@ -79,7 +79,7 @@ export function NewJobWizard() {
       // Solo se pide la fecha (no hora) — se completa con las 18:00 (cierre del día
       // de trabajo) para que el cálculo de urgencia siga teniendo sentido por hora.
       committedDate: new Date(`${committedDate}T18:00`).toISOString(),
-      priorityManual, clientImportant, quantity, measurements, materialIds, technique, finish, color,
+      priorityManual: priority, clientImportant, quantity, measurements, materialIds, technique, finish, color,
       observations, specialRequirements, activeStageKeys: activeStages,
       requiresInstallation, installAddress, installContactPhone, installDate,
       createdByUserId: user.id, responsibleUserId, assignedUserIds,
@@ -145,14 +145,14 @@ export function NewJobWizard() {
             <div><label className={labelCls}>Fecha de entrega comprometida</label>
               <input type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
             <div><label className={labelCls}>Prioridad</label>
-              <select className={inputCls} value={priorityManual ?? ''} onChange={(e) => setPriorityManual(e.target.value ? e.target.value as Priority : null)}>
-                <option value="">Calcular automáticamente según la fecha</option>
-                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>Forzar: {v.label}</option>)}
+              <select className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
               </select>
+              <p className="text-[11px] text-ink-400 mt-1">Vos elegís la urgencia — ya no se calcula sola por la fecha de entrega.</p>
             </div>
             <label className="flex items-center gap-2 text-sm text-ink-700">
               <input type="checkbox" checked={clientImportant} onChange={(e) => setClientImportant(e.target.checked)} className="rounded" />
-              Cliente prioritario (sube la prioridad automática de manera preventiva)
+              Cliente prioritario (solo para tenerlo marcado en la ficha)
             </label>
             <div><label className={labelCls}>Responsable interno</label>
               <select className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
@@ -225,7 +225,7 @@ export function NewJobWizard() {
             <SummaryRow label="Trabajo" value={name} />
             <SummaryRow label="Tipo" value={jobType.label} />
             <SummaryRow label="Entrega" value={committedDate ? new Date(`${committedDate}T18:00`).toLocaleDateString('es-AR') : '—'} />
-            <SummaryRow label="Prioridad" value={priorityManual ? PRIORITY_META[priorityManual].label : 'Automática'} />
+            <SummaryRow label="Prioridad" value={PRIORITY_META[priority].label} />
             <SummaryRow label="Etapas" value={activeStages.map((k) => STAGE_LABELS[k]).join(', ')} />
             <SummaryRow label="Instalación" value={requiresInstallation ? installAddress || 'Sí (sin dirección aún)' : 'No'} />
             {requiresInstallation && !installAddress.trim() ? (

@@ -35,21 +35,28 @@ function dateLabel(job: Job): string {
   return `Asignado ${fmtDate(job.createdAt)}`;
 }
 
+// Fila 1: código + countdown (dos "chips" en los extremos). Fila 2: cliente y
+// nombre del trabajo en una sola línea horizontal (el cliente pesa más:
+// negrita y oscuro; el nombre es de apoyo, gris). Fila 3: fecha, sola y
+// contenida en su propia línea para que nunca empuje el ancho de la ficha.
 function CardBody({ job, client }: { job: Job; client?: Client }) {
   return (
     <>
-      <span className={clsx(
-        'inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-mono font-bold tracking-tight',
-        job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-400 border border-ink-200'
-      )}>
-        {job.code ?? 'Sin N°'}
-      </span>
-      <div className="text-sm font-bold text-ink-900 leading-snug mt-1.5 truncate">{client?.name ?? 'Sin cliente'}</div>
-      <div className="text-xs text-ink-500 leading-snug line-clamp-2 mt-0.5">{job.name}</div>
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className={clsx(
+          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
+          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-400 border border-ink-200'
+        )}>
+          {job.code ?? 'Sin N°'}
+        </span>
         <CountdownBadge iso={job.committedDate} />
-        <span className="text-[10px] text-ink-300 whitespace-nowrap shrink-0">{dateLabel(job)}</span>
       </div>
+      <div className="mt-2 text-sm leading-snug truncate">
+        <span className="font-bold text-ink-900">{client?.name ?? 'Sin cliente'}</span>
+        <span className="text-ink-300 mx-1">·</span>
+        <span className="text-ink-500 font-normal">{job.name}</span>
+      </div>
+      <div className="mt-1 text-[10px] text-ink-300 text-right truncate">{dateLabel(job)}</div>
     </>
   );
 }
@@ -73,7 +80,7 @@ function KanbanCard({ job }: { job: Job }) {
         navigate(`/trabajos/${job.id}`);
       }}
       className={clsx(
-        'bg-white rounded-lg border border-ink-100 shadow-card px-3 py-2.5 cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
+        'bg-white rounded-lg border border-ink-100 shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
         isDragging && 'opacity-30'
       )}
     >
@@ -87,7 +94,7 @@ function KanbanCard({ job }: { job: Job }) {
 // quedar recortada por el overflow-y-auto de su columna de origen.
 function KanbanCardOverlay({ job, client }: { job: Job; client?: Client }) {
   return (
-    <div className="bg-white rounded-lg border border-ink-200 shadow-pop px-3 py-2.5 w-60 scale-105 cursor-grabbing">
+    <div className="bg-white rounded-lg border border-ink-200 shadow-pop px-3 py-2 w-60 overflow-hidden scale-105 cursor-grabbing">
       <CardBody job={job} client={client} />
     </div>
   );

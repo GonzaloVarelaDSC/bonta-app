@@ -11,7 +11,7 @@ import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
-import type { BlockReason, JobStatus, StageStatus } from '../../types';
+import type { BlockReason, JobStatus, Priority, StageStatus } from '../../types';
 
 const TABS = ['General', 'Especificaciones', 'Producción', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
 
@@ -69,7 +69,7 @@ export function JobDetailPage() {
               <div className="text-sm text-ink-500 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <PriorityBadge priority={effectivePriority(job)} manual={!!job.priorityManual} />
+              <PriorityBadge priority={effectivePriority(job)} />
               <StatusBadge status={job.status} />
               <CountdownBadge iso={job.committedDate} />
               <RiskBadge risk={calculateRisk(job)} />
@@ -100,12 +100,11 @@ export function JobDetailPage() {
           <div className="flex items-center gap-3 mt-3 flex-wrap">
             {canChangePriority(user.role) && (
               <select
-                value={job.priorityManual ?? ''}
-                onChange={(e) => setPriority(job.id, e.target.value ? (e.target.value as any) : null, user.id)}
+                value={effectivePriority(job)}
+                onChange={(e) => setPriority(job.id, e.target.value as Priority, user.id)}
                 className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
               >
-                <option value="">Prioridad automática ({PRIORITY_META[job.priorityAuto].label})</option>
-                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>Forzar: {v.label}</option>)}
+                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
               </select>
             )}
             <select

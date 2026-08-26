@@ -85,7 +85,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
       PRIORITY_ACCENT[priority]
     )}>
       <div className="flex items-center gap-3 flex-wrap">
-        <PriorityBadge priority={priority} manual={!!job.priorityManual} size="sm" />
+        <PriorityBadge priority={priority} size="sm" />
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect
           status={job.status} options={SELECTABLE_STATUSES}
