@@ -83,22 +83,24 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   CANCELADO: 'Cancelado',
 };
 
-export type ColumnTone = 'wait' | 'info' | 'plan';
+export type ColumnTone = 'wait' | 'info' | 'norm' | 'review' | 'plan' | 'site' | 'done';
 
 // Columnas del tablero Kanban — agrupan estados afines (ver especificación).
-// Orden = cadena real de producción (pedido por Gonzalo el 25/08: reemplaza el
-// orden anterior por popularidad de consulta). Diseño y Producción van juntas en
-// una sola columna porque en la práctica se procesan como un solo tramo.
-// `tone` es el mismo lenguaje de color que los badges de estado (gris = no
-// arrancado, azul = en curso, verde = listo) — así cada columna se pinta con el
-// color de la etapa que representa.
+// Orden = cadena real de producción (pedido por Gonzalo el 25/08). Diseño y
+// Producción son columnas separadas (se unieron en una primera vuelta, pero se
+// pidió volver a separarlas — cada una es un tramo bien distinto del trabajo).
+// `tone` le da a cada columna una identidad de color propia (antes solo había 3
+// tonos repetidos entre 7 columnas): gris = no arrancado, celeste = diseño,
+// dorado = producción, violeta = control de calidad, verde = listo, verde
+// azulado = instalación, gris cálido = terminado/archivado.
 export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]; tone: ColumnTone }[] = [
   { key: 'pendiente', label: 'Pendiente', statuses: ['PENDIENTE', 'NUEVO', 'FALTA_INFORMACION', 'APROBADO'], tone: 'wait' },
-  { key: 'diseno_produccion', label: 'Diseño y producción', statuses: ['EN_DISENO', 'DISENO_LISTO', 'EN_PRODUCCION'], tone: 'info' },
-  { key: 'control_calidad', label: 'Control de calidad', statuses: ['EN_CONTROL_CALIDAD'], tone: 'info' },
+  { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'], tone: 'info' },
+  { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'], tone: 'norm' },
+  { key: 'control_calidad', label: 'Control de calidad', statuses: ['EN_CONTROL_CALIDAD'], tone: 'review' },
   { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'], tone: 'plan' },
-  { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'], tone: 'info' },
-  { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'], tone: 'plan' },
+  { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'], tone: 'site' },
+  { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'], tone: 'done' },
 ];
 
 export const QC_TEMPLATE = [

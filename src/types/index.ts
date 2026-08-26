@@ -154,6 +154,7 @@ export interface Job {
   requestedDate: string; // fecha solicitada por cliente
   committedDate: string; // fecha comprometida internamente (con hora)
   finishedAt?: string;
+  readyAt?: string; // fecha en que quedó "Listo" por primera vez (se graba sola, no se pisa después)
 
   jobTypeId: JobTypeId;
   description: string;

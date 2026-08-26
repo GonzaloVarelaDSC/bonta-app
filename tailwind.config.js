@@ -52,6 +52,11 @@ export default {
         // vistazo del resto (gris = no arrancado, azul = en curso, verde = listo,
         // rojo/naranja = necesita atención), como en Linear/GitHub/Trello.
         info: { DEFAULT: '#3068e0', bg: '#eaf1fd', text: '#1d4ed8' },
+        // Violeta y verde azulado agregados para darle identidad de color propia a
+        // cada columna del Kanban (antes solo había 3 tonos para 7 columnas) — no
+        // llevan carga de "alarma" como crit/urg, son solo identidad visual.
+        review: { DEFAULT: '#8454d6', bg: '#f3eefc', text: '#5b32a8' },
+        site: { DEFAULT: '#0f9488', bg: '#e6f7f5', text: '#0b6d63' },
       },
       boxShadow: {
         card: '0 1px 2px rgba(15,23,32,0.06), 0 1px 1px rgba(15,23,32,0.04)',

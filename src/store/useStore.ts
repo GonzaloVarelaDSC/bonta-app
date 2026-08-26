@@ -205,10 +205,15 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   setStatus: async (jobId, status, byUserId) => {
     const before = get().jobs.find((j) => j.id === jobId);
+    const nowIso = new Date().toISOString();
+    // La fecha de "quedó listo" se graba una sola vez, la primera vez que el trabajo
+    // llega a Listo/Instalación — no se pisa si ya la tenía (ver tipo Job.readyAt).
+    const readyStatuses: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
+    const stampReady = readyStatuses.includes(status) && !before?.readyAt;
     // Optimista: refleja el cambio ya mismo (clave para que el drag&drop del kanban se sienta instantáneo)
     // y lo revierte si Supabase lo rechaza (por ejemplo, la regla de control de calidad obligatorio).
-    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, status, lastActivityAt: new Date().toISOString() } : j) }));
-    const { error } = await supabase.from('jobs').update({ status, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, status, lastActivityAt: nowIso, ...(stampReady ? { readyAt: nowIso } : {}) } : j) }));
+    const { error } = await supabase.from('jobs').update({ status, last_activity_at: nowIso, ...(stampReady ? { ready_at: nowIso } : {}) }).eq('id', jobId);
     if (error) {
       if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;

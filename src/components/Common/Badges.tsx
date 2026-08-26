@@ -108,8 +108,15 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
 export function CountdownBadge({ iso }: { iso: string }) {
   const c = countdown(iso);
   const tone = c.tone === 'ok' ? 'plan' : c.tone;
+  // Cuando faltan pocos días (tono crit/urg) suma un borde del mismo color —
+  // el fondo pastel solo no llamaba suficiente la atención.
+  const urgent = tone === 'crit' || tone === 'urg';
   return (
-    <span className={clsx('inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1 tabular', TONE_CLASSES[tone])}>
+    <span className={clsx(
+      'inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1 tabular',
+      TONE_CLASSES[tone],
+      urgent && 'border border-current/30'
+    )}>
       {c.overdue ? '⚠️' : '⏱️'} {c.label}
     </span>
   );

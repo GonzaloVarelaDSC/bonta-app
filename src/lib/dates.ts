@@ -36,7 +36,9 @@ export function countdown(iso: string, now: Date = new Date()): Countdown {
     return { label, tone: 'crit', overdue: true };
   }
   if (mins <= 4 * 60) return { label: `Faltan ${h}h ${m}m`, tone: 'crit', overdue: false };
-  if (mins <= 24 * 60) return { label: `Faltan ${h}h ${m}m`, tone: 'urg', overdue: false };
+  // Hasta 2 días (48h) cuenta como urgente — antes eran solo 24h y el tramo de
+  // "faltan 1-2 días" caía en el amarillo tranquilo de abajo, pasando desapercibido.
+  if (mins <= 48 * 60) return { label: d >= 1 ? `Faltan ${d}d ${h % 24}h` : `Faltan ${h}h ${m}m`, tone: 'urg', overdue: false };
   if (mins <= 72 * 60) return { label: d >= 1 ? `Faltan ${d}d` : `Faltan ${h}h`, tone: 'norm', overdue: false };
   return { label: `Faltan ${d}d`, tone: 'ok', overdue: false };
 }
