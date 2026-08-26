@@ -5,84 +5,67 @@ import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSenso
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
-import { effectivePriority } from '../../lib/priority';
-import { PriorityBadge, Avatar, CountdownBadge, StatusSelect } from '../Common/Badges';
+import { CountdownBadge } from '../Common/Badges';
 import type { Job, JobStatus } from '../../types';
-import { isSilent } from '../../lib/risk';
-import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
+import { tryChangeJobStatus } from '../../lib/statusChange';
 
 // Mismo lenguaje de color que los badges de estado — cada columna se pinta con
 // el color de la etapa que representa, para que el estudio se lea de un vistazo.
 const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; count: string }> = {
-  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/50', count: 'bg-wait text-white' },
-  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/50', count: 'bg-info text-white' },
-  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/50', count: 'bg-plan text-white' },
+  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/40', count: 'bg-wait text-white' },
+  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/40', count: 'bg-info text-white' },
+  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/40', count: 'bg-plan text-white' },
 };
 
-function KanbanCard({ job, onStatusChange }: { job: Job; onStatusChange: (job: Job, status: JobStatus) => void }) {
+// Ficha compacta: solo lo que hace falta para reconocer un trabajo de un
+// vistazo — el estado ya lo dice la columna, no hace falta repetirlo acá.
+function KanbanCard({ job }: { job: Job }) {
   const navigate = useNavigate();
   const clients = useStore((s) => s.clients);
-  const users = useStore((s) => s.users);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: job.id });
   const client = clients.find((c) => c.id === job.clientId);
-  const resp = users.find((u) => u.id === job.responsibleUserId);
-  const creator = users.find((u) => u.id === job.createdByUserId);
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 } : undefined;
 
   return (
     <div
       ref={setNodeRef} style={style} {...listeners} {...attributes}
-      onClick={(e) => {
+      onClick={() => {
         if (isDragging) return;
-        // No navegar si el click fue sobre el select de estado.
-        if ((e.target as HTMLElement).closest('select')) return;
         navigate(`/trabajos/${job.id}`);
       }}
-      className={`bg-white rounded-lg border border-ink-100 shadow-card p-3 cursor-grab active:cursor-grabbing hover:shadow-pop transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      className="bg-white rounded-lg border border-ink-100 shadow-card px-3 py-2.5 cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow"
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <PriorityBadge priority={effectivePriority(job)} manual={!!job.priorityManual} size="sm" />
-        {isSilent(job) && <span title="Sin movimiento hace más de 48h">💤</span>}
+      <div className="text-[13px] font-semibold text-ink-900 leading-snug line-clamp-2">{job.name}</div>
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <span className="text-xs text-ink-400 truncate">{client?.name ?? 'Sin cliente'}</span>
+        <span className="text-[11px] font-mono text-ink-300 shrink-0">{job.code ?? 'Sin N°'}</span>
       </div>
-      <div className="text-xs text-ink-500 font-mono font-medium">{job.code ?? 'Sin N°'}</div>
-      <div className="text-sm font-medium text-ink-900 leading-snug mt-0.5 mb-2">{job.name}</div>
-      <div className="text-xs text-ink-500 mb-2">{client?.name}</div>
-      <div className="mb-2">
-        <StatusSelect status={job.status} options={SELECTABLE_STATUSES} onChange={(s) => onStatusChange(job, s)} />
-      </div>
-      {creator && (
-        <div className="flex items-center gap-1.5 text-[11px] text-ink-400 mb-2">
-          <Avatar name={creator.name} color={creator.avatarColor} size={16} />
-          <span>Generado por {creator.name.split(' ')[0]}</span>
-        </div>
-      )}
-      <div className="flex items-center justify-between">
+      <div className="mt-2">
         <CountdownBadge iso={job.committedDate} />
-        {resp && <Avatar name={resp.name} color={resp.avatarColor} size={22} />}
       </div>
     </div>
   );
 }
 
-function KanbanColumnView({ colKey, label, tone, jobs, onStatusChange }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[]; onStatusChange: (job: Job, status: JobStatus) => void }) {
+function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: colKey });
   const toneCls = COLUMN_TONE_CLASSES[tone];
   return (
-    <div className="flex flex-col w-80 shrink-0">
-      <div className={clsx('flex items-center justify-between rounded-lg px-3 py-2 mb-2', toneCls.header)}>
-        <span className="text-sm font-semibold">{label}</span>
-        <span className={clsx('text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center tabular', toneCls.count)}>
+    <div className="flex flex-col h-full min-h-0">
+      <div className={clsx('flex items-start justify-between gap-2 rounded-lg px-2.5 py-1.5 mb-2', toneCls.header)}>
+        <span className="text-[13px] font-semibold leading-tight">{label}</span>
+        <span className={clsx('text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center tabular shrink-0', toneCls.count)}>
           {jobs.length}
         </span>
       </div>
       <div
         ref={setNodeRef}
         className={clsx(
-          'flex-1 rounded-xl p-2 space-y-2 min-h-[200px] transition-colors border-2',
+          'flex-1 min-h-0 overflow-y-auto rounded-xl p-2 space-y-2 border-2 transition-colors',
           isOver ? 'bg-brand-100/60 border-brand-300' : `${toneCls.body} border-transparent`
         )}
       >
-        {jobs.map((j) => <KanbanCard key={j.id} job={j} onStatusChange={onStatusChange} />)}
+        {jobs.map((j) => <KanbanCard key={j.id} job={j} />)}
         {jobs.length === 0 && <div className="text-xs text-ink-300 text-center py-6">Sin trabajos</div>}
       </div>
     </div>
@@ -112,10 +95,6 @@ export function KanbanPage() {
     tryChangeJobStatus(job, finalStatus, setStatus, user.id);
   }
 
-  function handleCardStatusChange(job: Job, status: JobStatus) {
-    tryChangeJobStatus(job, status, setStatus, user.id);
-  }
-
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-1">
@@ -125,13 +104,13 @@ export function KanbanPage() {
         </div>
         <span className="text-xs text-ink-400">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
-      <div className="flex-1 overflow-x-auto mt-4">
+      <div className="flex-1 min-h-0 mt-4 overflow-x-auto">
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 h-full pb-4" style={{ minWidth: KANBAN_COLUMNS.length * 336 }}>
+          <div className="grid grid-cols-6 gap-3 h-full min-w-[960px]">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumnView
                 key={col.key} colKey={col.key} label={col.label} tone={col.tone}
-                jobs={jobs.filter((j) => columnOf(j) === col.key)} onStatusChange={handleCardStatusChange}
+                jobs={jobs.filter((j) => columnOf(j) === col.key)}
               />
             ))}
           </div>
