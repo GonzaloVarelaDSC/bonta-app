@@ -4,6 +4,7 @@ import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
+import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar } from '../Common/Badges';
@@ -106,15 +107,15 @@ export function JobDetailPage() {
                 onChange={(e) => setPriority(job.id, e.target.value as Priority, user.id)}
                 className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
               >
-                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
               </select>
             )}
             <select
               value={job.status}
-              onChange={(e) => setStatus(job.id, e.target.value as JobStatus, user.id)}
+              onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
               className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
             >
-              {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
             {!activeBlock && (
               <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">

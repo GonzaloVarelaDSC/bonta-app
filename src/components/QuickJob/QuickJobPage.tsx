@@ -42,12 +42,8 @@ export function QuickJobPage() {
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
 
-  const [quantity, setQuantity] = useState('');
   const [measurements, setMeasurements] = useState('');
   const [materialIds, setMaterialIds] = useState<MaterialId[]>([]);
-  const [technique, setTechnique] = useState('');
-  const [finish, setFinish] = useState('');
-  const [color, setColor] = useState('');
   const [observations, setObservations] = useState('');
 
   const [requiresInstallation, setRequiresInstallation] = useState(false);
@@ -82,7 +78,7 @@ export function QuickJobPage() {
         name, clientId, contactName, contactPhone, jobTypeId, description,
         committedDate: new Date(`${committedDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
-        quantity, measurements, materialIds, technique, finish, color,
+        quantity: '', measurements, materialIds, technique: '', finish: '', color: '',
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId: user.id, responsibleUserId, assignedUserIds,
@@ -110,7 +106,7 @@ export function QuickJobPage() {
             <input
               id="qj-client" className={inputCls} list="qj-clientes-existentes" value={clientName}
               onChange={(e) => setClientName(e.target.value)}
-              placeholder="Nombre tal cual figura en Copernico (o nuevo, se crea solo)"
+              placeholder="Nombre del cliente — si es nuevo y todavía no está en Copernico, no importa"
               autoFocus
             />
             <datalist id="qj-clientes-existentes">
@@ -138,17 +134,18 @@ export function QuickJobPage() {
             <textarea id="qj-description" className={inputCls} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div><label htmlFor="qj-priority" className={labelCls}>Prioridad</label>
             <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
             </select>
           </div>
         </Section>
 
         <Section title="Especificaciones" hint="Opcional — cargalas ahora si el cliente te las está dando, si no se completan después desde la ficha.">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label htmlFor="qj-quantity" className={labelCls}>Cantidad</label>
-              <input id="qj-quantity" className={inputCls} value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-            <div><label htmlFor="qj-measurements" className={labelCls}>Medidas</label>
-              <input id="qj-measurements" className={inputCls} value={measurements} onChange={(e) => setMeasurements(e.target.value)} /></div>
+          <div>
+            <label htmlFor="qj-measurements" className={labelCls}>Cantidad y medidas</label>
+            <textarea
+              id="qj-measurements" className={inputCls} rows={2} value={measurements} onChange={(e) => setMeasurements(e.target.value)}
+              placeholder="Ej: 2 de 20x20cm, 3 de 10x10cm, 1 a medida de la imagen"
+            />
           </div>
           <div>
             <span className={labelCls}>Material</span>
@@ -161,14 +158,6 @@ export function QuickJobPage() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label htmlFor="qj-technique" className={labelCls}>Técnica</label>
-              <input id="qj-technique" className={inputCls} value={technique} onChange={(e) => setTechnique(e.target.value)} /></div>
-            <div><label htmlFor="qj-finish" className={labelCls}>Terminación</label>
-              <input id="qj-finish" className={inputCls} value={finish} onChange={(e) => setFinish(e.target.value)} /></div>
-          </div>
-          <div><label htmlFor="qj-color" className={labelCls}>Color</label>
-            <input id="qj-color" className={inputCls} value={color} onChange={(e) => setColor(e.target.value)} /></div>
           <div><label htmlFor="qj-obs" className={labelCls}>Observaciones</label>
             <textarea id="qj-obs" className={inputCls} rows={2} value={observations} onChange={(e) => setObservations(e.target.value)} /></div>
         </Section>

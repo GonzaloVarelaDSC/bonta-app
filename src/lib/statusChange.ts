@@ -1,14 +1,25 @@
 import type { Job, JobStatus } from '../types';
 import { STATUS_LABELS } from '../data/catalog';
 
-// Estados que se pueden elegir a mano desde la tarjeta/tabla — bloqueado y cancelado
-// quedan afuera porque tienen su propio flujo (motivo de bloqueo, etc.) y no son un
-// simple cambio de estado.
+// Estados que se pueden elegir a mano desde el selector de Dashboard/Trabajos/
+// ficha — Gonzalo pidió (26/08) dejar solo las 4 decisiones que de verdad se
+// toman a mano día a día; el resto (Pendiente, Diseño listo, Control de
+// calidad, Instalación, Terminado, Bloqueado, Cancelado) se alcanza por su
+// propio flujo (recién creado, drag en el Kanban, motivo de bloqueo,
+// instalación completada) y no hace falta que compita en este select.
 export const SELECTABLE_STATUSES: JobStatus[] = [
-  'PENDIENTE', 'FALTA_INFORMACION', 'EN_DISENO', 'DISENO_LISTO',
-  'EN_PRODUCCION', 'EN_CONTROL_CALIDAD', 'LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION',
-  'EN_INSTALACION', 'TERMINADO',
+  'FALTA_INFORMACION', 'EN_DISENO', 'EN_PRODUCCION', 'LISTO_PARA_ENTREGA',
 ];
+
+/**
+ * Opciones a mostrar en el select de estado de un trabajo puntual: las 4
+ * elegibles, más el estado actual si no es una de esas 4 (por ej. un trabajo
+ * recién creado en "Pendiente", o uno que ya está en Instalación) — así el
+ * select siempre puede mostrar el valor real en vez de quedar en blanco.
+ */
+export function statusOptionsFor(job: Job): JobStatus[] {
+  return SELECTABLE_STATUSES.includes(job.status) ? SELECTABLE_STATUSES : [job.status, ...SELECTABLE_STATUSES];
+}
 
 /** Bloquea el pase a "listo" si faltan ítems obligatorios del control de calidad — vale para Kanban y para la tabla. */
 export function tryChangeJobStatus(

@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
-import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
+import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 
@@ -61,9 +61,11 @@ const PRIORITY_ACCENT: Record<Priority, string> = {
  * información nueva: quién se lo asignó, para cuándo, qué tan urgente es, de qué
  * se trata y cómo contactar al cliente — todo de un vistazo, sin abrir la ficha.
  * Se arma en dos líneas internas (meta arriba, nombre+descripción abajo) para que
- * la descripción tenga lugar real y nada se empuje fuera de la tarjeta. La
- * navegación a la ficha completa es un botón explícito, nunca "click en cualquier
- * lado", así el estado y el N° nunca compiten con eso.
+ * la descripción tenga lugar real y nada se empuje fuera de la tarjeta. El botón
+ * "Ver ficha" se mantiene, pero además clickear cualquier zona no interactiva de
+ * la tarjeta (todo lo que no sea el select de estado, el editor de N° o el botón
+ * mismo) también abre la ficha — mismo resguardo `closest(...)` que ya usan
+ * JobsTable y el Kanban.
  */
 export function DashboardJobCard({ job }: { job: Job }) {
   const navigate = useNavigate();
@@ -80,15 +82,21 @@ export function DashboardJobCard({ job }: { job: Job }) {
   const priority = effectivePriority(job);
 
   return (
-    <div className={clsx(
-      'bg-white rounded-xl border-t border-r border-b border-ink-100 shadow-card px-4 py-3 flex flex-col gap-2',
-      PRIORITY_ACCENT[priority]
-    )}>
+    <div
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('select, button, input')) return;
+        navigate(`/trabajos/${job.id}`);
+      }}
+      className={clsx(
+        'bg-white rounded-xl border-t border-r border-b border-ink-100 shadow-card px-4 py-3 flex flex-col gap-2 cursor-pointer hover:shadow-pop transition-shadow',
+        PRIORITY_ACCENT[priority]
+      )}
+    >
       <div className="flex items-center gap-3 flex-wrap">
         <PriorityBadge priority={priority} size="sm" />
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect
-          status={job.status} options={SELECTABLE_STATUSES}
+          status={job.status} options={statusOptionsFor(job)}
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
         <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />

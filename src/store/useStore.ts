@@ -213,10 +213,15 @@ export const useStore = create<StoreState>()((set, get) => ({
   setStatus: async (jobId, status, byUserId) => {
     const before = get().jobs.find((j) => j.id === jobId);
     const nowIso = new Date().toISOString();
-    // La fecha de "quedó listo" se graba una sola vez, la primera vez que el trabajo
-    // llega a Listo/Instalación — no se pisa si ya la tenía (ver tipo Job.readyAt).
+    // La fecha de "quedó listo" se graba de nuevo cada vez que el trabajo ENTRA a
+    // Listo/Instalación viniendo de un estado que no lo era — así si un trabajo
+    // vuelve para atrás (por ej. control de calidad lo rebota) y vuelve a llegar a
+    // Listo otro día, la fecha se actualiza a ese día y no queda pisada con la
+    // primera vez (antes no se pisaba nunca, y quedaba una fecha vieja).  No se
+    // pisa al pasar DENTRO del mismo grupo (Listo → Instalación), para no perder
+    // cuándo quedó listo la producción.
     const readyStatuses: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
-    const stampReady = readyStatuses.includes(status) && !before?.readyAt;
+    const stampReady = readyStatuses.includes(status) && !readyStatuses.includes(before?.status ?? 'PENDIENTE' as JobStatus);
     // Optimista: refleja el cambio ya mismo (clave para que el drag&drop del kanban se sienta instantáneo)
     // y lo revierte si Supabase lo rechaza (por ejemplo, la regla de control de calidad obligatorio).
     set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, status, lastActivityAt: nowIso, ...(stampReady ? { readyAt: nowIso } : {}) } : j) }));

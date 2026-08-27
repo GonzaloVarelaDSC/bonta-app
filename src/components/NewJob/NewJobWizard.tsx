@@ -118,7 +118,7 @@ export function NewJobWizard() {
               <input
                 id="nj-client" className={inputCls} list="clientes-existentes" value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Escribí el nombre tal cual figura en Copernico"
+                placeholder="Nombre del cliente — si es nuevo y todavía no está en Copernico, no importa"
               />
               <datalist id="clientes-existentes">
                 {clients.map((c) => <option key={c.id} value={c.name} />)}
@@ -151,7 +151,7 @@ export function NewJobWizard() {
               <input id="nj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
             <div><label htmlFor="nj-priority" className={labelCls}>Prioridad</label>
               <select id="nj-priority" className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
               </select>
               <p className="text-[11px] text-ink-700 mt-1">Vos elegís la urgencia — ya no se calcula sola por la fecha de entrega.</p>
             </div>

@@ -20,11 +20,13 @@ const PRIORITY_TONE: Record<Priority, keyof typeof TONE_CLASSES> = {
 export function PriorityBadge({ priority, size = 'md' }: { priority: Priority; size?: 'sm' | 'md' }) {
   const meta = PRIORITY_META[priority];
   return (
-    <span className={clsx(
-      'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
-      TONE_CLASSES[PRIORITY_TONE[priority]],
-      size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
-    )}>
+    <span
+      title={meta.sla}
+      className={clsx(
+        'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
+        TONE_CLASSES[PRIORITY_TONE[priority]],
+        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+      )}>
       <span aria-hidden>{meta.emoji}</span>{meta.label}
     </span>
   );

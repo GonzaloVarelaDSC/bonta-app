@@ -8,7 +8,7 @@ import { canEditAnyJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
-import { SELECTABLE_STATUSES, tryChangeJobStatus } from '../../lib/statusChange';
+import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 
 function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -99,7 +99,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 </td>
                 <td className="px-2 py-2.5">
                   <StatusSelect
-                    status={j.status} options={SELECTABLE_STATUSES}
+                    status={j.status} options={statusOptionsFor(j)}
                     onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
                   />
                 </td>

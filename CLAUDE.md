@@ -659,3 +659,58 @@ lo que decían las secciones 2 y 4 sobre estos temas puntuales.
    de las 5. El badge de prioridad ya no muestra la etiqueta "manual" (todas lo son).
    `priorityAuto`/`priority_auto` se dejaron en el esquema como respaldo silencioso
    para trabajos viejos sin `priorityManual` cargado, nada más.
+
+---
+
+## 10. Actualización 26/08 — auditoría de diseño/accesibilidad, Carga rápida y ajustes de flujo
+
+1. **Auditoría propia**: se corrió design-critique + accessibility-review (skills en
+   `.claude/skills/`) sobre las 10 pantallas y se corrigieron los hallazgos en el
+   código (no quedó como informe aparte): contraste de texto secundario
+   (`ink-400/500/300/600` → `ink-700`, 6.5:1), anillo de foco (`brand-400/40` →
+   `brand-500`, 4.4:1), operabilidad por teclado del Kanban y de la tabla de
+   Trabajos, `aria-label`/`aria-pressed`/`htmlFor` en toda la app, patrón ARIA de
+   tabs en la ficha. Se dejó sin tocar lo que ya pasaba (Sidebar, panel de marca
+   del Login, badges de prioridad/estado).
+2. **Bug de `readyAt` corregido**: antes se grababa una sola vez y nunca se volvía
+   a pisar, así que un trabajo de prueba arrastrado a Listo varias veces (en
+   distintos días) seguía mostrando la fecha de la primera vez. Ahora se vuelve a
+   grabar cada vez que el trabajo ENTRA a Listo/Instalación viniendo de un estado
+   que no era parte de ese grupo — no se pisa al pasar de Listo a Instalación
+   (sigue siendo la fecha real de "cuándo quedó lista la producción").
+3. **Prioridad con plazo de referencia**: `PRIORITY_META` (`lib/priority.ts`) suma
+   un campo `sla` por prioridad — es una propuesta de Gonzalo/Claude, no una regla
+   cerrada, a confirmar con el uso real: Crítico = para mañana sí o sí, Urgente =
+   2-3 días hábiles, Normal = dentro de la semana, Planificado = más de una
+   semana, En espera = no corre plazo. Se ve como tooltip del `PriorityBadge`
+   (aparece en toda la app automáticamente) y como texto de cada opción en los
+   selects de prioridad del wizard/Carga rápida/ficha.
+4. **Selector de estado reducido a 4 opciones manuales** (`lib/statusChange.ts`,
+   `SELECTABLE_STATUSES`): Falta información, En diseño, En producción, Listo
+   para entrega — el resto de los estados (Pendiente, Diseño listo, Control de
+   calidad, Instalación, Terminado, Bloqueado, Cancelado) se alcanzan por su
+   propio flujo (alta, drag en el Kanban, motivo de bloqueo, instalación
+   completada) y no compiten más en el select de Dashboard/Trabajos/ficha. Nueva
+   función `statusOptionsFor(job)` agrega el estado actual a la lista si no es
+   una de esas 4, para que el select nunca quede en blanco. De paso se encontró
+   que el select de la ficha completa llamaba a `setStatus` directo, salteando el
+   gate de control de calidad — ahora pasa por `tryChangeJobStatus` como el resto.
+   **El Kanban (7 columnas) no se tocó** — es una vista distinta (tablero, no
+   dropdown) que Gonzalo ya iteró tres veces; si en algún momento pide simplificar
+   también las columnas, sería un cambio deliberado aparte.
+5. **`DashboardJobCard` ahora navega al clickear cualquier zona no interactiva**
+   de la tarjeta (mismo resguardo `closest('select, button, input')` que ya usan
+   JobsTable y el Kanban) — el botón "Ver ficha" se mantiene como antes, esto solo
+   agrega un camino más.
+6. **Carga rápida simplificada** (`QuickJob/QuickJobPage.tsx`): el campo Cliente
+   ya no pide "tal cual figura en Copernico" (un cliente nuevo lógicamente todavía
+   no está ahí); Cantidad y Medidas se unificaron en un solo textarea libre
+   ("Cantidad y medidas") para poder anotar variantes mixtas de un mismo pedido
+   (ej. "2 de 20x20, 3 de 10x10, 1 a medida de la imagen") sin forzar una grilla
+   rígida — se investigaron plataformas reales de gestión de imprentas (shopVOX,
+   Printavo) antes de decidir esto: ese tipo de software solo estructura campos
+   fijos (alto/ancho/color/etc.) para productos de catálogo configurables, no
+   para pedidos a medida como los de Bonta, donde el texto libre es lo que de
+   verdad se usa en la práctica. Se sacaron Técnica/Color/Terminación del
+   formulario (Gonzalo: "no existe" en la carga rápida) — siguen existiendo en el
+   modelo de datos y se pueden cargar después desde la ficha si hace falta.
