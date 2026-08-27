@@ -4,7 +4,7 @@ import { Check, ChevronLeft, ChevronRight, UploadCloud, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { JOB_TYPES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
-import type { JobTypeId, MaterialId, Priority } from '../../types';
+import type { JobTypeId, MaterialId, Priority, SizeItem } from '../../types';
 
 const STEPS = ['Cliente y descripción', 'Entrega y prioridad', 'Instalación', 'Archivos', 'Confirmación'];
 
@@ -33,12 +33,8 @@ export function NewJobWizard() {
   // Estas características técnicas ya no se cargan en el alta: el trabajo se crea con
   // estado "Falta información" y se completan después desde la ficha, si hace falta —
   // la fuente real es el mail o WhatsApp del cliente, no este formulario.
-  const quantity = '';
-  const measurements = '';
+  const sizeItems: SizeItem[] = [];
   const materialIds: MaterialId[] = [];
-  const technique = '';
-  const finish = '';
-  const color = '';
   const observations = '';
   const specialRequirements = '';
   const jobType = JOB_TYPES.find((t) => t.id === jobTypeId)!;
@@ -84,7 +80,7 @@ export function NewJobWizard() {
       // Solo se pide la fecha (no hora) — se completa con las 18:00 (cierre del día
       // de trabajo) para que el cálculo de urgencia siga teniendo sentido por hora.
       committedDate: new Date(`${committedDate}T18:00`).toISOString(),
-      priorityManual: priority, clientImportant, quantity, measurements, materialIds, technique, finish, color,
+      priorityManual: priority, clientImportant, sizeItems, materialIds,
       observations, specialRequirements, activeStageKeys: jobType.defaultStages,
       requiresInstallation, installAddress, installContactPhone, installDate,
       createdByUserId: user.id, responsibleUserId, assignedUserIds,

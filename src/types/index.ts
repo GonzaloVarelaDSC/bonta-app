@@ -140,6 +140,15 @@ export interface InstallationInfo {
   completedNotes?: string;
 }
 
+// Un "renglón" de medida: cantidad + ancho + alto, para pedidos con variantes
+// mixtas (ej. "2 de 20x20, 3 de 10x10"). Ancho/alto son texto libre a propósito
+// (no numérico) para poder anotar "a medida de la imagen" o "proporcional".
+export interface SizeItem {
+  quantity: string;
+  width: string;
+  height: string;
+}
+
 export interface Job {
   id: string;
   code: string | null; // N° de trabajo / orden de Copernico — lo carga a mano un admin/coordinador, no se genera solo
@@ -158,11 +167,17 @@ export interface Job {
 
   jobTypeId: JobTypeId;
   description: string;
+  /** @deprecated reemplazado por `sizeItems` (26/08) — queda en el esquema por datos viejos, ya no se carga desde ningún formulario. */
   quantity: string;
+  /** @deprecated reemplazado por `sizeItems` (26/08) — ídem. */
   measurements: string;
+  sizeItems: SizeItem[];
   materialIds: MaterialId[];
+  /** @deprecated "no existe" en la práctica del estudio — ya no se pide en ningún formulario. */
   technique: string;
+  /** @deprecated ídem. */
   finish: string;
+  /** @deprecated ídem. */
   color: string;
   observations: string;
   specialRequirements: string;

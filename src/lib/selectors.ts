@@ -41,9 +41,8 @@ export function computeCounts(jobs: Job[]): DashboardCounts {
 
 export function missingFields(job: Job): string[] {
   const missing: string[] = [];
-  if (!job.measurements.trim()) missing.push('Medida');
+  if (job.sizeItems.length === 0) missing.push('Medidas');
   if (job.materialIds.length === 0) missing.push('Material');
-  if (!job.technique.trim()) missing.push('Técnica');
   if (job.files.length === 0) missing.push('Archivo');
   if (job.requiresInstallation && !job.installation?.address.trim()) missing.push('Dirección de instalación');
   return missing;

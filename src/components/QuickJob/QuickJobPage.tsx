@@ -4,7 +4,8 @@ import { Zap } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { JOB_TYPES, MATERIALS } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
-import type { JobTypeId, MaterialId, Priority } from '../../types';
+import { SizeItemsEditor } from '../Common/SizeItemsEditor';
+import type { JobTypeId, MaterialId, Priority, SizeItem } from '../../types';
 
 const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
 const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
@@ -42,7 +43,7 @@ export function QuickJobPage() {
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
 
-  const [measurements, setMeasurements] = useState('');
+  const [sizeItems, setSizeItems] = useState<SizeItem[]>([{ quantity: '', width: '', height: '' }]);
   const [materialIds, setMaterialIds] = useState<MaterialId[]>([]);
   const [observations, setObservations] = useState('');
 
@@ -78,7 +79,7 @@ export function QuickJobPage() {
         name, clientId, contactName, contactPhone, jobTypeId, description,
         committedDate: new Date(`${committedDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
-        quantity: '', measurements, materialIds, technique: '', finish: '', color: '',
+        sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId: user.id, responsibleUserId, assignedUserIds,
@@ -141,11 +142,8 @@ export function QuickJobPage() {
 
         <Section title="Especificaciones" hint="Opcional — cargalas ahora si el cliente te las está dando, si no se completan después desde la ficha.">
           <div>
-            <label htmlFor="qj-measurements" className={labelCls}>Cantidad y medidas</label>
-            <textarea
-              id="qj-measurements" className={inputCls} rows={2} value={measurements} onChange={(e) => setMeasurements(e.target.value)}
-              placeholder="Ej: 2 de 20x20cm, 3 de 10x10cm, 1 a medida de la imagen"
-            />
+            <span className={labelCls}>Cantidad y medidas</span>
+            <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
           </div>
           <div>
             <span className={labelCls}>Material</span>

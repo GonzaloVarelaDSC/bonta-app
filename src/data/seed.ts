@@ -255,6 +255,7 @@ export const JOBS: Job[] = S.map((s, idx) => {
     description: s.description,
     quantity: s.quantity,
     measurements: s.measurements,
+    sizeItems: [],
     materialIds: s.materialIds,
     technique: s.technique,
     finish: s.finish,

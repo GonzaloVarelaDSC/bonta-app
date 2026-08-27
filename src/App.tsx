@@ -7,6 +7,7 @@ import { JobsPage } from './components/Jobs/JobsPage';
 import { ClientsPage } from './components/Jobs/ClientsPage';
 import { KanbanPage } from './components/Kanban/KanbanPage';
 import { JobDetailPage } from './components/JobDetail/JobDetailPage';
+import { JobExportPage } from './components/JobDetail/JobExportPage';
 import { NewJobWizard } from './components/NewJob/NewJobWizard';
 import { QuickJobPage } from './components/QuickJob/QuickJobPage';
 import { UsersPage } from './components/Users/UsersPage';
@@ -36,6 +37,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/trabajos/:id/exportar" element={<JobExportPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/trabajos" element={<JobsPage />} />

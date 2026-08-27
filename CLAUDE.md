@@ -714,3 +714,40 @@ lo que decían las secciones 2 y 4 sobre estos temas puntuales.
    verdad se usa en la práctica. Se sacaron Técnica/Color/Terminación del
    formulario (Gonzalo: "no existe" en la carga rápida) — siguen existiendo en el
    modelo de datos y se pueden cargar después desde la ficha si hace falta.
+
+---
+
+## 11. Actualización 26/08 (segunda ronda) — medidas estructuradas, ficha ver/editar, exportar a cliente
+
+1. **Medidas estructuradas (`Job.sizeItems`)**: reemplaza el campo libre
+   `measurements` en los formularios (Gonzalo pidió volver a esto después de
+   ver la versión de texto libre: "boxes cantidad-ancho-alto" con botón de
+   agregar). Nuevo tipo `SizeItem { quantity, width, height }` (todo texto
+   libre a propósito, así "a medida de la imagen" entra en el campo ancho/
+   alto), columna `jobs.size_items jsonb` (migración `009_job_size_items.sql`
+   — **hay que correrla en Supabase**), componente compartido
+   `Common/SizeItemsEditor.tsx` (`SizeItemsEditor` para cargar/editar,
+   `SizeItemsView` de solo lectura) usado en Carga rápida, la ficha y el
+   export a cliente. `measurements`/`quantity`/`technique`/`finish`/`color`
+   quedan en el esquema marcados `@deprecated` en `types/index.ts` — no se
+   borran (datos viejos), pero ningún formulario los toca más.
+2. **Especificaciones de la ficha: ver vs. editar**: antes quedaba siempre en
+   modo formulario; ahora arranca en modo lectura (como el resto de las
+   pestañas) y un botón "Editar especificaciones" pasa a edición; "Guardar"
+   vuelve a lectura con los valores nuevos, "Cancelar" descarta los cambios.
+   Se le aplicó el mismo recorte que a Carga rápida (sin Técnica/Color/
+   Terminación).
+3. **Exportar a cliente** (`JobDetail/JobExportPage.tsx`, ruta
+   `/trabajos/:id/exportar`, fuera del `AppLayout` — sin sidebar, pensada para
+   imprimir): hoja de referencia con logo + nombre del estudio, cliente,
+   descripción, medidas, material, instalación y fecha de entrega — **sin**
+   prioridad ni estado interno (a propósito, es lo que no debe ver el
+   cliente). Se "exporta" con el diálogo nativo de impresión del navegador
+   (botón "Imprimir / Guardar como PDF" → `window.print()`), no con una
+   librería de generación de PDF — evita sumar una dependencia nueva y el
+   usuario elige tamaño de papel/destino con la interfaz que ya conoce.
+   Accesible desde un botón "Exportar para cliente" en la cabecera de la
+   ficha (abre en pestaña nueva).
+4. **Bug del contador del Kanban corregido**: "N trabajos activos" contaba
+   también los Terminados (por eso no cambiaba al mover una ficha a esa
+   columna) — ahora los excluye.

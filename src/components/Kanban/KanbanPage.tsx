@@ -228,6 +228,9 @@ export function KanbanPage() {
       .filter((j) => priorityFilter === 'all' || effectivePriority(j) === priorityFilter)
       .filter((j) => respFilter === 'all' || j.responsibleUserId === respFilter);
   }, [user, allJobs, priorityFilter, respFilter]);
+  // "Trabajos activos" no cuenta los Terminados — quedan en el board (columna
+  // Terminado) pero no son trabajo pendiente, así que no tienen que sumar acá.
+  const activeCount = useMemo(() => jobs.filter((j) => j.status !== 'TERMINADO').length, [jobs]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeJob, setActiveJob] = useState<Job | null>(null);
 
@@ -257,7 +260,7 @@ export function KanbanPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
-          <span className="text-xs font-semibold text-ink-700 bg-ink-100 rounded-full px-2 py-0.5 tabular">{jobs.length} trabajos activos</span>
+          <span className="text-xs font-semibold text-ink-700 bg-ink-100 rounded-full px-2 py-0.5 tabular">{activeCount} trabajos activos</span>
           <FiltersButton
             priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
             respFilter={respFilter} setRespFilter={setRespFilter} users={users}

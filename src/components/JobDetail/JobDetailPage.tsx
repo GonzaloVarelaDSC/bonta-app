@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2 } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
@@ -8,12 +8,13 @@ import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar } from '../Common/Badges';
+import { SizeItemsEditor, SizeItemsView } from '../Common/SizeItemsEditor';
 import { JOB_TYPES, MATERIALS, STATUS_LABELS, BLOCK_REASON_LABELS } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
-import type { BlockReason, JobStatus, MaterialId, Priority } from '../../types';
+import type { BlockReason, JobStatus, MaterialId, Priority, SizeItem } from '../../types';
 
 const TABS = ['General', 'Especificaciones', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
 
@@ -122,6 +123,12 @@ export function JobDetailPage() {
                 <Lock size={13} /> Bloquear trabajo
               </button>
             )}
+            <a
+              href={`/trabajos/${job.id}/exportar`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200"
+            >
+              <FileOutput size={13} /> Exportar para cliente
+            </a>
           </div>
 
           <div role="tablist" aria-label="Secciones de la ficha" className="flex gap-1 mt-4 -mb-4 border-b border-ink-100 overflow-x-auto">
@@ -320,47 +327,70 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
   );
 }
 
+// Arranca en modo lectura (como el resto de las pestañas de la ficha); "Editar"
+// pasa a un formulario y "Guardar"/"Cancelar" vuelve a lectura — antes quedaba
+// siempre editable, sin distinción entre ver y modificar.
 function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (specs: JobSpecs) => Promise<void> }) {
-  const [quantity, setQuantity] = useState(job.quantity);
-  const [measurements, setMeasurements] = useState(job.measurements);
+  const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [sizeItems, setSizeItems] = useState<SizeItem[]>(job.sizeItems);
   const [materialIds, setMaterialIds] = useState<MaterialId[]>(job.materialIds);
-  const [technique, setTechnique] = useState(job.technique);
-  const [finish, setFinish] = useState(job.finish);
-  const [color, setColor] = useState(job.color);
   const [specialRequirements, setSpecialRequirements] = useState(job.specialRequirements);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setQuantity(job.quantity); setMeasurements(job.measurements); setMaterialIds(job.materialIds);
-    setTechnique(job.technique); setFinish(job.finish); setColor(job.color); setSpecialRequirements(job.specialRequirements);
-  }, [job.id]);
-
-  const dirty = quantity !== job.quantity || measurements !== job.measurements || technique !== job.technique
-    || finish !== job.finish || color !== job.color || specialRequirements !== job.specialRequirements
-    || materialIds.length !== job.materialIds.length || materialIds.some((m) => !job.materialIds.includes(m));
+  function startEdit() {
+    setSizeItems(job.sizeItems.length ? job.sizeItems : [{ quantity: '', width: '', height: '' }]);
+    setMaterialIds(job.materialIds);
+    setSpecialRequirements(job.specialRequirements);
+    setMode('edit');
+  }
 
   async function save() {
     setSaving(true);
-    try { await onSave({ quantity, measurements, materialIds, technique, finish, color, specialRequirements }); }
-    finally { setSaving(false); }
+    try {
+      await onSave({ sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds, specialRequirements });
+      setMode('view');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
   const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
+
+  if (mode === 'view') {
+    return (
+      <div className="max-w-3xl space-y-4 text-sm">
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-1.5">Cantidad y medidas</div>
+          <SizeItemsView items={job.sizeItems} />
+        </div>
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-1.5">Material</div>
+          {job.materialIds.length === 0 ? (
+            <p className="text-ink-700 italic">Sin material cargado.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {job.materialIds.map((id) => (
+                <span key={id} className="text-xs bg-ink-100 text-ink-700 rounded-full px-2.5 py-1">{MATERIALS.find((m) => m.id === id)?.label}</span>
+              ))}
+            </div>
+          )}
+        </div>
+        <Field label="Requisitos especiales" value={job.specialRequirements || '—'} block />
+        <button
+          onClick={startEdit}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
+        >
+          <Pencil size={14} /> Editar especificaciones
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl space-y-4 text-sm">
-      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
-        <div><label htmlFor="specs-quantity" className={labelCls}>Cantidad</label>
-          <input id="specs-quantity" className={inputCls} value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-        <div><label htmlFor="specs-measurements" className={labelCls}>Medidas</label>
-          <input id="specs-measurements" className={inputCls} value={measurements} onChange={(e) => setMeasurements(e.target.value)} /></div>
-        <div><label htmlFor="specs-technique" className={labelCls}>Técnica</label>
-          <input id="specs-technique" className={inputCls} value={technique} onChange={(e) => setTechnique(e.target.value)} /></div>
-        <div><label htmlFor="specs-finish" className={labelCls}>Terminación</label>
-          <input id="specs-finish" className={inputCls} value={finish} onChange={(e) => setFinish(e.target.value)} /></div>
-        <div><label htmlFor="specs-color" className={labelCls}>Color</label>
-          <input id="specs-color" className={inputCls} value={color} onChange={(e) => setColor(e.target.value)} /></div>
+      <div>
+        <span className={labelCls}>Cantidad y medidas</span>
+        <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
       </div>
       <div>
         <span className={labelCls}>Material</span>
@@ -374,15 +404,15 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
         </div>
       </div>
       <div><label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>
-        <textarea id="specs-special" className={inputCls} rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} /></div>
+        <textarea id="specs-special" className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} /></div>
       <div className="flex items-center gap-3 pt-1">
         <button
-          onClick={save} disabled={saving || !dirty}
+          onClick={save} disabled={saving}
           className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
-        {!dirty && <span className="text-xs text-ink-700">Sin cambios sin guardar</span>}
+        <button onClick={() => setMode('view')} disabled={saving} className="text-sm text-ink-700 hover:text-ink-900 disabled:opacity-40">Cancelar</button>
       </div>
     </div>
   );

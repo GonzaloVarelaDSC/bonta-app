@@ -55,16 +55,14 @@ interface StoreState {
 }
 
 export interface JobSpecs {
-  quantity: string; measurements: string; materialIds: Job['materialIds'];
-  technique: string; finish: string; color: string; specialRequirements: string;
+  sizeItems: Job['sizeItems']; materialIds: Job['materialIds']; specialRequirements: string;
 }
 
 export interface NewJobInput {
   name: string; clientId: string; contactName: string; contactPhone: string;
   jobTypeId: Job['jobTypeId']; description: string;
   committedDate: string; priorityManual: Priority; clientImportant: boolean;
-  quantity: string; measurements: string; materialIds: Job['materialIds'];
-  technique: string; finish: string; color: string; observations: string; specialRequirements: string;
+  sizeItems: Job['sizeItems']; materialIds: Job['materialIds']; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[];
@@ -176,8 +174,8 @@ export const useStore = create<StoreState>()((set, get) => ({
       name: input.name, client_id: input.clientId, contact_name: input.contactName, contact_phone: input.contactPhone,
       created_by_user_id: input.createdByUserId,
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
-      job_type_id: input.jobTypeId, description: input.description, quantity: input.quantity, measurements: input.measurements,
-      material_ids: input.materialIds, technique: input.technique, finish: input.finish, color: input.color,
+      job_type_id: input.jobTypeId, description: input.description, size_items: input.sizeItems,
+      material_ids: input.materialIds,
       observations: input.observations, special_requirements: input.specialRequirements,
       status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,
@@ -258,8 +256,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   updateJobSpecs: async (jobId, specs, byUserId) => {
     const { error } = await supabase.from('jobs').update({
-      quantity: specs.quantity, measurements: specs.measurements, material_ids: specs.materialIds,
-      technique: specs.technique, finish: specs.finish, color: specs.color,
+      size_items: specs.sizeItems, material_ids: specs.materialIds,
       special_requirements: specs.specialRequirements, last_activity_at: new Date().toISOString(),
     }).eq('id', jobId);
     if (error) throw error;

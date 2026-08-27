@@ -9,8 +9,7 @@ export function calculateRisk(job: Job, now: Date = new Date()): RiskLevel {
 
   if (hasOpenDependencyRisk) return 'CRITICO';
   if (job.requiresInstallation && activeStages >= 3 && hours <= 96) return 'ALTO';
-  const missingSomething =
-    !job.measurements.trim() || job.materialIds.length === 0 || !job.technique.trim();
+  const missingSomething = job.sizeItems.length === 0 || job.materialIds.length === 0;
   if (missingSomething || isBlocked) return 'MEDIO';
   return 'BAJO';
 }
