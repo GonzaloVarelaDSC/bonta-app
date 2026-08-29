@@ -25,6 +25,20 @@ const DATE_PRESETS = [
   { label: '+1 semana', days: 10 },
 ];
 
+// Sugerencia automática al elegir la fecha — sigue siendo 100% editable
+// después a mano, esto solo precarga un punto de partida razonable.
+function suggestPriority(dateStr: string): Priority {
+  if (!dateStr) return 'NORMAL';
+  const today = new Date();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const daysDiff = Math.round((new Date(y, m - 1, d).getTime() - todayOnly.getTime()) / 86_400_000);
+  if (daysDiff <= 1) return 'CRITICO';
+  if (daysDiff <= 3) return 'URGENTE';
+  if (daysDiff <= 7) return 'NORMAL';
+  return 'PLANIFICADO';
+}
+
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
@@ -53,7 +67,10 @@ export function QuickJobPage() {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [name, setName] = useState('');
-  const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => (localStorage.getItem(LAST_TYPE_KEY) as JobTypeId | null) ?? 'carteleria');
+  const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => {
+    const saved = localStorage.getItem(LAST_TYPE_KEY);
+    return JOB_TYPES.some((t) => t.id === saved) ? (saved as JobTypeId) : JOB_TYPES[0].id;
+  });
   const [description, setDescription] = useState('');
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
@@ -78,6 +95,10 @@ export function QuickJobPage() {
     setJobTypeId(id);
     localStorage.setItem(LAST_TYPE_KEY, id);
   }
+  function changeDate(newDate: string) {
+    setCommittedDate(newDate);
+    setPriority(suggestPriority(newDate));
+  }
   function toggleMaterial(id: MaterialId) {
     setMaterialIds((ids) => ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
   }
@@ -85,18 +106,34 @@ export function QuickJobPage() {
     setAssignedUserIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id]);
   }
 
-  const canSubmit = !!clientName.trim() && !!name.trim() && !!description.trim() && !!committedDate
-    && (!requiresInstallation || !!installAddress.trim());
+  // Única condición dura: sin al menos una medida cargada, no se puede crear el
+  // trabajo. El resto (cliente, nombre, descripción, fecha, dirección) avisa
+  // pero no bloquea — se completa con un valor de referencia y se termina de
+  // cargar después desde la ficha.
+  const hasSizeData = sizeItems.some((it) => it.quantity.trim() || it.width.trim() || it.height.trim());
+  const softWarnings: string[] = [];
+  if (!clientName.trim()) softWarnings.push('cliente');
+  if (!name.trim()) softWarnings.push('nombre del trabajo');
+  if (!description.trim()) softWarnings.push('descripción');
+  if (!committedDate) softWarnings.push('fecha de entrega');
+  if (requiresInstallation && !installAddress.trim()) softWarnings.push('dirección de instalación');
 
   async function submit() {
+    if (softWarnings.length > 0) {
+      const ok = confirm(`Vas a crear el trabajo sin completar: ${softWarnings.join(', ')}. Se puede completar después desde la ficha — ¿confirmás igual?`);
+      if (!ok) return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
       const jobType = JOB_TYPES.find((t) => t.id === jobTypeId)!;
-      const clientId = await findOrCreateClient(clientName);
+      const finalName = name.trim() || description.trim().slice(0, 60) || 'Trabajo sin nombre';
+      const finalClientName = clientName.trim() || 'Cliente sin especificar';
+      const finalDate = committedDate || addDaysLocal(7);
+      const clientId = await findOrCreateClient(finalClientName);
       const job = await createJob({
-        name, clientId, contactName, contactPhone, jobTypeId, description,
-        committedDate: new Date(`${committedDate}T18:00`).toISOString(),
+        name: finalName, clientId, contactName, contactPhone, jobTypeId, description,
+        committedDate: new Date(`${finalDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
         sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
@@ -148,11 +185,11 @@ export function QuickJobPage() {
               </select>
             </div>
             <div><label htmlFor="qj-date" className={labelCls}>Fecha de entrega</label>
-              <input id="qj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} />
+              <input id="qj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => changeDate(e.target.value)} />
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {DATE_PRESETS.map((p) => (
                   <button
-                    type="button" key={p.label} onClick={() => setCommittedDate(addDaysLocal(p.days))}
+                    type="button" key={p.label} onClick={() => changeDate(addDaysLocal(p.days))}
                     className={`text-[11px] px-2 py-1 rounded-full border ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}
                   >
                     {p.label}
@@ -167,6 +204,7 @@ export function QuickJobPage() {
             <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
               {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
             </select>
+            <p className="text-[11px] text-ink-700 mt-1">Se sugiere sola según la fecha de entrega — la podés cambiar cuando quieras.</p>
           </div>
         </Section>
 
@@ -212,6 +250,9 @@ export function QuickJobPage() {
             <select id="qj-responsible" className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
               {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
+            <p className="text-[11px] text-ink-700 mt-1">
+              Quién se hace cargo de que este trabajo avance (normalmente quien lo va a diseñar o producir) — es distinto de quién lo cargó acá. Aparece en "Solo asignados a mí" del Dashboard.
+            </p>
           </div>
           <div>
             <span className={labelCls}>Asignar a</span>
@@ -228,11 +269,17 @@ export function QuickJobPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-5 py-3 flex items-center justify-between gap-3 z-20">
-        <span className="text-xs text-ink-700">{canSubmit ? 'Listo para crear' : 'Completá cliente, nombre, descripción y fecha de entrega'}</span>
+        <span className="text-xs text-ink-700">
+          {!hasSizeData
+            ? 'Cargá al menos una medida (cantidad, ancho o alto) para poder crear el trabajo'
+            : softWarnings.length > 0
+              ? `Se puede crear igual — falta: ${softWarnings.join(', ')}`
+              : 'Listo para crear'}
+        </span>
         <div className="flex items-center gap-2">
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button
-            disabled={!canSubmit || submitting} onClick={submit}
+            disabled={!hasSizeData || submitting} onClick={submit}
             className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-5 py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Zap size={15} /> {submitting ? 'Creando...' : 'Crear trabajo'}

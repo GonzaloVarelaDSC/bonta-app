@@ -751,3 +751,52 @@ lo que decían las secciones 2 y 4 sobre estos temas puntuales.
 4. **Bug del contador del Kanban corregido**: "N trabajos activos" contaba
    también los Terminados (por eso no cambiaba al mover una ficha a esa
    columna) — ahora los excluye.
+
+---
+
+## 12. Actualización 26/08 (tercera ronda) — se retira el wizard, alta única en Carga rápida
+
+1. **Se elimina `NewJobWizard`** (`src/components/NewJob/`, borrado) — Gonzalo notó que
+   coexistían dos formularios de alta con distinto nivel de detalle (el wizard no
+   pedía especificaciones, Carga rápida sí) y eso generaba confusión real de cara al
+   equipo. Decisión: un solo camino de alta, **Carga rápida**, para no repetir
+   trabajo ni tener dos UX distintas para lo mismo. La ruta `/trabajos/nuevo` ahora
+   redirige a `/trabajos/rapido`; el botón "Nuevo trabajo" de Trabajos apunta ahí.
+2. **Validación relajada** (`QuickJobPage.tsx`): la única condición dura para poder
+   crear el trabajo es tener al menos una medida cargada (`sizeItems`). Cliente,
+   nombre, descripción, fecha de entrega y dirección de instalación avisan con un
+   `confirm()` si faltan pero NO bloquean — se completan con un valor de referencia
+   ("Cliente sin especificar", fecha +7 días, etc.) y se pueden terminar de cargar
+   después desde la ficha.
+3. **Prioridad sugerida automáticamente según la fecha, pero 100% editable**: al
+   elegir/cambiar la fecha de entrega (a mano o con los chips rápidos), la
+   prioridad se precarga sola (mañana o antes → Crítico, 2-3 días → Urgente, hasta
+   la semana → Normal, más → Planificado) — el campo sigue siendo un select normal,
+   se puede cambiar en cualquier momento y esa elección manual no se vuelve a pisar
+   sola. No es el viejo `calculateAutoPriority()` que se borró en la sección 9 —
+   es solo un default inteligente en el momento de elegir la fecha.
+4. **Catálogo de "Tipo de trabajo" sintetizado**: de 17 verticales abstractas
+   (Señalética, Ambientación, Stands, Eventos, etc.) a 10 agrupadas por máquina/
+   proceso real: Impresión V7000, Impresión S40, Impresión P9000 (máquinas
+   distintas, a propósito separadas), Corte láser, Corte CNC, Corpóreo,
+   Carpintería, Acrílico, Vidrieras y stands, Otro. Los ids viejos siguen
+   existiendo en la base y en el tipo `JobTypeId` (por los trabajos de prueba que
+   ya los tienen) pero ya no se ofrecen en ningún selector — ver migración 011.
+5. **Eliminar un trabajo**: botón en la tabla de Trabajos (ícono de tacho, solo
+   admin/coordinador) con confirmación nativa antes de borrar. Hacía falta agregar
+   la policy de DELETE en `jobs` (no existía ninguna — con RLS activado y sin
+   policy, quedaba denegado por default) — ver migración 010. Todos los hijos ya
+   tenían `on delete cascade`, así que un solo `delete` alcanza.
+6. **`vercel.json` nuevo**: sin esto, F5 en cualquier ruta que no sea `/` tiraba
+   404 (Vercel no sabía que las rutas las resuelve React Router del lado del
+   cliente). Rewrite estándar de SPA: todo lo que no matchee un archivo real cae a
+   `index.html`.
+7. **Sidebar**: el wordmark "Estudio Bonta" ahora es un link al Dashboard.
+8. **Bug de RLS en notificaciones** (`new row violates row-level security policy
+   for table "notifications"`, aparecía al asignar a alguien que no es quien
+   crea el trabajo): el archivo `002_policies.sql` ya tiene la policy correcta
+   (`with check (true)`) pero evidentemente nunca se volvió a aplicar contra la
+   base real después de haber quedado más restrictiva en algún momento — mismo
+   patrón que los bugs de `contact_phone`/`ready_at` de antes. Hay que volver a
+   correr ese bloque puntual en el SQL Editor (ver el chat de esa fecha para el
+   SQL exacto, o repetir el bloque "notificaciones" completo de `002_policies.sql`).

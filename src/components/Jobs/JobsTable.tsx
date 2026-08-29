@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
-import { canEditAnyJob } from '../../lib/permissions';
+import { canEditAnyJob, canDeleteJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
@@ -51,7 +51,18 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
   const users = useStore((s) => s.users);
   const setJobCode = useStore((s) => s.setJobCode);
   const setStatus = useStore((s) => s.setStatus);
+  const deleteJob = useStore((s) => s.deleteJob);
   const canEditCode = !!currentUser && canEditAnyJob(currentUser.role);
+  const canDelete = !!currentUser && canDeleteJob(currentUser.role);
+
+  async function handleDelete(j: Job) {
+    if (!confirm(`¿Eliminar "${j.name}"${j.code ? ` (${j.code})` : ''}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteJob(j.id);
+    } catch (err: any) {
+      alert(err.message ?? 'No se pudo eliminar el trabajo.');
+    }
+  }
 
   if (jobs.length === 0) {
     return <div className="px-4 py-10 text-center text-sm text-ink-700">No hay trabajos que coincidan con este filtro.</div>;
@@ -109,13 +120,24 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 <td className="px-2 py-2.5"><CountdownBadge iso={j.committedDate} /></td>
                 {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}
                 <td className="px-2 py-2.5">
-                  <button
-                    type="button" onClick={() => navigate(`/trabajos/${j.id}`)}
-                    aria-label={`Ver ficha de ${j.name}`}
-                    className="text-ink-700 hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
-                  >
-                    <ArrowRight size={15} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button" onClick={() => navigate(`/trabajos/${j.id}`)}
+                      aria-label={`Ver ficha de ${j.name}`}
+                      className="text-ink-700 hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
+                    >
+                      <ArrowRight size={15} />
+                    </button>
+                    {canDelete && (
+                      <button
+                        type="button" onClick={() => handleDelete(j)}
+                        aria-label={`Eliminar ${j.name}`}
+                        className="text-ink-700 hover:text-crit-text focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap,
@@ -21,10 +21,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const user = useStore((s) => s.currentUser);
   return (
     <aside onClick={onNavigate} className="w-60 shrink-0 bg-ink-950 text-ink-100 flex flex-col h-full">
-      <div className="px-5 py-5 border-b border-white/10">
+      <Link to="/" className="block px-5 py-5 border-b border-white/10 hover:bg-white/5 transition-colors">
         <div className="font-brand font-extrabold text-lg tracking-tight text-white">Estudio Bonta</div>
         <div className="text-[11px] text-ink-400 mt-0.5 uppercase tracking-wide">Gestión de producción</div>
-      </div>
+      </Link>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {user && canCreateJobs(user.role) && (
           <NavLink

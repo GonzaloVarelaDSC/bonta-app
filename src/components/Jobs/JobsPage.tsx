@@ -45,7 +45,7 @@ export function JobsPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-display font-bold text-ink-900">Trabajos</h1>
         {canCreateJobs(user.role) && (
-          <button onClick={() => navigate('/trabajos/nuevo')} className="inline-flex items-center gap-1.5 bg-ink-950 text-white text-sm font-semibold px-3.5 py-2 rounded-lg hover:bg-ink-800 transition-colors">
+          <button onClick={() => navigate('/trabajos/rapido')} className="inline-flex items-center gap-1.5 bg-ink-950 text-white text-sm font-semibold px-3.5 py-2 rounded-lg hover:bg-ink-800 transition-colors">
             <Plus size={16} /> Nuevo trabajo
           </button>
         )}

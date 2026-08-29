@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/Layout/AppLayout';
 import { LoginPage } from './components/Auth/LoginPage';
 import { DashboardPage } from './components/Dashboard/DashboardPage';
@@ -8,7 +8,6 @@ import { ClientsPage } from './components/Jobs/ClientsPage';
 import { KanbanPage } from './components/Kanban/KanbanPage';
 import { JobDetailPage } from './components/JobDetail/JobDetailPage';
 import { JobExportPage } from './components/JobDetail/JobExportPage';
-import { NewJobWizard } from './components/NewJob/NewJobWizard';
 import { QuickJobPage } from './components/QuickJob/QuickJobPage';
 import { UsersPage } from './components/Users/UsersPage';
 import { ConfigPage } from './components/Common/ConfigPage';
@@ -41,7 +40,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/trabajos" element={<JobsPage />} />
-          <Route path="/trabajos/nuevo" element={<NewJobWizard />} />
+          <Route path="/trabajos/nuevo" element={<Navigate to="/trabajos/rapido" replace />} />
           <Route path="/trabajos/rapido" element={<QuickJobPage />} />
           <Route path="/trabajos/:id" element={<JobDetailPage />} />
           <Route path="/kanban" element={<KanbanPage />} />

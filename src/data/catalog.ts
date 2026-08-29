@@ -21,23 +21,22 @@ export const STAGE_LABELS: Record<StageKey, string> = {
   instalacion: 'Instalación',
 };
 
+// Sintetizado (26/08) alrededor de máquina/proceso real del estudio en vez de
+// una "vertical" abstracta por cliente (antes eran 17 tipos tipo "Señalética"/
+// "Ambientación" que en la práctica se resolvían con la misma máquina). Los 3
+// de impresión son máquinas distintas a propósito — Gonzalo pidió dejarlas
+// separadas. El resto de la lista es una síntesis razonable a confirmar/ajustar
+// con él, no un relevamiento exhaustivo de todo lo que hace el estudio.
 export const JOB_TYPES: JobType[] = [
-  { id: 'impresion_uv', label: 'Impresión UV', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad', 'embalaje'] },
-  { id: 'bajo_acrilico', label: 'Bajo acrílico', defaultStages: ['diseno', 'impresion', 'corte', 'terminacion', 'control_calidad', 'embalaje'] },
-  { id: 'plotter_vinilo', label: 'Plotter / Vinilo', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
-  { id: 'vidrieras', label: 'Vidrieras', defaultStages: ['diseno', 'impresion', 'corte', 'instalacion'] },
-  { id: 'senaletica', label: 'Señalética', defaultStages: ['diseno', 'impresion', 'corte', 'armado', 'control_calidad', 'instalacion'] },
-  { id: 'carteleria', label: 'Cartelería', defaultStages: ['diseno', 'impresion', 'corte', 'armado', 'control_calidad', 'instalacion'] },
-  { id: 'letras_corporeas', label: 'Letras corpóreas', defaultStages: ['diseno', 'corte', 'armado', 'terminacion', 'control_calidad', 'instalacion'] },
-  { id: 'backlight', label: 'Backlight', defaultStages: ['diseno', 'impresion', 'corte', 'armado', 'control_calidad', 'instalacion'] },
-  { id: 'stands', label: 'Stands', defaultStages: ['diseno', 'impresion', 'carpinteria', 'armado', 'control_calidad', 'instalacion'] },
-  { id: 'eventos', label: 'Eventos', defaultStages: ['diseno', 'impresion', 'armado', 'instalacion'] },
-  { id: 'ambientacion', label: 'Ambientación', defaultStages: ['diseno', 'impresion', 'corte', 'instalacion'] },
+  { id: 'impresion_v7000', label: 'Impresión V7000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
+  { id: 'impresion_s40', label: 'Impresión S40', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
+  { id: 'impresion_p9000', label: 'Impresión P9000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
+  { id: 'corte_laser', label: 'Corte láser', defaultStages: ['diseno', 'corte', 'control_calidad'] },
+  { id: 'corte_cnc', label: 'Corte CNC', defaultStages: ['diseno', 'corte', 'control_calidad'] },
+  { id: 'corporeo', label: 'Corpóreo', defaultStages: ['diseno', 'corte', 'armado', 'terminacion', 'control_calidad', 'instalacion'] },
   { id: 'carpinteria', label: 'Carpintería', defaultStages: ['diseno', 'carpinteria', 'terminacion', 'control_calidad'] },
-  { id: 'acrilico', label: 'Acrílico', defaultStages: ['diseno', 'corte', 'terminacion', 'control_calidad', 'embalaje'] },
-  { id: 'trofeos', label: 'Trofeos', defaultStages: ['diseno', 'impresion', 'corte', 'terminacion', 'control_calidad', 'embalaje'] },
-  { id: 'impresion_3d', label: 'Impresión 3D', defaultStages: ['diseno', 'impresion', 'terminacion', 'control_calidad', 'embalaje'] },
-  { id: 'piezas_especiales', label: 'Piezas especiales', defaultStages: ['diseno', 'impresion', 'corte', 'armado', 'terminacion', 'control_calidad'] },
+  { id: 'acrilico', label: 'Acrílico', defaultStages: ['diseno', 'corte', 'terminacion', 'control_calidad'] },
+  { id: 'vidrieras_stands', label: 'Vidrieras y stands', defaultStages: ['diseno', 'impresion', 'armado', 'control_calidad', 'instalacion'] },
   { id: 'otro', label: 'Otro', defaultStages: ['diseno', 'control_calidad'] },
 ];
 

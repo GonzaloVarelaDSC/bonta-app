@@ -49,6 +49,7 @@ interface StoreState {
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (userId: string) => Promise<void>;
   setUserActive: (userId: string, active: boolean) => Promise<void>;
+  deleteJob: (jobId: string) => Promise<void>;
   resetDemoData: () => Promise<void>;
   loadJobComments: (jobId: string) => Promise<void>;
   loadJobActivity: (jobId: string) => Promise<void>;
@@ -392,6 +393,18 @@ export const useStore = create<StoreState>()((set, get) => ({
   setUserActive: async (userId, active) => {
     await supabase.from('profiles').update({ active }).eq('id', userId);
     set((s) => ({ users: s.users.map((u) => u.id === userId ? { ...u, active } : u) }));
+  },
+
+  // Todos los hijos (comentarios, historial, archivos, etc.) tienen `on delete
+  // cascade` en el esquema, así que un solo delete de la fila alcanza.
+  deleteJob: async (jobId) => {
+    const before = get().jobs.find((j) => j.id === jobId);
+    set((s) => ({ jobs: s.jobs.filter((j) => j.id !== jobId) }));
+    const { error } = await supabase.from('jobs').delete().eq('id', jobId);
+    if (error) {
+      if (before) set((s) => ({ jobs: [...s.jobs, before] }));
+      throw error;
+    }
   },
 
   resetDemoData: async () => { await get_loadAll(set, get); },

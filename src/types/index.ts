@@ -30,11 +30,17 @@ export interface Client {
   tier: 'estandar' | 'prioritario';
 }
 
+// Catálogo sintetizado (26/08) alrededor de máquina/proceso real en vez de
+// "vertical" abstracta — ver data/catalog.ts. Los ids viejos (abajo) se dejan
+// en el tipo por los pocos trabajos de prueba que ya los tienen guardados;
+// `JOB_TYPES` (lo que se ofrece para elegir) ya no los incluye.
 export type JobTypeId =
+  | 'impresion_v7000' | 'impresion_s40' | 'impresion_p9000'
+  | 'corte_laser' | 'corte_cnc' | 'corporeo' | 'carpinteria' | 'acrilico' | 'vidrieras_stands' | 'otro'
+  // @deprecated ids viejos, ya no aparecen en el selector — quedan para no romper el tipado de trabajos de prueba existentes.
   | 'impresion_uv' | 'bajo_acrilico' | 'plotter_vinilo' | 'vidrieras' | 'senaletica'
   | 'carteleria' | 'letras_corporeas' | 'backlight' | 'stands' | 'eventos'
-  | 'ambientacion' | 'carpinteria' | 'acrilico' | 'trofeos' | 'impresion_3d'
-  | 'piezas_especiales' | 'otro';
+  | 'ambientacion' | 'trofeos' | 'impresion_3d' | 'piezas_especiales';
 
 export interface JobType {
   id: JobTypeId;
