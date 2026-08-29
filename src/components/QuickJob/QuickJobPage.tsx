@@ -9,6 +9,21 @@ import type { JobTypeId, MaterialId, Priority, SizeItem } from '../../types';
 
 const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
 const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
+const LAST_TYPE_KEY = 'bonta-qj-last-type';
+
+// Fecha local (no UTC) — con .toISOString() a secas la fecha puede correrse un
+// día según la hora y el huso horario del navegador.
+function addDaysLocal(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+const DATE_PRESETS = [
+  { label: 'Mañana', days: 1 },
+  { label: '3 días', days: 3 },
+  { label: 'Esta semana', days: 5 },
+  { label: '+1 semana', days: 10 },
+];
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -38,7 +53,7 @@ export function QuickJobPage() {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [name, setName] = useState('');
-  const [jobTypeId, setJobTypeId] = useState<JobTypeId>('carteleria');
+  const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => (localStorage.getItem(LAST_TYPE_KEY) as JobTypeId | null) ?? 'carteleria');
   const [description, setDescription] = useState('');
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
@@ -59,6 +74,10 @@ export function QuickJobPage() {
   const [submitError, setSubmitError] = useState('');
   const nameFieldRef = useRef<HTMLInputElement>(null);
 
+  function selectJobType(id: JobTypeId) {
+    setJobTypeId(id);
+    localStorage.setItem(LAST_TYPE_KEY, id);
+  }
   function toggleMaterial(id: MaterialId) {
     setMaterialIds((ids) => ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
   }
@@ -124,12 +143,23 @@ export function QuickJobPage() {
             <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label htmlFor="qj-type" className={labelCls}>Tipo de trabajo</label>
-              <select id="qj-type" className={inputCls} value={jobTypeId} onChange={(e) => setJobTypeId(e.target.value as JobTypeId)}>
+              <select id="qj-type" className={inputCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
                 {JOB_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
             <div><label htmlFor="qj-date" className={labelCls}>Fecha de entrega</label>
-              <input id="qj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} /></div>
+              <input id="qj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => setCommittedDate(e.target.value)} />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {DATE_PRESETS.map((p) => (
+                  <button
+                    type="button" key={p.label} onClick={() => setCommittedDate(addDaysLocal(p.days))}
+                    className={`text-[11px] px-2 py-1 rounded-full border ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div><label htmlFor="qj-description" className={labelCls}>Descripción — qué hay que producir</label>
             <textarea id="qj-description" className={inputCls} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
