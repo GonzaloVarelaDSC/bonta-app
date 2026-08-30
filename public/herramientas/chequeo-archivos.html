@@ -189,8 +189,15 @@
   .modal h3 { margin: 0 0 12px; font-size: 16px; color: #2d2b2b; }
   .modal textarea { width: 100%; height: 190px; font-size: 13.5px; font-family: inherit; border: 1.5px solid #d7d3d3; border-radius: 8px; padding: 12px; resize: vertical; line-height: 1.55; }
   .modal-actions { margin-top: 14px; display: flex; justify-content: flex-end; gap: 10px; }
-  .btn-cancel { background: #f0eded; color: #605d5d; } .btn-copy { background: #2f9e5a; color: white; }
-  .copy-confirm { font-size: 13px; color: #2f9e5a; margin-right: auto; align-self: center; display: none; font-weight: 600; }
+  .btn-cancel { background: #f0eded; color: #605d5d; }
+  .btn-copy { background: #2f9e5a; color: white; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-copy:disabled { cursor: default; }
+  .btn-copy-icon { position: relative; width: 15px; height: 15px; display: inline-flex; flex-shrink: 0; }
+  .btn-copy-icon svg { position: absolute; inset: 0; transition: opacity .15s ease, transform .15s ease; }
+  .btn-copy-icon .icon-copy { opacity: 1; transform: scale(1); }
+  .btn-copy-icon .icon-check { opacity: 0; transform: scale(0); }
+  .btn-copy.copied .icon-copy { opacity: 0; transform: scale(0); }
+  .btn-copy.copied .icon-check { opacity: 1; transform: scale(1); }
 
   /* ---------- Manual de Uso: submenu ---------- */
   .man-menu { display: flex; flex-direction: column; gap: 14px; max-width: 660px; margin: 6px auto 0; }
@@ -586,9 +593,14 @@
     <h3>Mensaje para el cliente</h3>
     <textarea id="modalTextarea"></textarea>
     <div class="modal-actions">
-      <span class="copy-confirm" id="copyConfirm">Copiado ✓</span>
       <button class="btn btn-cancel" id="modalCancel">Cerrar</button>
-      <button class="btn btn-copy" id="modalCopy">Copiar</button>
+      <button class="btn btn-copy" id="modalCopy">
+        <span class="btn-copy-icon">
+          <svg class="icon-copy" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <svg class="icon-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span id="modalCopyLabel">Copiar</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1237,14 +1249,23 @@ async function exportPdf(resultId) {
 
 const modalBackdrop = document.getElementById('modalBackdrop');
 const modalTextarea = document.getElementById('modalTextarea');
-const copyConfirm = document.getElementById('copyConfirm');
+const modalCopyBtn = document.getElementById('modalCopy');
+const modalCopyLabel = document.getElementById('modalCopyLabel');
 document.getElementById('modalCancel').addEventListener('click', () => modalBackdrop.classList.remove('open'));
-document.getElementById('modalCopy').addEventListener('click', async () => {
+modalCopyBtn.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(modalTextarea.value);
-    copyConfirm.style.display = 'inline';
-    setTimeout(() => copyConfirm.style.display = 'none', 2000);
-  } catch (e) { modalTextarea.select(); document.execCommand('copy'); }
+  } catch (e) {
+    modalTextarea.select(); document.execCommand('copy');
+  }
+  modalCopyBtn.classList.add('copied');
+  modalCopyBtn.disabled = true;
+  modalCopyLabel.textContent = '¡Copiado!';
+  setTimeout(() => {
+    modalCopyBtn.classList.remove('copied');
+    modalCopyBtn.disabled = false;
+    modalCopyLabel.textContent = 'Copiar';
+  }, 1500);
 });
 function openMessage(resultId, kind) {
   const r = results.find(x => x.id === resultId);
