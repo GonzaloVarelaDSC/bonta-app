@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, Undo2, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors,
@@ -234,6 +234,13 @@ export function KanbanPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [activeJob, setActiveJob] = useState<Job | null>(null);
 
+  // Un drag accidental cambia el estado real de un trabajo con un solo gesto de
+  // mouse — más fácil de hacer "sin querer" que el select de estado, que pide
+  // un click deliberado. "Deshacer" cubre ese riesgo sin agregar fricción al
+  // caso normal (no interrumpe nada, solo queda disponible unos segundos).
+  const [undoAction, setUndoAction] = useState<{ jobId: string; jobName: string; fromStatus: JobStatus; toLabel: string } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   function columnOf(job: Job) {
     return KANBAN_COLUMNS.find((c) => c.statuses.includes(job.status))?.key ?? 'pendiente';
   }
@@ -252,7 +259,19 @@ export function KanbanPage() {
     if (!targetCol || targetCol.key === columnOf(job)) return;
     const targetStatus: JobStatus = targetCol.statuses[0];
     const finalStatus = job.requiresInstallation && targetCol.key === 'listo' ? 'LISTO_PARA_INSTALACION' : targetStatus;
-    tryChangeJobStatus(job, finalStatus, setStatus, user.id);
+    const applied = tryChangeJobStatus(job, finalStatus, setStatus, user.id);
+    if (applied) {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      setUndoAction({ jobId: job.id, jobName: job.name, fromStatus: job.status, toLabel: targetCol.label });
+      undoTimerRef.current = setTimeout(() => setUndoAction(null), 6000);
+    }
+  }
+
+  function undo() {
+    if (!undoAction) return;
+    setStatus(undoAction.jobId, undoAction.fromStatus, user.id);
+    setUndoAction(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
 
   return (
@@ -283,6 +302,15 @@ export function KanbanPage() {
           </DragOverlay>
         </DndContext>
       </div>
+
+      {undoAction && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-ink-950 text-white text-sm rounded-lg shadow-pop px-4 py-2.5">
+          <span>"{undoAction.jobName}" pasó a {undoAction.toLabel}</span>
+          <button type="button" onClick={undo} className="inline-flex items-center gap-1 font-semibold text-brand-300 hover:text-brand-200">
+            <Undo2 size={14} /> Deshacer
+          </button>
+        </div>
+      )}
     </div>
   );
 }

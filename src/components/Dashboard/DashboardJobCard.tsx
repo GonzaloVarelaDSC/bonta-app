@@ -136,7 +136,11 @@ export function DashboardJobCard({ job }: { job: Job }) {
           {resp && (
             <span className="flex items-center gap-1"><Avatar name={resp.name} color={resp.avatarColor} size={18} /> {resp.name.split(' ')[0]}</span>
           )}
-          {creator && <span className="whitespace-nowrap">Asignado por {creator.name.split(' ')[0]}</span>}
+          {creator && (
+            <span className="flex items-center gap-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-2.5 py-0.5 font-semibold whitespace-nowrap" title={`${creator.name} te asignó este trabajo`}>
+              <Avatar name={creator.name} color={creator.avatarColor} size={18} /> Asignado por {creator.name.split(' ')[0]}
+            </span>
+          )}
         </div>
       </div>
     </div>

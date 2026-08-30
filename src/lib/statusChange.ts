@@ -21,19 +21,25 @@ export function statusOptionsFor(job: Job): JobStatus[] {
   return SELECTABLE_STATUSES.includes(job.status) ? SELECTABLE_STATUSES : [job.status, ...SELECTABLE_STATUSES];
 }
 
-/** Bloquea el pase a "listo" si faltan ítems obligatorios del control de calidad — vale para Kanban y para la tabla. */
+/**
+ * Bloquea el pase a "listo" si faltan ítems obligatorios del control de
+ * calidad — vale para Kanban y para la tabla. Devuelve `true` si el cambio se
+ * llegó a disparar (para que el Kanban sepa si ofrecer "Deshacer" o no —
+ * si el gate lo rechazó, no cambió nada, no hay nada que deshacer).
+ */
 export function tryChangeJobStatus(
   job: Job,
   targetStatus: JobStatus,
   setStatus: (jobId: string, status: JobStatus, byUserId: string) => Promise<void>,
   byUserId: string
-) {
+): boolean {
   if (targetStatus === 'LISTO_PARA_ENTREGA' || targetStatus === 'LISTO_PARA_INSTALACION') {
     const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
     if (requiredPending.length > 0) {
       alert(`No se puede pasar a "${STATUS_LABELS[targetStatus]}": faltan ${requiredPending.length} ítems obligatorios del control de calidad. Completalos desde la ficha del trabajo.`);
-      return;
+      return false;
     }
   }
   setStatus(job.id, targetStatus, byUserId);
+  return true;
 }

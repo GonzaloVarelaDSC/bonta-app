@@ -71,6 +71,11 @@ export function JobDetailPage() {
               <div className="font-mono text-xs text-ink-700 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
               <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
               <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
+              {creator && (
+                <div className="flex items-center gap-1.5 mt-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-semibold w-fit" title={`${creator.name} te asignó este trabajo`}>
+                  <Avatar name={creator.name} color={creator.avatarColor} size={18} /> Asignado por {creator.name}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <PriorityBadge priority={effectivePriority(job)} />
