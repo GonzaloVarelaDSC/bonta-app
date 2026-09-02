@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { canCreateJobs } from '../../lib/permissions';
 import { JOB_TYPES, MATERIALS } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
 import { SizeItemsEditor } from '../Common/SizeItemsEditor';
@@ -82,6 +83,15 @@ export function QuickJobPage() {
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
 
+  // "Asignado por" — quién de coordinación/dirección decide asignar este
+  // trabajo (Nancy, Richard, Alejandra, Pancho, Martín...). Arranca en quien
+  // está logueado, pero es un select explícito: no todos los que cargan un
+  // trabajo son necesariamente quienes deciden a quién se lo asignan.
+  const assigners = users.filter((u) => u.active && canCreateJobs(u.role));
+  const [createdByUserId, setCreatedByUserId] = useState(
+    () => (assigners.some((u) => u.id === user.id) ? user.id : assigners[0]?.id ?? user.id)
+  );
+
   // Si quien crea el trabajo no es él mismo asignable (ej. Pancho, dueño), no
   // tiene sentido precargarlo a él como responsable — arranca en el primer
   // productor disponible en su lugar.
@@ -142,7 +152,7 @@ export function QuickJobPage() {
         sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
-        createdByUserId: user.id, responsibleUserId, assignedUserIds,
+        createdByUserId, responsibleUserId, assignedUserIds,
       });
       navigate(`/trabajos/${job.id}`);
     } catch (err: any) {
@@ -244,6 +254,12 @@ export function QuickJobPage() {
         </Section>
 
         <Section title="Asignación">
+          <div><label htmlFor="qj-assigner" className={labelCls}>Asignado por</label>
+            <select id="qj-assigner" className={inputCls} value={createdByUserId} onChange={(e) => setCreatedByUserId(e.target.value)}>
+              {assigners.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <p className="text-[11px] text-ink-700 mt-1">Quién decide asignar este trabajo — no siempre es quien lo está tipeando acá.</p>
+          </div>
           <div><label htmlFor="qj-responsible" className={labelCls}>Responsable interno</label>
             <select id="qj-responsible" className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
               {producers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}

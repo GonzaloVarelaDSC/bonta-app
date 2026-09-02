@@ -52,7 +52,13 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
 /** Vista de solo lectura de los mismos renglones — para la ficha antes de tocar "Editar". */
 export function SizeItemsView({ items }: { items: SizeItem[] }) {
   const withData = items.filter((it) => it.quantity || it.width || it.height);
-  if (withData.length === 0) return <p className="text-sm text-ink-700 italic">Sin medidas cargadas.</p>;
+  if (withData.length === 0) {
+    return (
+      <div className="bg-white border border-ink-100 rounded-lg px-3 py-4 text-sm text-ink-700 italic text-center">
+        Sin medidas cargadas.
+      </div>
+    );
+  }
   return (
     <table className="w-full text-sm border border-ink-100 rounded-lg overflow-hidden">
       <thead>
