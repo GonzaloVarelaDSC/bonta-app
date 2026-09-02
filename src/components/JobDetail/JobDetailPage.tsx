@@ -136,12 +136,19 @@ export function JobDetailPage() {
             </a>
           </div>
 
-          <div role="tablist" aria-label="Secciones de la ficha" className="flex gap-1 mt-4 -mb-4 border-b border-ink-100 overflow-x-auto">
+          {/* Pestañas con "volumen" tipo Chrome: la activa se levanta (fondo del
+              panel + sombra) y se funde con el contenido de abajo; las
+              inactivas quedan chatas sobre el header blanco. */}
+          <div role="tablist" aria-label="Secciones de la ficha" className="flex gap-1 mt-4 -mb-4 px-1 overflow-x-auto">
             {visibleTabs.map((t) => (
               <button
                 key={t} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls={`tabpanel-${t}`}
                 onClick={() => setTab(t)}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${tab === t ? 'border-ink-950 text-ink-900' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
+                className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${
+                  tab === t
+                    ? 'bg-ink-50 text-ink-900 font-semibold shadow-[0_-2px_6px_rgba(15,23,32,0.08)] relative z-10'
+                    : 'text-ink-700 hover:bg-ink-100/70 hover:text-ink-900'
+                }`}>
                 {t}
               </button>
             ))}
@@ -361,29 +368,36 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
 
   const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
 
+  const sectionLabelCls = 'text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5';
+
   if (mode === 'view') {
     return (
-      <div className="max-w-3xl space-y-4 text-sm">
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-1.5">Cantidad y medidas</div>
-          <SizeItemsView items={job.sizeItems} />
+      <div className="max-w-3xl text-sm">
+        <div className="bg-white border border-ink-100 rounded-xl shadow-card divide-y divide-ink-100">
+          <div className="p-5">
+            <div className={sectionLabelCls}>Cantidad y medidas</div>
+            <SizeItemsView items={job.sizeItems} />
+          </div>
+          <div className="p-5">
+            <div className={sectionLabelCls}>Material</div>
+            {job.materialIds.length === 0 ? (
+              <p className="text-ink-700 italic">Sin material cargado.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {job.materialIds.map((id) => (
+                  <span key={id} className="text-xs bg-ink-100 text-ink-700 rounded-full px-2.5 py-1">{MATERIALS.find((m) => m.id === id)?.label}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="p-5">
+            <div className={sectionLabelCls}>Requisitos especiales</div>
+            <p className="text-ink-800">{job.specialRequirements || '—'}</p>
+          </div>
         </div>
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-1.5">Material</div>
-          {job.materialIds.length === 0 ? (
-            <p className="text-ink-700 italic">Sin material cargado.</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {job.materialIds.map((id) => (
-                <span key={id} className="text-xs bg-ink-100 text-ink-700 rounded-full px-2.5 py-1">{MATERIALS.find((m) => m.id === id)?.label}</span>
-              ))}
-            </div>
-          )}
-        </div>
-        <Field label="Requisitos especiales" value={job.specialRequirements || '—'} block />
         <button
           onClick={startEdit}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
         >
           <Pencil size={14} /> Editar especificaciones
         </button>
@@ -392,25 +406,29 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
   }
 
   return (
-    <div className="max-w-3xl space-y-4 text-sm">
-      <div>
-        <span className={labelCls}>Cantidad y medidas</span>
-        <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
-      </div>
-      <div>
-        <span className={labelCls}>Material</span>
-        <div className="flex flex-wrap gap-1.5">
-          {MATERIALS.map((m) => (
-            <button type="button" key={m.id} onClick={() => setMaterialIds((ids) => ids.includes(m.id) ? ids.filter((x) => x !== m.id) : [...ids, m.id])} aria-pressed={materialIds.includes(m.id)}
-              className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
-              {m.label}
-            </button>
-          ))}
+    <div className="max-w-3xl text-sm">
+      <div className="bg-white border border-ink-100 rounded-xl shadow-card divide-y divide-ink-100">
+        <div className="p-5">
+          <div className={labelCls}>Cantidad y medidas</div>
+          <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
+        </div>
+        <div className="p-5">
+          <div className={labelCls}>Material</div>
+          <div className="flex flex-wrap gap-1.5">
+            {MATERIALS.map((m) => (
+              <button type="button" key={m.id} onClick={() => setMaterialIds((ids) => ids.includes(m.id) ? ids.filter((x) => x !== m.id) : [...ids, m.id])} aria-pressed={materialIds.includes(m.id)}
+                className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="p-5">
+          <label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>
+          <textarea id="specs-special" className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} />
         </div>
       </div>
-      <div><label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>
-        <textarea id="specs-special" className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} /></div>
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-3 mt-4">
         <button
           onClick={save} disabled={saving}
           className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed"

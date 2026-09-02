@@ -49,34 +49,31 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
   );
 }
 
-/** Vista de solo lectura de los mismos renglones — para la ficha antes de tocar "Editar". */
+const VIEW_GRID_COLS = 'grid grid-cols-[56px_1fr_1fr] gap-2';
+
+/**
+ * Vista de solo lectura de los mismos renglones — para la ficha antes de
+ * tocar "Editar". Divs con grid, igual que el editor — nada de `<table>`:
+ * con el `border`/`overflow-hidden` de Tailwind una tabla HTML no pintaba
+ * bien el contorno ni el fondo del header en algunos navegadores.
+ */
 export function SizeItemsView({ items }: { items: SizeItem[] }) {
   const withData = items.filter((it) => it.quantity || it.width || it.height);
   if (withData.length === 0) {
-    return (
-      <div className="bg-white border border-ink-100 rounded-lg px-3 py-4 text-sm text-ink-700 italic text-center">
-        Sin medidas cargadas.
-      </div>
-    );
+    return <p className="text-sm text-ink-700 italic">Sin medidas cargadas.</p>;
   }
   return (
-    <table className="w-full text-sm border border-ink-100 rounded-lg overflow-hidden">
-      <thead>
-        <tr className="bg-ink-50 text-left text-[11px] uppercase tracking-wide text-ink-700">
-          <th className="px-3 py-1.5 font-medium">Cantidad</th>
-          <th className="px-3 py-1.5 font-medium">Ancho</th>
-          <th className="px-3 py-1.5 font-medium">Alto</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div className="border border-ink-100 rounded-lg overflow-hidden">
+      <div className={`${VIEW_GRID_COLS} px-3 py-1.5 bg-ink-50 text-[10px] uppercase tracking-wide text-ink-700 font-medium`}>
+        <span>Cantidad</span><span>Ancho</span><span>Alto</span>
+      </div>
+      <div className="divide-y divide-ink-50 bg-white">
         {withData.map((it, i) => (
-          <tr key={i} className="border-t border-ink-50">
-            <td className="px-3 py-1.5 text-ink-800">{it.quantity || '—'}</td>
-            <td className="px-3 py-1.5 text-ink-800">{it.width || '—'}</td>
-            <td className="px-3 py-1.5 text-ink-800">{it.height || '—'}</td>
-          </tr>
+          <div key={i} className={`${VIEW_GRID_COLS} px-3 py-2 text-ink-800`}>
+            <span>{it.quantity || '—'}</span><span>{it.width || '—'}</span><span>{it.height || '—'}</span>
+          </div>
         ))}
-      </tbody>
-    </table>
+      </div>
+    </div>
   );
 }
