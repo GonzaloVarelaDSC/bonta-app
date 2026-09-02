@@ -2,9 +2,14 @@ import { Plus, X } from 'lucide-react';
 import type { SizeItem } from '../../types';
 
 const cellCls = 'w-full border border-ink-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
-const cellLabelCls = 'block text-[10px] font-medium text-ink-700 mb-1';
+const GRID_COLS = 'grid grid-cols-[56px_1fr_1fr_28px] gap-2';
 
-/** Un renglón editable de cantidad/ancho/alto, con botón para agregar y quitar renglones. */
+/**
+ * Un renglón editable de cantidad/ancho/alto por fila, con botón para agregar
+ * y quitar renglones. Todo dentro de una tarjeta con líneas divisorias (mismo
+ * lenguaje que el checklist de control de calidad) para que se lea como una
+ * lista prolija en vez de inputs sueltos flotando.
+ */
 export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChange: (items: SizeItem[]) => void }) {
   function update(i: number, patch: Partial<SizeItem>) {
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -17,29 +22,26 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
   }
 
   return (
-    <div className="space-y-2">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-end gap-2">
-          <div className="w-20 shrink-0">
-            {i === 0 && <label className={cellLabelCls}>Cantidad</label>}
+    <div className="bg-white border border-ink-100 rounded-lg overflow-hidden">
+      <div className={`${GRID_COLS} px-3 py-1.5 bg-ink-50 text-[10px] uppercase tracking-wide text-ink-700 font-medium`}>
+        <span>Cant.</span><span>Ancho</span><span>Alto</span><span />
+      </div>
+      <div className="divide-y divide-ink-50">
+        {items.length === 0 && <div className="px-3 py-4 text-sm text-ink-700 italic text-center">Sin renglones todavía — agregá uno abajo.</div>}
+        {items.map((item, i) => (
+          <div key={i} className={`${GRID_COLS} items-center px-3 py-2`}>
             <input value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
-          </div>
-          <div className="flex-1">
-            {i === 0 && <label className={cellLabelCls}>Ancho</label>}
             <input value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
-          </div>
-          <div className="flex-1">
-            {i === 0 && <label className={cellLabelCls}>Alto</label>}
             <input value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-1 justify-self-center">
+              <X size={15} />
+            </button>
           </div>
-          <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-1.5 shrink-0">
-            <X size={15} />
-          </button>
-        </div>
-      ))}
+        ))}
+      </div>
       <button
         type="button" onClick={add}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 border border-dashed border-brand-300 rounded-lg px-3 py-1.5 hover:bg-brand-50"
+        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-brand-600 border-t border-ink-100 py-2 hover:bg-brand-50"
       >
         <Plus size={13} /> Agregar medida
       </button>

@@ -12,7 +12,10 @@ create table if not exists profiles (
   role text not null check (role in ('admin','coordinador','diseno','produccion','instalacion')),
   sector text not null default '',
   avatar_color text not null default '#146b52',
-  active boolean not null default true
+  active boolean not null default true,
+  -- Separado del rol de permisos: si a esta persona le asignan trabajos de
+  -- verdad (Responsable interno / Asignar a). Un dueño/admin puede no serlo.
+  is_producer boolean not null default true
 );
 
 -- Crea el perfil automáticamente cuando se crea un usuario en auth.users

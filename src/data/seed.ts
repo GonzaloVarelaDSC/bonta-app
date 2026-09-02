@@ -10,14 +10,14 @@ import { JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from './catalog';
 
 // ---------- Usuarios ----------
 export const USERS: User[] = [
-  { id: 'u-marcela', name: 'Marcela Bonta', email: 'marcela@estudiobonta.com', role: 'admin', sector: 'Dirección', avatarColor: '#0f4c3a', active: true },
-  { id: 'u-juan', name: 'Juan Pérez', email: 'juan@estudiobonta.com', role: 'coordinador', sector: 'Coordinación', avatarColor: '#146b52', active: true },
-  { id: 'u-maria', name: 'María Gómez', email: 'maria@estudiobonta.com', role: 'diseno', sector: 'Diseño', avatarColor: '#7c3aed', active: true },
-  { id: 'u-lucia', name: 'Lucía Fernández', email: 'lucia@estudiobonta.com', role: 'diseno', sector: 'Diseño', avatarColor: '#9333ea', active: true },
-  { id: 'u-pedro', name: 'Pedro Ramírez', email: 'pedro@estudiobonta.com', role: 'produccion', sector: 'Producción', avatarColor: '#c2410c', active: true },
-  { id: 'u-diego', name: 'Diego Sosa', email: 'diego@estudiobonta.com', role: 'produccion', sector: 'Producción', avatarColor: '#b45309', active: true },
-  { id: 'u-nahuel', name: 'Nahuel Torres', email: 'nahuel@estudiobonta.com', role: 'instalacion', sector: 'Instalación', avatarColor: '#0369a1', active: true },
-  { id: 'u-gonzalo', name: 'Gonzalo Varela', email: 'gonzalo@estudiobonta.com', role: 'coordinador', sector: 'Diseño Industrial / Producción', avatarColor: '#0f4c3a', active: true },
+  { id: 'u-marcela', name: 'Marcela Bonta', email: 'marcela@estudiobonta.com', role: 'admin', sector: 'Dirección', avatarColor: '#0f4c3a', active: true, isProducer: false },
+  { id: 'u-juan', name: 'Juan Pérez', email: 'juan@estudiobonta.com', role: 'coordinador', sector: 'Coordinación', avatarColor: '#146b52', active: true, isProducer: false },
+  { id: 'u-maria', name: 'María Gómez', email: 'maria@estudiobonta.com', role: 'diseno', sector: 'Diseño', avatarColor: '#7c3aed', active: true, isProducer: true },
+  { id: 'u-lucia', name: 'Lucía Fernández', email: 'lucia@estudiobonta.com', role: 'diseno', sector: 'Diseño', avatarColor: '#9333ea', active: true, isProducer: true },
+  { id: 'u-pedro', name: 'Pedro Ramírez', email: 'pedro@estudiobonta.com', role: 'produccion', sector: 'Producción', avatarColor: '#c2410c', active: true, isProducer: true },
+  { id: 'u-diego', name: 'Diego Sosa', email: 'diego@estudiobonta.com', role: 'produccion', sector: 'Producción', avatarColor: '#b45309', active: true, isProducer: true },
+  { id: 'u-nahuel', name: 'Nahuel Torres', email: 'nahuel@estudiobonta.com', role: 'instalacion', sector: 'Instalación', avatarColor: '#0369a1', active: true, isProducer: true },
+  { id: 'u-gonzalo', name: 'Gonzalo Varela', email: 'gonzalo@estudiobonta.com', role: 'coordinador', sector: 'Diseño Industrial / Producción', avatarColor: '#0f4c3a', active: true, isProducer: true },
 ];
 
 export function userById(id: string): User | undefined {

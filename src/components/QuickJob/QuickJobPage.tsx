@@ -65,7 +65,6 @@ export function QuickJobPage() {
 
   const [clientName, setClientName] = useState('');
   const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
   const [name, setName] = useState('');
   const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => {
     const saved = localStorage.getItem(LAST_TYPE_KEY);
@@ -84,7 +83,13 @@ export function QuickJobPage() {
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
 
-  const [responsibleUserId, setResponsibleUserId] = useState(user.id);
+  // Si quien crea el trabajo no es él mismo asignable (ej. Pancho, dueño), no
+  // tiene sentido precargarlo a él como responsable — arranca en el primer
+  // productor disponible en su lugar.
+  const producers = users.filter((u) => u.active && u.isProducer);
+  const [responsibleUserId, setResponsibleUserId] = useState(
+    () => (producers.some((u) => u.id === user.id) ? user.id : producers[0]?.id ?? user.id)
+  );
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -132,7 +137,7 @@ export function QuickJobPage() {
       const finalDate = committedDate || addDaysLocal(7);
       const clientId = await findOrCreateClient(finalClientName);
       const job = await createJob({
-        name: finalName, clientId, contactName, contactPhone, jobTypeId, description,
+        name: finalName, clientId, contactName, contactPhone: '', jobTypeId, description,
         committedDate: new Date(`${finalDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
         sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
@@ -170,12 +175,8 @@ export function QuickJobPage() {
               {clients.map((c) => <option key={c.id} value={c.name} />)}
             </datalist>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label htmlFor="qj-contact-name" className={labelCls}>Contacto</label>
-              <input id="qj-contact-name" className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Quién pide el trabajo" /></div>
-            <div><label htmlFor="qj-contact-phone" className={labelCls}>Tel. / WhatsApp</label>
-              <input id="qj-contact-phone" className={inputCls} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="11 2345 6789" /></div>
-          </div>
+          <div><label htmlFor="qj-contact-name" className={labelCls}>Contacto</label>
+            <input id="qj-contact-name" className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pide el trabajo" /></div>
           <div><label htmlFor="qj-name" className={labelCls}>Nombre del trabajo</label>
             <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
           <div className="grid grid-cols-2 gap-4">
@@ -248,7 +249,7 @@ export function QuickJobPage() {
         <Section title="Asignación">
           <div><label htmlFor="qj-responsible" className={labelCls}>Responsable interno</label>
             <select id="qj-responsible" className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
-              {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {producers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
             <p className="text-[11px] text-ink-700 mt-1">
               Quién se hace cargo de que este trabajo avance (normalmente quien lo va a diseñar o producir) — es distinto de quién lo cargó acá. Aparece en "Solo asignados a mí" del Dashboard.
@@ -257,7 +258,7 @@ export function QuickJobPage() {
           <div>
             <span className={labelCls}>Asignar a</span>
             <div className="flex flex-wrap gap-1.5">
-              {users.filter((u) => u.active).map((u) => (
+              {producers.map((u) => (
                 <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)} aria-pressed={assignedUserIds.includes(u.id)}
                   className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                   {u.name}

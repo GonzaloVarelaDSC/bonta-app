@@ -800,3 +800,27 @@ lo que decían las secciones 2 y 4 sobre estos temas puntuales.
    patrón que los bugs de `contact_phone`/`ready_at` de antes. Hay que volver a
    correr ese bloque puntual en el SQL Editor (ver el chat de esa fecha para el
    SQL exacto, o repetir el bloque "notificaciones" completo de `002_policies.sql`).
+
+---
+
+## 13. Actualización 26/08 (cuarta ronda) — `isProducer`, prolijidad de Especificaciones
+
+1. **`User.isProducer`** (columna `profiles.is_producer`, migración 012):
+   separa el rol de permisos (`role` — admin ve Usuarios/Configuración) de si a
+   la persona le asignan trabajos de verdad. Pancho es `admin` pero dueño, así
+   que `is_producer = false` — no aparece más en "Responsable interno"/
+   "Asignar a". Gonzalo es `admin` Y productor a la vez (`is_producer = true`,
+   el default de la columna). Si se suma gente nueva que sea solo dueño/
+   coordinador sin procesar trabajos, hay que acordarse de poner
+   `is_producer = false` a mano — no hay UI para esto todavía, es directo en
+   `profiles`.
+2. **`SizeItemsEditor`/`SizeItemsView`** (`Common/SizeItemsEditor.tsx`)
+   rediseñados con una tarjeta con líneas divisorias (mismo lenguaje que el
+   checklist de control de calidad) — antes eran inputs sueltos sin ningún
+   contorno que los agrupara, Gonzalo lo vio como "no hay renglones ni nada".
+3. **Carga rápida**: el campo "Contacto" quedó solo con el nombre — se sacó
+   "Tel. / WhatsApp" del contacto puntual (dato de más para la carga rápida,
+   Gonzalo lo pidió explícitamente). `contactPhone` se sigue mandando vacío al
+   crear el trabajo; se puede cargar después si hace falta.
+4. **Botón de eliminar en Trabajos**: pasa de gris-que-se-pone-rojo-al-hover a
+   rojo siempre (`text-crit`) — Gonzalo lo veía poco visible.

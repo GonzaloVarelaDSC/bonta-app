@@ -10,6 +10,7 @@ export function mapProfile(row: any): User {
   return {
     id: row.id, name: row.name, email: row.email, role: row.role,
     sector: row.sector ?? '', avatarColor: row.avatar_color ?? '#146b52', active: row.active,
+    isProducer: row.is_producer ?? true,
   };
 }
 

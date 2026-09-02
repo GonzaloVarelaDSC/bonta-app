@@ -150,7 +150,7 @@ function FiltersButton({
 }: {
   priorityFilter: Priority | 'all'; setPriorityFilter: (p: Priority | 'all') => void;
   respFilter: string | 'all'; setRespFilter: (r: string) => void;
-  users: { id: string; name: string; active: boolean }[];
+  users: { id: string; name: string; active: boolean; isProducer: boolean }[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -197,7 +197,7 @@ function FiltersButton({
               className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">Todo responsable</option>
-              {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {users.filter((u) => u.active && u.isProducer).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
           {activeCount > 0 && (

@@ -132,7 +132,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                       <button
                         type="button" onClick={() => handleDelete(j)}
                         aria-label={`Eliminar ${j.name}`}
-                        className="text-ink-700 hover:text-crit-text focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
+                        className="text-crit hover:text-crit-text focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
                       >
                         <Trash2 size={15} />
                       </button>

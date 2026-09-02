@@ -18,6 +18,11 @@ export interface User {
   sector: string;
   avatarColor: string;
   active: boolean;
+  // Separado de `role` a propósito: el rol es el permiso de sistema (admin ve
+  // Usuarios/Configuración), esto es si a la persona le asignan trabajos de
+  // verdad. Un dueño puede ser admin sin ser nunca responsable de un trabajo;
+  // Gonzalo puede ser admin Y diseñador a la vez.
+  isProducer: boolean;
 }
 
 export interface Client {
