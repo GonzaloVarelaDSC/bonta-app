@@ -64,7 +64,6 @@ export function QuickJobPage() {
   const findOrCreateClient = useStore((s) => s.findOrCreateClient);
 
   const [clientName, setClientName] = useState('');
-  const [contactName, setContactName] = useState('');
   const [name, setName] = useState('');
   const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => {
     const saved = localStorage.getItem(LAST_TYPE_KEY);
@@ -137,7 +136,7 @@ export function QuickJobPage() {
       const finalDate = committedDate || addDaysLocal(7);
       const clientId = await findOrCreateClient(finalClientName);
       const job = await createJob({
-        name: finalName, clientId, contactName, contactPhone: '', jobTypeId, description,
+        name: finalName, clientId, contactName: '', contactPhone: '', jobTypeId, description,
         committedDate: new Date(`${finalDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
         sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
@@ -175,8 +174,6 @@ export function QuickJobPage() {
               {clients.map((c) => <option key={c.id} value={c.name} />)}
             </datalist>
           </div>
-          <div><label htmlFor="qj-contact-name" className={labelCls}>Contacto</label>
-            <input id="qj-contact-name" className={inputCls} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nombre de quien pide el trabajo" /></div>
           <div><label htmlFor="qj-name" className={labelCls}>Nombre del trabajo</label>
             <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
           <div className="grid grid-cols-2 gap-4">
