@@ -89,6 +89,7 @@ create table if not exists jobs (
   measurements text not null default '',
   size_items jsonb not null default '[]'::jsonb,
   material_ids text[] not null default '{}',
+  products jsonb not null default '[]'::jsonb,
   technique text not null default '',
   finish text not null default '',
   color text not null default '',

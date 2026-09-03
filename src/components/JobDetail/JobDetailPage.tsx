@@ -8,15 +8,15 @@ import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar } from '../Common/Badges';
-import { SizeItemsEditor, SizeItemsView } from '../Common/SizeItemsEditor';
-import { JOB_TYPES, MATERIALS, STATUS_LABELS, BLOCK_REASON_LABELS } from '../../data/catalog';
+import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
+import { JOB_TYPES, STATUS_LABELS, BLOCK_REASON_LABELS } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
-import type { BlockReason, JobStatus, MaterialId, Priority, SizeItem } from '../../types';
+import type { BlockReason, JobStatus, Priority, Product } from '../../types';
 
-const TABS = ['General', 'Especificaciones', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+const TABS = ['General', 'Productos', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
 
 export function JobDetailPage() {
   const { id } = useParams();
@@ -27,7 +27,9 @@ export function JobDetailPage() {
   const activityLog = useStore((s) => s.activityLog).filter((a) => a.jobId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const setStatus = useStore((s) => s.setStatus);
   const setPriority = useStore((s) => s.setPriority);
+  const updateCommittedDate = useStore((s) => s.updateCommittedDate);
   const updateJobSpecs = useStore((s) => s.updateJobSpecs);
+  const toggleProductChecked = useStore((s) => s.toggleProductChecked);
   const blockJob = useStore((s) => s.blockJob);
   const unblockJob = useStore((s) => s.unblockJob);
   const addFileVersion = useStore((s) => s.addFileVersion);
@@ -165,7 +167,18 @@ export function JobDetailPage() {
               <Field label="Asignados" value={job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean).join(', ') || '—'} />
               <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
               <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
-              <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
+              {canChangePriority(user.role) ? (
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Fecha comprometida</div>
+                  <input
+                    type="date" value={job.committedDate.slice(0, 10)}
+                    onChange={(e) => e.target.value && updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id)}
+                    className="text-ink-800 bg-transparent border border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-1.5 -ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              ) : (
+                <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
+              )}
               <Field label="Tipo de trabajo" value={JOB_TYPES.find((t) => t.id === job.jobTypeId)?.label} />
               <div className="sm:col-span-2">
                 <Field label="Descripción" value={job.description} block />
@@ -174,8 +187,12 @@ export function JobDetailPage() {
             </div>
           )}
 
-          {tab === 'Especificaciones' && (
-            <SpecsTab job={job} onSave={(specs) => updateJobSpecs(job.id, specs, user.id)} />
+          {tab === 'Productos' && (
+            <ProductsTab
+              job={job}
+              onSave={(specs) => updateJobSpecs(job.id, specs, user.id)}
+              onToggle={(productId) => toggleProductChecked(job.id, productId, user.id)}
+            />
           )}
 
           {tab === 'Control de calidad' && (
@@ -339,19 +356,18 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
   );
 }
 
-// Arranca en modo lectura (como el resto de las pestañas de la ficha); "Editar"
-// pasa a un formulario y "Guardar"/"Cancelar" vuelve a lectura — antes quedaba
-// siempre editable, sin distinción entre ver y modificar.
-function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (specs: JobSpecs) => Promise<void> }) {
+// Los productos con checkbox siempre se pueden tildar (no hace falta entrar
+// en modo edición para eso — sería fricción justo en la parte que se usa todo
+// el tiempo mientras se procesa el trabajo). "Editar productos" es aparte,
+// para agregar/quitar productos o cambiar material/medidas/notas.
+function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job; onSave: (specs: JobSpecs) => Promise<void>; onToggle: (productId: string) => void }) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  const [sizeItems, setSizeItems] = useState<SizeItem[]>(job.sizeItems);
-  const [materialIds, setMaterialIds] = useState<MaterialId[]>(job.materialIds);
+  const [products, setProducts] = useState<Product[]>(job.products);
   const [specialRequirements, setSpecialRequirements] = useState(job.specialRequirements);
   const [saving, setSaving] = useState(false);
 
   function startEdit() {
-    setSizeItems(job.sizeItems.length ? job.sizeItems : [{ quantity: '', width: '', height: '' }]);
-    setMaterialIds(job.materialIds);
+    setProducts(job.products);
     setSpecialRequirements(job.specialRequirements);
     setMode('edit');
   }
@@ -359,7 +375,7 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
   async function save() {
     setSaving(true);
     try {
-      await onSave({ sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds, specialRequirements });
+      await onSave({ products, specialRequirements });
       setMode('view');
     } finally {
       setSaving(false);
@@ -367,68 +383,37 @@ function SpecsTab({ job, onSave }: { job: import('../../types').Job; onSave: (sp
   }
 
   const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
-
-  const sectionLabelCls = 'text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5';
+  const doneCount = job.products.filter((p) => p.checked).length;
 
   if (mode === 'view') {
     return (
-      <div className="max-w-3xl text-sm">
-        <div className="bg-white border border-ink-100 rounded-xl shadow-card divide-y divide-ink-100">
-          <div className="p-5">
-            <div className={sectionLabelCls}>Cantidad y medidas</div>
-            <SizeItemsView items={job.sizeItems} />
-          </div>
-          <div className="p-5">
-            <div className={sectionLabelCls}>Material</div>
-            {job.materialIds.length === 0 ? (
-              <p className="text-ink-700 italic">Sin material cargado.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {job.materialIds.map((id) => (
-                  <span key={id} className="text-xs bg-ink-100 text-ink-700 rounded-full px-2.5 py-1">{MATERIALS.find((m) => m.id === id)?.label}</span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="p-5">
-            <div className={sectionLabelCls}>Requisitos especiales</div>
-            <p className="text-ink-800">{job.specialRequirements || '—'}</p>
-          </div>
+      <div className="max-w-3xl text-sm space-y-4">
+        {job.products.length > 0 && (
+          <div className="text-xs text-ink-700">{doneCount} de {job.products.length} productos procesados</div>
+        )}
+        <ProductsView products={job.products} onToggle={onToggle} />
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5">Requisitos especiales</div>
+          <p className="text-ink-800">{job.specialRequirements || '—'}</p>
         </div>
         <button
           onClick={startEdit}
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
         >
-          <Pencil size={14} /> Editar especificaciones
+          <Pencil size={14} /> Editar productos
         </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl text-sm">
-      <div className="bg-white border border-ink-100 rounded-xl shadow-card divide-y divide-ink-100">
-        <div className="p-5">
-          <div className={labelCls}>Cantidad y medidas</div>
-          <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
-        </div>
-        <div className="p-5">
-          <div className={labelCls}>Material</div>
-          <div className="flex flex-wrap gap-1.5">
-            {MATERIALS.map((m) => (
-              <button type="button" key={m.id} onClick={() => setMaterialIds((ids) => ids.includes(m.id) ? ids.filter((x) => x !== m.id) : [...ids, m.id])} aria-pressed={materialIds.includes(m.id)}
-                className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="p-5">
-          <label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>
-          <textarea id="specs-special" className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} />
-        </div>
+    <div className="max-w-3xl text-sm space-y-4">
+      <ProductsEditor products={products} onChange={setProducts} jobTypeId={job.jobTypeId} />
+      <div>
+        <label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>
+        <textarea id="specs-special" className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" rows={2} value={specialRequirements} onChange={(e) => setSpecialRequirements(e.target.value)} />
       </div>
-      <div className="flex items-center gap-3 mt-4">
+      <div className="flex items-center gap-3">
         <button
           onClick={save} disabled={saving}
           className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed"

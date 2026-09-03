@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canCreateJobs } from '../../lib/permissions';
-import { JOB_TYPES, MATERIALS } from '../../data/catalog';
+import { JOB_TYPES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
-import { SizeItemsEditor } from '../Common/SizeItemsEditor';
-import type { JobTypeId, MaterialId, Priority, SizeItem } from '../../types';
+import { ProductsEditor } from '../Common/ProductsEditor';
+import type { JobTypeId, Priority, Product } from '../../types';
+
+function emptyProduct(): Product {
+  return { id: crypto.randomUUID(), label: '', materialIds: [], sizeItems: [{ quantity: '', width: '', height: '' }], notes: '', checked: false };
+}
 
 const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
 const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
@@ -74,8 +78,7 @@ export function QuickJobPage() {
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
 
-  const [sizeItems, setSizeItems] = useState<SizeItem[]>([{ quantity: '', width: '', height: '' }]);
-  const [materialIds, setMaterialIds] = useState<MaterialId[]>([]);
+  const [products, setProducts] = useState<Product[]>([emptyProduct()]);
   const [observations, setObservations] = useState('');
 
   const [requiresInstallation, setRequiresInstallation] = useState(false);
@@ -113,18 +116,15 @@ export function QuickJobPage() {
     setCommittedDate(newDate);
     setPriority(suggestPriority(newDate));
   }
-  function toggleMaterial(id: MaterialId) {
-    setMaterialIds((ids) => ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
-  }
   function toggleAssigned(id: string) {
     setAssignedUserIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id]);
   }
 
-  // Única condición dura: sin al menos una medida cargada, no se puede crear el
-  // trabajo. El resto (cliente, nombre, descripción, fecha, dirección) avisa
-  // pero no bloquea — se completa con un valor de referencia y se termina de
-  // cargar después desde la ficha.
-  const hasSizeData = sizeItems.some((it) => it.quantity.trim() || it.width.trim() || it.height.trim());
+  // Única condición dura: sin al menos una medida cargada en algún producto,
+  // no se puede crear el trabajo. El resto (cliente, nombre, descripción,
+  // fecha, dirección) avisa pero no bloquea — se completa con un valor de
+  // referencia y se termina de cargar después desde la ficha.
+  const hasSizeData = products.some((p) => p.sizeItems.some((it) => it.quantity.trim() || it.width.trim() || it.height.trim()));
   const softWarnings: string[] = [];
   if (!clientName.trim()) softWarnings.push('cliente');
   if (!name.trim()) softWarnings.push('nombre del trabajo');
@@ -149,7 +149,9 @@ export function QuickJobPage() {
         name: finalName, clientId, contactName: '', contactPhone: '', jobTypeId, description,
         committedDate: new Date(`${finalDate}T18:00`).toISOString(),
         priorityManual: priority, clientImportant: false,
-        sizeItems: sizeItems.filter((it) => it.quantity || it.width || it.height), materialIds,
+        products: products
+          .map((p) => ({ ...p, sizeItems: p.sizeItems.filter((it) => it.quantity || it.width || it.height) }))
+          .filter((p) => p.label.trim() || p.materialIds.length > 0 || p.sizeItems.length > 0 || p.notes.trim()),
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId, responsibleUserId, assignedUserIds,
@@ -216,22 +218,8 @@ export function QuickJobPage() {
           </div>
         </Section>
 
-        <Section title="Especificaciones" hint="Opcional — cargalas ahora si el cliente te las está dando, si no se completan después desde la ficha.">
-          <div>
-            <span className={labelCls}>Cantidad y medidas</span>
-            <SizeItemsEditor items={sizeItems} onChange={setSizeItems} />
-          </div>
-          <div>
-            <span className={labelCls}>Material</span>
-            <div className="flex flex-wrap gap-1.5">
-              {MATERIALS.map((m) => (
-                <button type="button" key={m.id} onClick={() => toggleMaterial(m.id)} aria-pressed={materialIds.includes(m.id)}
-                  className={`text-xs px-2.5 py-1.5 rounded-full border ${materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        <Section title="Productos" hint="Un trabajo puede tener más de un producto (ej. Corpóreo 3D + Corpóreo en acrílico) — cada uno con su propio material y medidas.">
+          <ProductsEditor products={products} onChange={setProducts} jobTypeId={jobTypeId} />
           <div><label htmlFor="qj-obs" className={labelCls}>Observaciones</label>
             <textarea id="qj-obs" className={inputCls} rows={2} value={observations} onChange={(e) => setObservations(e.target.value)} /></div>
         </Section>

@@ -35,7 +35,9 @@ interface StoreState {
   setStatus: (jobId: string, status: JobStatus, movedByUserId: string) => Promise<void>;
   setJobCode: (jobId: string, code: string, byUserId: string) => Promise<void>;
   setPriority: (jobId: string, priority: Priority, byUserId: string) => Promise<void>;
+  updateCommittedDate: (jobId: string, committedDate: string, byUserId: string) => Promise<void>;
   updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
+  toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -56,14 +58,14 @@ interface StoreState {
 }
 
 export interface JobSpecs {
-  sizeItems: Job['sizeItems']; materialIds: Job['materialIds']; specialRequirements: string;
+  products: Job['products']; specialRequirements: string;
 }
 
 export interface NewJobInput {
   name: string; clientId: string; contactName: string; contactPhone: string;
   jobTypeId: Job['jobTypeId']; description: string;
   committedDate: string; priorityManual: Priority; clientImportant: boolean;
-  sizeItems: Job['sizeItems']; materialIds: Job['materialIds']; observations: string; specialRequirements: string;
+  products: Job['products']; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[];
@@ -175,8 +177,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       name: input.name, client_id: input.clientId, contact_name: input.contactName, contact_phone: input.contactPhone,
       created_by_user_id: input.createdByUserId,
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
-      job_type_id: input.jobTypeId, description: input.description, size_items: input.sizeItems,
-      material_ids: input.materialIds,
+      job_type_id: input.jobTypeId, description: input.description, products: input.products,
       observations: input.observations, special_requirements: input.specialRequirements,
       status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,
@@ -255,14 +256,46 @@ export const useStore = create<StoreState>()((set, get) => ({
     await refreshMyNotifications(set, get);
   },
 
+  // committed_date es uno de los campos que el trigger `jobs_update_guard` (ver
+  // 002_policies.sql) protege — solo admin/coordinador pueden tocarlo. La UI ya
+  // gatea el botón con `canChangePriority`, esto es la segunda barrera real.
+  updateCommittedDate: async (jobId, committedDate, byUserId) => {
+    const before = get().jobs.find((j) => j.id === jobId);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, committedDate } : j) }));
+    const { error } = await supabase.from('jobs').update({ committed_date: committedDate, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) {
+      if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
+      throw error;
+    }
+    await insertActivity(set, jobId, byUserId, 'fecha', 'Cambió la fecha de entrega comprometida.');
+    await refreshJob(set, jobId);
+  },
+
   updateJobSpecs: async (jobId, specs, byUserId) => {
     const { error } = await supabase.from('jobs').update({
-      size_items: specs.sizeItems, material_ids: specs.materialIds,
+      products: specs.products,
       special_requirements: specs.specialRequirements, last_activity_at: new Date().toISOString(),
     }).eq('id', jobId);
     if (error) throw error;
-    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó las especificaciones técnicas.');
+    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó los productos del trabajo.');
     await refreshJob(set, jobId);
+  },
+
+  // Tildar un producto es informativo, nunca bloquea nada — por eso es una
+  // acción propia y liviana en vez de pasar por el modo "Editar" del resto de
+  // los productos (que sí guarda todo junto).
+  toggleProductChecked: async (jobId, productId, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const product = job.products.find((p) => p.id === productId);
+    const products = job.products.map((p) => p.id === productId ? { ...p, checked: !p.checked } : p);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, products } : j) }));
+    const { error } = await supabase.from('jobs').update({ products, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) {
+      set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? job : j) }));
+      throw error;
+    }
+    await insertActivity(set, jobId, byUserId, 'producto', `Marcó "${product?.label}" como ${product?.checked ? 'pendiente' : 'procesado'}.`);
   },
 
   assignJob: async (jobId, assignedUserIds, responsibleUserId, byUserId) => {

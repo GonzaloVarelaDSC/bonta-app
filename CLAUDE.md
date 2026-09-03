@@ -824,3 +824,71 @@ lo que decían las secciones 2 y 4 sobre estos temas puntuales.
    crear el trabajo; se puede cargar después si hace falta.
 4. **Botón de eliminar en Trabajos**: pasa de gris-que-se-pone-rojo-al-hover a
    rojo siempre (`text-crit`) — Gonzalo lo veía poco visible.
+
+---
+
+## 14. Actualización 02/09 — `Job.products`: un trabajo puede tener varios productos
+
+Gonzalo explicó que un trabajo real casi nunca es "un material, una medida": son
+pedidos combinados de un mismo cliente (ej. "Corpóreo 3D" + "Corpóreo en acrílico"
+en el mismo trabajo), cada material tiene variables propias (espesor, PAI, color de
+acrílico lechoso/cristal, con o sin base, mate/brillo/satín, montado o no y su
+demasía de 5mm salvo montaje en PVC), y pidió poder chequear qué producto ya está
+procesado sin que eso bloquee cambiar el estado del trabajo. También pidió poder
+editar la fecha de entrega después de creada la ficha, y sacar el aviso de "falta
+archivo" que saltaba siempre.
+
+1. **`Job.sizeItems`/`Job.materialIds` reemplazados por `Job.products: Product[]`**
+   (`types/index.ts`). Cada `Product` es
+   `{ id, label, materialIds: MaterialId[], sizeItems: SizeItem[], notes: string,
+   checked: boolean }`. **Decisión deliberada: espesor/color/mate-brillo-satín/con-
+   o-sin-base/montado-o-no/demasía NO se modelaron como campos rígidos** — son
+   demasiadas combinaciones específicas del oficio (por máquina, por material) para
+   codificarlas bien sin arriesgarse a errar la regla real; en vez de eso, cada
+   producto tiene un campo `notes` de texto libre con placeholder de ejemplo
+   ("Acrílico 5mm cristal", "Vinilo con base, montado en PVC (sin demasía)"). Si en
+   algún momento se ve que hace falta estructurarlo, es un cambio a proponer
+   explícitamente, no algo para inventar de nuevo. `sizeItems`/`materialIds` sueltos
+   quedan `@deprecated` en el tipo `Job` (no se borran, datos viejos).
+2. **Corpóreo → sugiere agregar plantilla de vinilo de corte**: en
+   `Common/ProductsEditor.tsx`, si `jobTypeId === 'corporeo'` y ningún producto
+   cargado tiene "plantilla" en el nombre, aparece un banner descartable
+   (`Lightbulb`, tokens `review-bg`/`review-text`) con un botón "+ Agregar" que
+   precarga `{ label: 'Plantilla de vinilo de corte', materialIds: ['vinilo'] }` —
+   nunca se agrega solo, es un click. Refleja la regla de Gonzalo ("95% de las
+   veces lleva su plantilla") sin forzarla para el 5% restante.
+3. **Pestaña "Especificaciones" de la ficha renombrada a "Productos"**
+   (`JobDetailPage.tsx`, `ProductsTab`) — mismo patrón ver/editar que ya tenía
+   (arranca en lectura, "Editar productos" pasa a edición, Guardar/Cancelar).
+   En modo lectura usa `ProductsView`, que muestra un contador "N de M productos
+   procesados" y, dentro de cada tarjeta de producto, un **checkbox "procesado"
+   siempre clickeable** (no hace falta entrar a modo edición) que llama a la nueva
+   acción del store `toggleProductChecked` — completamente desacoplado de
+   `tryChangeJobStatus`/`SELECTABLE_STATUSES`: tildarlo o no **nunca** bloquea ni
+   condiciona el cambio de estado del trabajo, es puramente informativo para que
+   quien está procesando sepa qué le falta (punto 8 del pedido de Gonzalo, cumplido
+   literal: "que no sea obligatorio... que no prohiba cambiar el estado").
+4. **`missingFields()`/`isMissingInfo` (`lib/selectors.ts`, `lib/risk.ts`) ya no
+   miran archivos** — el único campo que puede marcar "falta información" ahora es
+   no tener ningún producto cargado, o requerir instalación sin dirección. El
+   viejo aviso "Faltan datos para producción: Archivo" (Gonzalo: "es raro que se
+   vaya a usar, no advertir nada") desapareció; subir archivos sigue existiendo,
+   simplemente dejó de ser una condición de "trabajo incompleto".
+5. **Fecha de entrega comprometida editable en la ficha** — antes de esta ronda
+   solo se cargaba al crear el trabajo. Ahora, en la pestaña General de
+   `JobDetailPage.tsx`, si `canChangePriority(user.role)` (admin/coordinador) el
+   campo es un `<input type="date">` editable in place que llama a la nueva acción
+   `updateCommittedDate` del store; para el resto de los roles sigue siendo de
+   solo lectura. Coincide con el trigger `jobs_update_guard` de `002_policies.sql`,
+   que ya restringía `committed_date` a esos roles a nivel de base — la UI ahora
+   respeta esa misma regla en vez de no ofrecer edición para nadie.
+6. **`JobExportPage.tsx`** (hoja para el cliente) actualizada para iterar
+   `job.products` en vez de los campos planos viejos — cada producto se exporta
+   como su propia sección con nombre, material (vía el helper `materialLabels()`),
+   medidas y notas. Sin esto, cualquier trabajo cargado después de este cambio
+   exportaría una hoja de cliente vacía de especificaciones.
+7. **Migración `013_job_products.sql`** — agrega la columna:
+   ```sql
+   alter table jobs add column if not exists products jsonb not null default '[]'::jsonb;
+   ```
+   También sumada a `001_schema.sql` para instalaciones nuevas.

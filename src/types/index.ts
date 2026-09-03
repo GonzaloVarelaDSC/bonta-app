@@ -160,6 +160,31 @@ export interface SizeItem {
   height: string;
 }
 
+/**
+ * Un trabajo real casi nunca es "un material, una medida" — son combinaciones
+ * de productos/procesos distintos para el mismo cliente en el mismo trabajo
+ * (ej. "Corpóreo 3D" + "Corpóreo en acrílico"). Cada `Product` es uno de esos
+ * renglones: su propio material, sus propias medidas, y un check para llevar
+ * el pulso de cuáles ya se procesaron.
+ *
+ * `notes` es a propósito texto libre y no un campo estructurado por espesor/
+ * terminación/montaje — las combinaciones reales (espesor de acrílico, mate/
+ * brillo/satin según la máquina, con o sin base, demasía de 5mm si va montado
+ * salvo que sea sobre PVC, etc.) son demasiado variables para forzarlas en
+ * dropdowns sin arriesgar quedar mal o incompletas; un renglón de texto que la
+ * gente que sabe del oficio complete a mano es más fiel que una UI rígida
+ * adivinando reglas del rubro. Si con el uso real se ve un patrón que conviene
+ * estructurar, se agrega después.
+ */
+export interface Product {
+  id: string;
+  label: string; // ej. "Corpóreo 3D", "Corpóreo en acrílico"
+  materialIds: MaterialId[];
+  sizeItems: SizeItem[];
+  notes: string; // espesor, color de acrílico, mate/brillo/satin, con o sin base, montado o no, etc.
+  checked: boolean; // "ya lo procesé" — informativo, nunca bloquea el cambio de estado del trabajo
+}
+
 export interface Job {
   id: string;
   code: string | null; // N° de trabajo / orden de Copernico — lo carga a mano un admin/coordinador, no se genera solo
@@ -182,8 +207,11 @@ export interface Job {
   quantity: string;
   /** @deprecated reemplazado por `sizeItems` (26/08) — ídem. */
   measurements: string;
+  /** @deprecated reemplazado por `products` (26/08) — un trabajo puede tener varios productos, cada uno con su propia medida. Queda por datos viejos. */
   sizeItems: SizeItem[];
+  /** @deprecated ídem. */
   materialIds: MaterialId[];
+  products: Product[];
   /** @deprecated "no existe" en la práctica del estudio — ya no se pide en ningún formulario. */
   technique: string;
   /** @deprecated ídem. */
