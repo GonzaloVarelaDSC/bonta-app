@@ -14,26 +14,35 @@ export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
   const allJobs = useStore((s) => s.jobs);
   const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
-  const counts = useMemo(() => computeCounts(jobs), [jobs]);
   const [filter, setFilter] = useState<FilterKey>(null);
   const [onlyMine, setOnlyMine] = useState(true);
 
+  // Los cubos de arriba tienen que contar sobre el mismo conjunto que después
+  // se ve al hacer click — si no, un cubo puede mostrar "1" y al tocarlo
+  // aparecer vacío porque ese trabajo es de otra persona y "Solo asignados a
+  // mí" lo saca. Se escopea acá, antes de calcular counts, para que el número
+  // y la lista siempre coincidan.
+  const scoped = useMemo(
+    () => (onlyMine ? jobs.filter((j) => j.responsibleUserId === user.id || j.assignedUserIds.includes(user.id)) : jobs),
+    [jobs, onlyMine, user.id]
+  );
+  const counts = useMemo(() => computeCounts(scoped), [scoped]);
+
   const filtered = useMemo(() => {
-    let base = jobs;
+    let base = scoped;
     switch (filter) {
-      case 'critical': base = jobs.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'CRITICO'); break;
-      case 'urgent': base = jobs.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
-      case 'dueToday': base = jobs.filter(isDueToday); break;
-      case 'overdue': base = jobs.filter(isOverdue); break;
-      case 'inProduction': base = jobs.filter((j) => j.status === 'EN_PRODUCCION'); break;
-      case 'readyToDeliver': base = jobs.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
-      case 'waitingInfo': base = jobs.filter(isMissingInfo); break;
-      case 'silent': base = jobs.filter((j) => isSilent(j)); break;
-      default: base = jobs.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO');
+      case 'critical': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'CRITICO'); break;
+      case 'urgent': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
+      case 'dueToday': base = scoped.filter(isDueToday); break;
+      case 'overdue': base = scoped.filter(isOverdue); break;
+      case 'inProduction': base = scoped.filter((j) => j.status === 'EN_PRODUCCION'); break;
+      case 'readyToDeliver': base = scoped.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
+      case 'waitingInfo': base = scoped.filter(isMissingInfo); break;
+      case 'silent': base = scoped.filter((j) => isSilent(j)); break;
+      default: base = scoped.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO');
     }
-    if (onlyMine) base = base.filter((j) => j.responsibleUserId === user.id || j.assignedUserIds.includes(user.id));
     return sortByPriority(base);
-  }, [jobs, filter, onlyMine, user.id]);
+  }, [scoped, filter]);
 
   // Orden pedido por Gonzalo: lo más operativo (listos para entregar, en producción)
   // primero, después el resto por urgencia.

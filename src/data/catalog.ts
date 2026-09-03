@@ -107,6 +107,11 @@ export const QC_TEMPLATE = [
   { key: 'material', label: 'Material correcto', required: true },
   { key: 'color', label: 'Color correcto', required: true },
   { key: 'impresion', label: 'Impresión correcta', required: true },
+  // Bajo acrílico se ve desde el frente pero se imprime del lado de atrás — si
+  // la imagen no se espeja antes de imprimir, sale al revés y hay que rehacer
+  // la pieza. Gonzalo (02/09): paso crítico, aparece en el checklist de todos
+  // los trabajos (no solo los de acrílico) para no depender de acordarse.
+  { key: 'espejado', label: 'Imagen espejada (si es impresión bajo acrílico)', required: true },
   { key: 'corte', label: 'Corte correcto', required: false },
   { key: 'terminacion', label: 'Terminación correcta', required: true },
   { key: 'cantidad', label: 'Cantidad correcta', required: true },

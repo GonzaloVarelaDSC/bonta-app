@@ -892,3 +892,61 @@ archivo" que saltaba siempre.
    alter table jobs add column if not exists products jsonb not null default '[]'::jsonb;
    ```
    También sumada a `001_schema.sql` para instalaciones nuevas.
+
+---
+
+## 15. Actualización 02/09 (segunda ronda) — bug de RLS al asignar, QC deja de bloquear, KPIs consistentes, Pendiente vuelve al selector
+
+Ronda de correcciones sobre lo recién probado en producción con la migración 013 ya
+corrida.
+
+1. **Bug de RLS `activity_log` al crear un trabajo con "Asignado por" distinto de
+   quien lo carga de verdad.** `createJob` logueaba el evento "crear" con
+   `input.createdByUserId` (el valor del dropdown "Asignado por", editable a
+   propósito para acreditar el trabajo a otra persona — ver sección 13), pero la
+   policy `activity_log_insert` exige `user_id = auth.uid()`. Si alguien cargaba un
+   trabajo y elegía como "Asignado por" a otra persona (ej. Gonzalo tipea el pedido
+   pero acredita a Pancho), el insert del historial violaba RLS y toda la creación
+   fallaba. Se corrigió logueando con `get().currentUser?.id` (quien está
+   realmente autenticado) en vez del valor del dropdown — "Asignado por" se sigue
+   guardando tal cual en `jobs.created_by_user_id`, sin cambios ahí.
+2. **Control de calidad deja de bloquear el pase a "Listo"** — mismo criterio que
+   ya se había aplicado al checklist de Productos (sección 14, punto 3): Gonzalo
+   pidió extender "que no sea obligatorio, que no prohíba cambiar el estado" a
+   control de calidad también. `tryChangeJobStatus` (`lib/statusChange.ts`) ya NO
+   devuelve `false` ni frena el cambio — si quedan ítems obligatorios sin marcar,
+   muestra un `alert()` de recordatorio (mismo tono que la sugerencia de plantilla
+   de vinilo) pero el estado cambia igual. El banner de la pestaña Control de
+   calidad en la ficha se reescribió para no sonar a bloqueo ("Quedan N ítems...
+   es solo un recordatorio"). El checklist en sí sigue existiendo y tildándose
+   igual que siempre — lo que cambió es únicamente que no frena nada.
+3. **Nuevo ítem de control de calidad: "Imagen espejada (si es impresión bajo
+   acrílico)"** (`QC_TEMPLATE`, `data/catalog.ts`) — Gonzalo: paso crítico del
+   oficio (bajo acrílico se ve desde el frente pero se imprime del lado de atrás;
+   si no se espeja la imagen antes de imprimir, la pieza sale al revés y hay que
+   rehacerla). Se agregó como ítem `required: true` en la plantilla uniforme que
+   se siembra en TODOS los trabajos nuevos (mismo patrón que el resto de
+   `QC_TEMPLATE`, que ya tenía ítems no aplicables a todos los tipos de trabajo,
+   como "Corte correcto") — no hay mecanismo hoy para sembrar ítems de control de
+   calidad condicionados por tipo de trabajo/material (sería "checklist
+   configurable", explícitamente fuera de alcance de esta fase). Como el gate ya
+   no bloquea (punto 2), no hay costo real en que aparezca en trabajos donde no
+   aplica: se ignora sin efecto. **Ojo:** al sembrarse solo en `createJob`, este
+   ítem nuevo aparece únicamente en trabajos creados después de este cambio, no
+   en los ya existentes (no hace falta migración SQL — `quality_checks` es tabla
+   normal, no jsonb).
+4. **KPIs del Dashboard ahora escopeados a "Solo asignados a mí"** — antes los
+   cubos de arriba (`computeCounts`) se calculaban sobre TODOS los trabajos
+   visibles para el usuario, pero al hacer click el listado de abajo sí aplicaba
+   el toggle "Solo asignados a mí" — así un cubo podía mostrar, por ej., "1" en
+   "En producción" y al tocarlo aparecer vacío porque ese trabajo puntual era de
+   otra persona. Gonzalo lo reportó como "no tengo para ver los trabajos en
+   producción". Se corrigió escopeando el conjunto de trabajos ANTES de calcular
+   `counts` (`DashboardPage.tsx`, variable `scoped`), así el número del cubo y lo
+   que aparece al clickearlo siempre coinciden.
+5. **"Pendiente" vuelve a `SELECTABLE_STATUSES`** (`lib/statusChange.ts`) —
+   la ronda del 26/08 (sección 10, punto 4) lo había sacado del selector manual a
+   propósito (se alcanzaba solo al crear el trabajo), pero Gonzalo pidió poder
+   volver un trabajo a Pendiente a mano (por ej. si se lo pasó de estado por
+   error). Ahora el select de Dashboard/Trabajos/ficha tiene 5 opciones:
+   Pendiente, Falta información, En diseño, En producción, Listo para entrega.

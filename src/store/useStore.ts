@@ -200,7 +200,12 @@ export const useStore = create<StoreState>()((set, get) => ({
       });
     }
 
-    await insertActivity(set, jobId, input.createdByUserId, 'crear', `Creó el trabajo — ${input.name}.`);
+    // El historial es una auditoría de quién apretó el botón de verdad (RLS exige
+    // user_id = auth.uid()), que puede no coincidir con "Asignado por" — ese campo
+    // es editable a propósito para acreditar el trabajo a otra persona (ej. Pancho
+    // le dicta el pedido a Gonzalo y Gonzalo lo carga, pero el crédito es de Pancho).
+    const actorId = get().currentUser?.id ?? input.createdByUserId;
+    await insertActivity(set, jobId, actorId, 'crear', `Creó el trabajo — ${input.name}.`);
     await insertNotifications(input.assignedUserIds.filter((id) => id !== input.responsibleUserId), jobId, `Nuevo trabajo asignado: ${input.name}.`);
 
     const job = await fetchJobById(jobId);
