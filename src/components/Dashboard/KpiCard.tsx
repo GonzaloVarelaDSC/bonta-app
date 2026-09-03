@@ -5,7 +5,7 @@ interface Props {
   label: string;
   value: number;
   icon: LucideIcon;
-  tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral';
+  tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'neutral';
   active?: boolean;
   onClick?: () => void;
 }
@@ -18,17 +18,18 @@ const TONE_BORDER: Record<string, string> = {
   norm: 'border-norm/60 hover:border-norm',
   plan: 'border-plan/50 hover:border-plan',
   wait: 'border-wait/50 hover:border-wait',
+  info: 'border-info/50 hover:border-info',
   neutral: 'border-ink-300 hover:border-ink-400',
 };
 
 const TONE_TEXT: Record<string, string> = {
   crit: 'text-crit-text', urg: 'text-urg-text', norm: 'text-norm-text',
-  plan: 'text-plan-text', wait: 'text-wait-text', neutral: 'text-ink-800',
+  plan: 'text-plan-text', wait: 'text-wait-text', info: 'text-info-text', neutral: 'text-ink-800',
 };
 
 const TONE_ICON_BG: Record<string, string> = {
   crit: 'bg-crit-bg text-crit-text', urg: 'bg-urg-bg text-urg-text', norm: 'bg-norm-bg text-norm-text',
-  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', neutral: 'bg-ink-100 text-ink-700',
+  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', info: 'bg-info-bg text-info-text', neutral: 'bg-ink-100 text-ink-700',
 };
 
 export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Props) {

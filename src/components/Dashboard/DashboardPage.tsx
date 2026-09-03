@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp } from 'lucide-react';
+import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
@@ -8,7 +8,7 @@ import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
 
-type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
+type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
 export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
@@ -35,6 +35,7 @@ export function DashboardPage() {
       case 'urgent': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
       case 'dueToday': base = scoped.filter(isDueToday); break;
       case 'overdue': base = scoped.filter(isOverdue); break;
+      case 'inDesign': base = scoped.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO'); break;
       case 'inProduction': base = scoped.filter((j) => j.status === 'EN_PRODUCCION'); break;
       case 'readyToDeliver': base = scoped.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
       case 'waitingInfo': base = scoped.filter(isMissingInfo); break;
@@ -46,9 +47,10 @@ export function DashboardPage() {
 
   // Orden pedido por Gonzalo: lo más operativo (listos para entregar, en producción)
   // primero, después el resto por urgencia.
-  const cards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'neutral' }[] = [
+  const cards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'neutral' }[] = [
     { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
     { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
+    { key: 'inDesign', label: 'En diseño', value: counts.inDesign, icon: PenTool, tone: 'info' },
     { key: 'critical', label: 'Críticos', value: counts.critical, icon: Flame, tone: 'crit' },
     { key: 'urgent', label: 'Urgentes', value: counts.urgent, icon: Zap, tone: 'urg' },
     { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, icon: CalendarClock, tone: 'norm' },

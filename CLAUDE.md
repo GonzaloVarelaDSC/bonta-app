@@ -172,9 +172,10 @@ supabase/
   app) pero casi todo el contenido está vacío ("Todavía no hay contenido para esta
   sección"), a propósito — Gonzalo pidió la sección pero todavía no dictó qué
   escribir en cada una.
-- **Solo Gonzalo tiene cuenta** — el resto del equipo (~7 personas) no está cargado
-  todavía. Ver sección 7, punto 1 — esto bloquea que "Responsable interno"/"Asignar
-  a" muestren más de un nombre.
+- **Cuentas del equipo, en progreso** — Gonzalo, Gastón y Pancho ya tienen cuenta
+  real. Martín y Alejandra: instrucciones dadas el 03/09 (ver sección 16), falta
+  que Gonzalo las cree en Supabase. Nancy y Richard: todavía sin arrancar. Ver
+  sección 7, punto 1.
 - **No hay tests automatizados.** La única verificación es `npm run build` (tsc +
   vite build) y revisión manual/visual en el sitio deployado. Esta sesión en
   particular **no tuvo acceso a screenshots del navegador** (el panel de preview no
@@ -950,3 +951,47 @@ corrida.
    volver un trabajo a Pendiente a mano (por ej. si se lo pasó de estado por
    error). Ahora el select de Dashboard/Trabajos/ficha tiene 5 opciones:
    Pendiente, Falta información, En diseño, En producción, Listo para entrega.
+
+---
+
+## 16. Actualización 03/09 — cubo "En diseño", cuentas de Martín/Alejandra, próximo paso: base de conocimiento de materiales
+
+1. **Nueva tarjeta de KPI "En diseño"** en el Dashboard (`lib/selectors.ts`,
+   `computeCounts` — campo `inDesign`, cuenta `EN_DISENO` + `DISENO_LISTO`;
+   `DashboardPage.tsx`, filtro `inDesign`). Se agregó el tono `info` a `KpiCard`
+   (`Common`/`Dashboard/KpiCard.tsx` — antes solo tenía `crit/urg/norm/plan/wait/
+   neutral`), usando el token `info` ya existente en `tailwind.config.js` (el
+   mismo azul que usa `statusTone()` para "En diseño" en badges/Kanban), para que
+   el cubo nuevo matchee el color con el resto de la UI en vez de quedar gris
+   genérico.
+2. **Cuentas de Martín (dueño) y Alejandra (administración)** — instrucciones
+   paso a paso dadas a Gonzalo en el chat del 03/09 para crearlas en Supabase
+   Dashboard → Authentication → Users, más el UPDATE de `profiles` para dejarlas
+   con nombre/rol/`is_producer` correctos (mismo patrón ya usado con Gastón y
+   Pancho). Martín: mismo perfil que Pancho (`role='admin'`, `is_producer=false`
+   — dueño, no procesa trabajos). Alejandra: `role='coordinador'`,
+   `is_producer=false` (solo carga trabajos, no es responsable de producción,
+   igual que Nancy/Richard cuando se sumen). **No confirmado si Gonzalo ya las
+   creó** — verificar con un SELECT antes de asumirlo, mismo patrón que la vez
+   de Pancho (sección 5 del handoff original, la corrección de rol/nombre que
+   nunca se había aplicado la primera vez).
+3. **Pendiente para la próxima sesión — base de conocimiento de materiales**:
+   Gonzalo quiere transmitir TODA su información técnica de materiales (ej.
+   vinilo montado = demasía de 7mm por lado, distinto según esté montado o no,
+   distinto en PVC — nota: esto ajusta/reemplaza el dato de "5mm" mencionado en
+   la sección 14 punto 1, confirmar el valor correcto con él antes de usarlo en
+   cualquier lado) para que quede plasmada (a) como ayuda contextual al cargar
+   un trabajo y (b) como ítems de su checklist de Productos a medida que
+   procesa. Se le propuso arrancar una conversación nueva para dictar esto (por
+   volumen de contexto, ver punto 4) y, del lado técnico, evaluar extender el
+   patrón ya construido de sugerencia dismissible (`ProductsEditor.tsx`, banner
+   de "Plantilla de vinilo de corte" para Corpóreo) a más reglas material→
+   recordatorio, en vez de volver a campos rígidos — coherente con la decisión
+   de la sección 14 punto 1 de mantener el detalle técnico en texto libre.
+   Todavía no se implementó nada de esto, es un pedido a desarrollar.
+4. Esta sesión larga ya pasó por una compactación de contexto — se sugirió
+   arrancar una conversación nueva específicamente para el dictado de
+   materiales del punto 3, dado que va a ser información extensa y conviene
+   tener presupuesto de contexto completo disponible. Este archivo (`CLAUDE.md`)
+   sigue siendo el punto de continuidad entre sesiones — cualquier sesión nueva
+   debe leerlo primero.
