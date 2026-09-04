@@ -23,6 +23,13 @@ export interface User {
   // verdad. Un dueño puede ser admin sin ser nunca responsable de un trabajo;
   // Gonzalo puede ser admin Y diseñador a la vez.
   isProducer: boolean;
+  // Separado también de `role`: puede cargar un trabajo (tiene permiso), pero
+  // no necesariamente aparece como opción en "Asignado por" — ese campo es un
+  // crédito de "quién de verdad fue el que lo tomó/coordinó con el cliente"
+  // (Nancy/Richard/Alejandra/Gonzalo), no cualquiera que tenga acceso al
+  // formulario (Gastón/Pancho/Martín pueden cargar en un apuro, pero el
+  // crédito real le queda a otro). Ver `assigners` en QuickJobPage.tsx.
+  creditsAsAssigner: boolean;
 }
 
 export interface Client {

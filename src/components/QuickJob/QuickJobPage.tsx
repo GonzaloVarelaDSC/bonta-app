@@ -86,11 +86,14 @@ export function QuickJobPage() {
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
 
-  // "Asignado por" — quién de coordinación/dirección decide asignar este
-  // trabajo (Nancy, Richard, Alejandra, Pancho, Martín...). Arranca en quien
-  // está logueado, pero es un select explícito: no todos los que cargan un
-  // trabajo son necesariamente quienes deciden a quién se lo asignan.
-  const assigners = users.filter((u) => u.active && canCreateJobs(u.role));
+  // "Asignado por" — quién de coordinación/dirección tomó/coordinó este
+  // trabajo con el cliente (Nancy, Richard, Alejandra, Gonzalo...). Gastón,
+  // Pancho y Martín pueden cargar un trabajo igual (tienen acceso a este
+  // formulario) pero no aparecen acá — `creditsAsAssigner` es un campo aparte
+  // de `role` (Gonzalo, 03/09): "permití cargar trabajos pero que no
+  // aparezcan como quien asignó". Arranca en quien está logueado si es una
+  // opción válida, si no en la primera de la lista.
+  const assigners = users.filter((u) => u.active && canCreateJobs(u.role) && u.creditsAsAssigner);
   const [createdByUserId, setCreatedByUserId] = useState(
     () => (assigners.some((u) => u.id === user.id) ? user.id : assigners[0]?.id ?? user.id)
   );

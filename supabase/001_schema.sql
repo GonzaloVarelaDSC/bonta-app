@@ -15,7 +15,10 @@ create table if not exists profiles (
   active boolean not null default true,
   -- Separado del rol de permisos: si a esta persona le asignan trabajos de
   -- verdad (Responsable interno / Asignar a). Un dueño/admin puede no serlo.
-  is_producer boolean not null default true
+  is_producer boolean not null default true,
+  -- Separado también de `role`: puede cargar un trabajo, pero no
+  -- necesariamente aparece como opción en "Asignado por" (ver 014).
+  credits_as_assigner boolean not null default true
 );
 
 -- Crea el perfil automáticamente cuando se crea un usuario en auth.users

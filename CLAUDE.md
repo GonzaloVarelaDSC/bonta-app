@@ -995,3 +995,49 @@ corrida.
    tener presupuesto de contexto completo disponible. Este archivo (`CLAUDE.md`)
    sigue siendo el punto de continuidad entre sesiones — cualquier sesión nueva
    debe leerlo primero.
+
+---
+
+## 17. Actualización 03/09 (segunda ronda) — `User.creditsAsAssigner`: cargar un trabajo ≠ aparecer como quien lo asignó
+
+Gonzalo: "a Gastón, Pancho y Martín permití cargar trabajos, pero que no aparezcan
+como quien asignó". Dos cosas separadas que hasta ahora dependían las dos de
+`role` nada más:
+
+1. **`User.creditsAsAssigner`** (columna `profiles.credits_as_assigner`,
+   migración `014_profiles_credits_as_assigner.sql`, default `true`) — nueva
+   columna, independiente de `role` e `isProducer`. El selector "Asignado por"
+   de Carga rápida (`QuickJobPage.tsx`, `assigners`) ahora filtra por
+   `canCreateJobs(role) && creditsAsAssigner`, no solo por rol. Es un crédito de
+   "quién de verdad coordinó el trabajo con el cliente" (Nancy, Richard,
+   Alejandra, Gonzalo) — Gastón/Pancho/Martín pueden tener acceso al formulario
+   igual (para cargar en un apuro) sin ensuciar ese selector con su nombre.
+2. **Gastón pasa a rol `coordinador`** (antes `diseno`) — es el cambio mínimo
+   para darle acceso real a Carga rápida: `canCreateJobs`/`jobs_insert` (RLS) y
+   varias policies más que se disparan al crear un trabajo (`job_stages_write`,
+   `quality_checks_write`, `installations_write`, `job_assigned_write`) están
+   gateadas a `is_admin_or_coordinador()` a nivel de base — no hay forma de
+   darle *solo* el permiso de crear sin subirlo a un rol que ya lo tenga, sin
+   escribir una función SQL nueva y tocar cinco policies distintas. Efecto
+   secundario aceptado: Gastón gana también `canEditAnyJob`/`canChangePriority`/
+   `canAssign`/`canApproveFiles`/`canSeeStats`/`canDeleteJob` — más permiso del
+   estrictamente pedido, pero consistente con cómo ya funciona el resto del
+   equipo (Gonzalo es admin Y productor a la vez) y evita una migración de RLS
+   mucho más grande para un beneficio marginal. Si en algún momento se ve que
+   esto le da a Gastón acceso a algo que no debería tocar, avisar y ahí sí vale
+   la pena separar el permiso de verdad.
+3. **SQL a correr** (agrega la columna + deja el estado real de estas tres
+   personas):
+   ```sql
+   alter table profiles add column if not exists credits_as_assigner boolean not null default true;
+
+   update profiles set role = 'coordinador', credits_as_assigner = false
+   where email = 'gaston@estudiobonta.com.ar'; -- ajustar al email real de Gastón
+
+   update profiles set credits_as_assigner = false
+   where email in ('pancho@estudiobonta.com.ar', 'martin@estudiobonta.com.ar'); -- ajustar el de Pancho
+   ```
+   **Ojo:** no tengo confirmados los emails reales de Gastón ni de Pancho en
+   este archivo — usar los que Gonzalo ya cargó en Supabase (verificar con un
+   `select id, name, email, role from profiles;` antes de correr el UPDATE si
+   hay dudas).
