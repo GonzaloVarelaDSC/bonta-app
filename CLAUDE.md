@@ -2,14 +2,20 @@
 
 Este archivo es un handoff completo para que una sesión nueva de Claude Code, sin
 memoria de las sesiones anteriores, pueda seguir trabajando en este proyecto sin que
-Gonzalo tenga que reexplicar nada. Reemplaza la versión anterior de este archivo
-(22/08/2026) — todo lo de acá está verificado contra el código real al 25/08/2026.
+Gonzalo tenga que reexplicar nada. Se escribió originalmente el 25/08/2026 y se fue
+actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base original
+(puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
+(9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
+**la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
+la contradiga más arriba**. Última actualización: 03/09/2026 (sección 17).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
 probando la app en vivo y pidiendo cambios ronda tras ronda. Si algo de acá contradice
 lo que ves en el código, confiá en el código — este archivo puede quedar desactualizado
-si se siguen haciendo cambios sin actualizarlo.
+si se siguen haciendo cambios sin actualizarlo. **Al terminar una ronda de cambios,
+actualizar este archivo (agregar o editar la sección "Actualización" correspondiente)
+antes de dar la ronda por cerrada — así ninguna sesión nueva pierde contexto.**
 
 ---
 
@@ -28,9 +34,11 @@ instalación si aplica, historial de actividad y comentarios internos. El Dashbo
 funciona como "briefing diario" — a quién le sirve más que nada es a Gonzalo, para
 saber apenas entra a la app qué tiene que hacer ese día sin leer notas a mano.
 
-**Quién lo va a usar:** hoy (25/08/2026) **solo Gonzalo** tiene cuenta real y está
-usando la app en producción. El plan es sumar ~7 personas más, con roles distintos
-(ver sección 7, punto 1, y la memoria `project_team_roles` de Claude):
+**Quién lo va a usar:** el plan original era ~7 personas con roles distintos (ver
+memoria `project_team_roles` de Claude); al 03/09/2026 **5 de 7 ya tienen cuenta
+real y están usando la app** — Gonzalo, Gastón, Pancho, Martín y Alejandra (ver
+sección 3 para el detalle de rol/permiso de cada uno, y sección 17 para un ajuste
+pendiente de confirmar sobre Gastón). Faltan Nancy y Richard.
 - **Nancy, Richard, Alejandra** — pasan presupuestos y aceptan trabajos en Copernico;
   necesitan poder dar de alta trabajos acá (rol `coordinador`).
 - **Gastón y Gonzalo** — diseñadores, procesan los trabajos ya cargados (responsables
@@ -172,10 +180,19 @@ supabase/
   app) pero casi todo el contenido está vacío ("Todavía no hay contenido para esta
   sección"), a propósito — Gonzalo pidió la sección pero todavía no dictó qué
   escribir en cada una.
-- **Cuentas del equipo, en progreso** — Gonzalo, Gastón y Pancho ya tienen cuenta
-  real. Martín y Alejandra: instrucciones dadas el 03/09 (ver sección 16), falta
-  que Gonzalo las cree en Supabase. Nancy y Richard: todavía sin arrancar. Ver
-  sección 7, punto 1.
+- **Cuentas del equipo — 5 de 7 creadas.** Gonzalo, Gastón, Pancho, Martín y
+  Alejandra ya tienen cuenta real en Supabase Auth, confirmado con un SELECT el
+  03/09 (ver sección 16, punto 2 — nombre y rol correctos para los 5). Nancy y
+  Richard: todavía sin arrancar, ver sección 7 punto 1. **Pendiente de
+  confirmar si Gonzalo ya corrió el SQL de la sección 17, punto 3** (sube a
+  Gastón a rol `coordinador` + pone `credits_as_assigner = false` en Gastón/
+  Pancho/Martín) — se le dio el SQL con los emails reales el 03/09 pero no
+  confirmó haberlo corrido. Verificar con
+  `select name, email, role, credits_as_assigner from profiles order by name;`
+  antes de asumir que ya está aplicado (emails reales, confirmados por
+  screenshot el 03/09: Gastón `gastonebenitez@outlook.com`, Pancho
+  `panchobonta@gmail.com`, Martín `martin@estudiobonta.com.ar`, Alejandra
+  `alejandra@estudiobonta.com.ar`, Gonzalo `gonzaa.gd@gmail.com`).
 - **No hay tests automatizados.** La única verificación es `npm run build` (tsc +
   vite build) y revisión manual/visual en el sitio deployado. Esta sesión en
   particular **no tuvo acceso a screenshots del navegador** (el panel de preview no
@@ -472,15 +489,13 @@ pida de nuevo explícitamente.
    archivo local. Buscar en el Dashboard de Supabase (SQL Editor → historial de
    queries) o pedirle a Gonzalo que reexporte el schema actual de la función. Esto
    es un **prerequisito** del punto siguiente.
-2. **Crear las cuentas de Supabase Auth de los ~7 empleados**, usando sus Gmail
-   reales (decisión ya tomada, no placeholders `@estudiobonta.com`). Hay una memoria
-   de Claude guardada (`project_team_roles`, en
-   `~/.claude/projects/.../memory/project_team_roles.md`) con roles sugeridos por
-   persona — confirmar con Gonzalo antes de asumir el rol exacto de cada uno. Una vez
-   creadas, ajustar `supabase/004_seed_profiles.sql`/`005_seed_demo_data.sql` si hace
-   falta (hoy tienen placeholders). Gastón en particular es urgente — Gonzalo lo
-   quiere como responsable/asignado en trabajos y hoy no puede porque no tiene
-   cuenta.
+2. **Crear las cuentas de Supabase Auth de los ~7 empleados** — 5 de 7 ya
+   creadas y confirmadas (Gonzalo, Gastón, Pancho, Martín, Alejandra; ver
+   sección 3). Faltan **Nancy y Richard** (coordinadores, mismo perfil que
+   Alejandra: `role='coordinador'`, `is_producer=false`,
+   `credits_as_assigner=true`) — falta juntar sus emails reales. Antes de
+   avanzar acá, confirmar si el SQL pendiente de la sección 17 punto 3 (rol de
+   Gastón + `credits_as_assigner`) ya se corrió.
 3. **Subida real de archivos a Supabase Storage** — nunca implementado. Ver
    README.md, sección "Pendiente para que la subida de archivos sea real", tiene el
    plan exacto (bucket `job-files`, columna `storage_path`, reemplazar el
@@ -536,12 +551,18 @@ pida de nuevo explícitamente.
 - Proyecto ref `mazbtflmitelfjgdxfne`. **No hay migration runner ni CLI de Supabase
   configurado** — todas las migraciones de `supabase/*.sql` se corren a mano,
   pegándolas en el SQL Editor del Dashboard de Supabase.
-- Migraciones que se cree que están aplicadas en la base real (001 a 005 fueron
-  parte de la configuración inicial antes de esta sesión; 006 y 007 se confirmaron
-  corridas por Gonzalo el 23/08/2026, en un solo bloque con las tres sentencias
-  `ALTER TABLE`): **001, 002, 003, 004, 005, 006, 007 — todas.** Si en algún momento
-  aparece un error de "column does not exist" o similar al crear/editar un trabajo,
-  lo primero a revisar es si falta correr alguna migración.
+- Migraciones que se cree que están aplicadas en la base real: **001 a 014,
+  todas.** 001-005 fueron parte de la configuración inicial; 006 y 007 se
+  confirmaron corridas por Gonzalo el 23/08/2026; 008-012 se infieren aplicadas
+  porque las features que dependen de ellas (fecha "Listo" del Kanban, medidas
+  estructuradas ya migradas a Productos, borrar trabajo, `isProducer`) funcionan
+  en producción sin errores de RLS/columna reportados; **013 confirmada
+  corrida por Gonzalo explícitamente**; **014 confirmada con un SELECT**
+  (screenshot del 03/09 mostrando la columna `credits_as_assigner`). Si en
+  algún momento aparece un error de "column does not exist" o similar al
+  crear/editar un trabajo, lo primero a revisar es si falta correr alguna
+  migración — no hay migration runner, así que esto puede pasar en cualquier
+  momento si Gonzalo se salteó una.
 - El bug de `handle_new_user()` (sección 5/7) significa que el `001_schema.sql`
   local **no refleja exactamente** lo que hay corriendo en la base real para esa
   función puntual — todo lo demás del schema sí debería estar sincronizado.
@@ -583,11 +604,14 @@ pida de nuevo explícitamente.
   corre `npm run dev` en el puerto 5173. Para levantarlo desde el navegador
   integrado de Claude Code: `preview_start` con `name: "bonta-dev"`, después
   navegar a `http://localhost:5173/<ruta>`.
-- **Ojo:** en esta sesión el panel de preview no compositeaba frames (`screenshot`
-  tiraba timeout siempre) — la verificación visual se hizo con `get_page_text` y
-  `read_page` (accessibility tree) en vez de capturas. Puede que en una sesión nueva
-  sí funcione `computer{action:"screenshot"}`; probarlo temprano si hace falta
-  revisar algo visualmente.
+- **Ojo:** en la sesión del 25/08 el panel de preview no compositeaba frames
+  (`screenshot` tiraba timeout siempre) y la verificación visual se hizo con
+  `get_page_text`/`read_page` en vez de capturas. En sesiones posteriores
+  (02/09 en adelante) `preview_start` + `read_console_messages` funcionaron
+  normal para smoke-tests (sin login real, porque no puedo autenticarme como
+  Gonzalo — ver regla de contraseñas). Si hace falta revisar algo visualmente
+  con capturas reales, probar `computer{action:"screenshot"}` temprano; si
+  vuelve a fallar, caer al método de texto.
 
 ### Dependencias externas / servicios de terceros
 - **Google Fonts** (Inter, Cormorant Garamond) — cargadas por `<link>` en
@@ -964,17 +988,23 @@ corrida.
    mismo azul que usa `statusTone()` para "En diseño" en badges/Kanban), para que
    el cubo nuevo matchee el color con el resto de la UI en vez de quedar gris
    genérico.
-2. **Cuentas de Martín (dueño) y Alejandra (administración)** — instrucciones
-   paso a paso dadas a Gonzalo en el chat del 03/09 para crearlas en Supabase
-   Dashboard → Authentication → Users, más el UPDATE de `profiles` para dejarlas
-   con nombre/rol/`is_producer` correctos (mismo patrón ya usado con Gastón y
-   Pancho). Martín: mismo perfil que Pancho (`role='admin'`, `is_producer=false`
-   — dueño, no procesa trabajos). Alejandra: `role='coordinador'`,
-   `is_producer=false` (solo carga trabajos, no es responsable de producción,
-   igual que Nancy/Richard cuando se sumen). **No confirmado si Gonzalo ya las
-   creó** — verificar con un SELECT antes de asumirlo, mismo patrón que la vez
-   de Pancho (sección 5 del handoff original, la corrección de rol/nombre que
-   nunca se había aplicado la primera vez).
+2. **Cuentas de Martín (dueño) y Alejandra (administración) — creadas y
+   confirmadas.** Instrucciones paso a paso dadas a Gonzalo en el chat del
+   03/09 para crearlas en Supabase Dashboard → Authentication → Users, más el
+   UPDATE de `profiles` para dejarlas con nombre/rol correctos (mismo patrón
+   ya usado con Gastón y Pancho). Martín: mismo perfil que Pancho
+   (`role='admin'`, `is_producer=false` — dueño, no procesa trabajos).
+   Alejandra: `role='coordinador'`, `is_producer=false` (solo carga trabajos,
+   no es responsable de producción, igual que Nancy/Richard cuando se sumen).
+   **Confirmado con un SELECT** (screenshot de Gonzalo, mismo día): las 5
+   cuentas existentes (Gonzalo, Gastón, Pancho, Martín, Alejandra) tienen
+   nombre y rol correctos — `role` de cada una: Gonzalo `admin`, Gastón
+   `diseno` (**ver sección 17, punto 2 y 3 — pendiente de subir a
+   `coordinador`, no confirmado si ya se corrió**), Pancho `admin`, Martín
+   `admin`, Alejandra `coordinador`. Emails reales confirmados: Gastón
+   `gastonebenitez@outlook.com`, Pancho `panchobonta@gmail.com`, Martín
+   `martin@estudiobonta.com.ar`, Alejandra `alejandra@estudiobonta.com.ar`,
+   Gonzalo `gonzaa.gd@gmail.com`.
 3. **Pendiente para la próxima sesión — base de conocimiento de materiales**:
    Gonzalo quiere transmitir TODA su información técnica de materiales (ej.
    vinilo montado = demasía de 7mm por lado, distinto según esté montado o no,
@@ -1026,18 +1056,24 @@ como quien asignó". Dos cosas separadas que hasta ahora dependían las dos de
    mucho más grande para un beneficio marginal. Si en algún momento se ve que
    esto le da a Gastón acceso a algo que no debería tocar, avisar y ahí sí vale
    la pena separar el permiso de verdad.
-3. **SQL a correr** (agrega la columna + deja el estado real de estas tres
-   personas):
+3. **Migración 014 confirmada corrida** (Gonzalo pegó un screenshot del SELECT
+   mostrando la columna `credits_as_assigner` ya presente, en `true` para los 5
+   usuarios). **El SQL de abajo (rol de Gastón + `credits_as_assigner=false`)
+   se le dio con los emails reales ya completados, pero Gonzalo NO confirmó
+   haberlo corrido** — no asumir que ya está aplicado, verificar con
+   `select name, email, role, credits_as_assigner from profiles order by name;`
+   antes de dar por hecho el estado de Gastón/Pancho/Martín:
    ```sql
-   alter table profiles add column if not exists credits_as_assigner boolean not null default true;
-
    update profiles set role = 'coordinador', credits_as_assigner = false
-   where email = 'gaston@estudiobonta.com.ar'; -- ajustar al email real de Gastón
+   where email = 'gastonebenitez@outlook.com';
 
    update profiles set credits_as_assigner = false
-   where email in ('pancho@estudiobonta.com.ar', 'martin@estudiobonta.com.ar'); -- ajustar el de Pancho
+   where email in ('panchobonta@gmail.com', 'martin@estudiobonta.com.ar');
    ```
-   **Ojo:** no tengo confirmados los emails reales de Gastón ni de Pancho en
-   este archivo — usar los que Gonzalo ya cargó en Supabase (verificar con un
-   `select id, name, email, role from profiles;` antes de correr el UPDATE si
-   hay dudas).
+4. **Aclaración que surgió en el chat**: Gonzalo preguntó "¿pero ahora todos
+   podemos crear trabajos entonces?" al ver que los 5 usuarios actuales quedan
+   con `canCreateJobs` en `true` (los 5 son `admin` o `coordinador`). Se le
+   aclaró que es coincidencia de que el equipo actual entero cae en esos dos
+   roles, no un cambio de la regla — alguien con rol `produccion`/`instalacion`
+   (ej. un instalador que se sume a futuro) seguiría sin poder cargar trabajos.
+   No hace falta volver a explicar esto si no lo vuelve a preguntar.
