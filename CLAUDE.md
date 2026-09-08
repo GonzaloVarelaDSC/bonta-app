@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 20).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 21).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1420,3 +1420,59 @@ where email = 'gastonebenitez@outlook.com';
 update profiles set sector = 'Coordinación'
 where email in ('richard@estudiobonta.com.ar', 'alejandra@estudiobonta.com.ar');
 ```
+
+---
+
+## 21. Actualización 08/09 (cierre) — todo verificado; próximo tema: pantalla de Configuración
+
+### Estado
+
+Gonzalo **probó en producción todo lo de las secciones 18, 19 y 20 y funciona**.
+Los SQL de esas rondas están **corridos y confirmados**:
+
+- **18:** Gastón a `role='coordinador'`; alta de Richard (`richard@estudiobonta.com.ar`,
+  `role='coordinador'`, `is_producer=false`).
+- **19:** migración `015_job_assigned_names.sql` (`jobs.assigned_names text[]`).
+- **`is_producer`:** solo Gonzalo y Gastón en `true` (el resto `false`) — "Responsable"
+  y el filtro de responsable del Kanban muestran solo a esos dos.
+- **20:** `sector` seteado como puesto visible (Pancho/Martín "Dirección", Gonzalo
+  "Diseño / Producción", Gastón "Diseño", Richard/Alejandra "Coordinación").
+
+Migraciones aplicadas en la base real: **001–015**.
+
+Equipo con cuenta y usando la app: Gonzalo, Gastón, Pancho, Martín, Alejandra,
+Richard (6). Falta **Nancy** (coordinadora, falta su email).
+
+### Próximo tema (arranca 09/09): pantalla de Configuración
+
+`src/components/Common/ConfigPage.tsx` (ruta `/configuracion`, solo admin). Hoy es
+**solo lectura**: lista como chips los catálogos que viven como constantes en
+`src/data/catalog.ts` — `JOB_TYPES`, `MATERIALS`, `BLOCK_REASON_LABELS`. El texto
+de la pantalla dice "cuando se conecte el backend real" — **está desactualizado**:
+el backend real (Supabase) ya está. Lo que falta es mover esos catálogos de
+constantes en código a datos editables.
+
+Contexto para no arrancar de cero mañana:
+
+- **Ya existen las tablas** `job_types` (id, label, default_stages) y `materials`
+  (id, label) en `001_schema.sql`, con policies de escritura solo-admin en
+  `002_policies.sql`, y están sembradas por `003_seed_catalogs.sql`. **Pero la app
+  no las lee** — lee las constantes de `catalog.ts`. O sea: la mitad del trabajo
+  (esquema + RLS) ya está hecha para tipos de trabajo y materiales.
+- **`BLOCK_REASON_LABELS`** no tiene tabla — habría que crearla (migración nueva) o
+  dejarla como constante si Gonzalo no la quiere editable.
+- Ojo con los `id` de catálogo: hoy son strings semánticos (`'impresion_v7000'`,
+  `'acrilico'`) referenciados en `JobTypeId`/`MaterialId` (tipos TS) y guardados en
+  `jobs.job_type_id` / `products[].materialIds`. Si se vuelven editables, los ids
+  de registros existentes no se pueden romper — agregar sí, renombrar label sí,
+  borrar/cambiar id es delicado.
+- Decidir con Gonzalo el alcance: ¿solo agregar/renombrar? ¿activar/desactivar sin
+  borrar? ¿también las etapas (`STAGE_LABELS`) y la plantilla de control de calidad
+  (`QC_TEMPLATE`)? Esto último es "checklist configurable", hasta ahora marcado
+  fuera de alcance de Fase 1 (§3) — puede que Gonzalo lo quiera reincorporar.
+
+También quedó pendiente de rondas anteriores (tintero, §18/19): base de
+conocimiento de materiales, estados que sobran (`NUEVO`/`APROBADO`), Manual de uso,
+`credits_as_assigner` (columna muerta), fix `handle_new_user()`, subida real de
+archivos a Storage, etapas del wizard, mobile, y el "texto automático para el
+cliente" cuando un trabajo llega a Listo para entregar.
