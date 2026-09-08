@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput } from 'lucide-react';
+import { useParams, Navigate, Link } from 'react-router-dom';
+import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
@@ -68,6 +68,9 @@ export function JobDetailPage() {
       <div className="flex-1 min-w-0 overflow-y-auto">
         {/* Cabecera fija */}
         <div className="sticky top-0 z-10 bg-white border-b border-ink-100 px-6 py-4">
+          <Link to="/trabajos" className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+            <ArrowLeft size={13} aria-hidden /> Volver a Trabajos
+          </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="font-mono text-xs text-ink-700 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
@@ -178,7 +181,7 @@ export function JobDetailPage() {
               <Field label="Contacto" value={job.contactPhone ? `${job.contactName} · ${job.contactPhone}` : job.contactName} />
               <Field label="Generado por" value={creator?.name ?? '—'} />
               <Field label="Responsable interno" value={responsible?.name} />
-              <Field label="Asignados" value={job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean).join(', ') || '—'} />
+              <Field label="Asignados" value={[...job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean), ...job.assignedNames].join(', ') || '—'} />
               <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
               <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
               {canChangePriority(user.role) ? (

@@ -206,6 +206,9 @@ export interface Job {
   createdByUserId: string | null;
   responsibleUserId: string;
   assignedUserIds: string[];
+  // Gente del taller / instaladores sin cuenta en la app (lista fija, ver
+  // ASSIGN_ALSO_NAMES en data/catalog.ts). Texto plano, no son perfiles.
+  assignedNames: string[];
   createdAt: string;
   requestedDate: string; // fecha solicitada por cliente
   committedDate: string; // fecha comprometida internamente (con hora)

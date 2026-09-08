@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { SlidersHorizontal, Undo2, X } from 'lucide-react';
+import { SlidersHorizontal, Undo2, X, ArrowRight } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors,
@@ -9,11 +9,10 @@ import {
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
-import { CountdownBadge } from '../Common/Badges';
+import { Avatar } from '../Common/Badges';
 import type { Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
-import { fmtDate } from '../../lib/dates';
 
 // Mismo lenguaje de color que los badges de estado, más dos tonos nuevos
 // (review, site) para que cada columna tenga su propia identidad — ver
@@ -31,45 +30,44 @@ const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; co
   done: { header: 'bg-ink-100 text-ink-700', body: 'bg-ink-100/50', count: 'bg-ink-200 text-ink-700 border border-ink-300' },
 };
 
-const READY_STATUSES: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
-
-// En Listo/Instalación importa más "hace cuánto está terminado" que "hace cuánto
-// se asignó" — en el resto de las columnas es al revés (Gonzalo, 25/08).
-function dateLabel(job: Job): string {
-  if (READY_STATUSES.includes(job.status) && job.readyAt) return `Listo ${fmtDate(job.readyAt)}`;
-  return `Asignado ${fmtDate(job.createdAt)}`;
-}
-
-// Fila 1: código + countdown (dos "chips" en los extremos). Fila 2: cliente y
-// nombre del trabajo en una sola línea horizontal (el cliente pesa más:
-// negrita y oscuro; el nombre es de apoyo, gris). Fila 3: fecha, sola y
-// contenida en su propia línea para que nunca empuje el ancho de la ficha.
+// Ficha compacta, lo mínimo para reconocer un trabajo de un vistazo (Gonzalo,
+// 08/09): N° de Copernico, cliente, y quién asignó → a quién. Nada del nombre
+// ni la descripción del trabajo, ni el contador de días — eso se ve al abrir
+// la ficha. El estado ya lo dice la columna.
 function CardBody({ job, client }: { job: Job; client?: Client }) {
+  const users = useStore((s) => s.users);
+  const creator = users.find((u) => u.id === job.createdByUserId);
+  const resp = users.find((u) => u.id === job.responsibleUserId);
   return (
     <>
-      <div className="flex items-center justify-between gap-2 min-w-0">
-        <span className={clsx(
-          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
-          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
-        )}>
-          {job.code ?? 'Sin N°'}
-        </span>
-        <CountdownBadge iso={job.committedDate} />
-      </div>
-      <div className="mt-2 text-sm leading-snug truncate">
-        <span className="font-bold text-ink-900">{client?.name ?? 'Sin cliente'}</span>
-        <span className="text-ink-700 mx-1">·</span>
-        <span className="text-ink-700 font-normal">{job.name}</span>
-      </div>
-      <div className="mt-1 text-[10px] text-ink-700 text-right truncate">{dateLabel(job)}</div>
+      <span className={clsx(
+        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight',
+        job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
+      )}>
+        {job.code ?? 'Sin N°'}
+      </span>
+      <div className="mt-1.5 text-sm font-bold text-ink-900 leading-snug truncate">{client?.name ?? 'Sin cliente'}</div>
+      {(creator || resp) && (
+        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-ink-700 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
+          {creator && (
+            <span className="inline-flex items-center gap-1 min-w-0">
+              <Avatar name={creator.name} color={creator.avatarColor} size={14} />
+              <span className="truncate">{creator.name.split(' ')[0]}</span>
+            </span>
+          )}
+          {creator && resp && <ArrowRight size={10} className="text-ink-400 shrink-0" aria-hidden />}
+          {resp && (
+            <span className="inline-flex items-center gap-1 min-w-0">
+              <Avatar name={resp.name} color={resp.avatarColor} size={14} />
+              <span className="truncate">{resp.name.split(' ')[0]}</span>
+            </span>
+          )}
+        </div>
+      )}
     </>
   );
 }
 
-// Ficha compacta: código, cliente y nombre son lo que hace falta para reconocer
-// un trabajo de un vistazo — el estado ya lo dice la columna, no hace falta
-// repetirlo acá. Cliente y N° de Copernico llevan más peso visual que el
-// nombre del trabajo, a pedido de Gonzalo (25/08).
 function KanbanCard({ job }: { job: Job }) {
   const navigate = useNavigate();
   const clients = useStore((s) => s.clients);

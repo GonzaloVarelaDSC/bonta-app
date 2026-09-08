@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 07/09/2026 (sección 18).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 19).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1275,3 +1275,92 @@ De "se cierra rápido" a "proyecto aparte":
     reportes completos, ficha de cliente extendida, checklist de calidad
     configurable desde admin, dependencias entre trabajos, plantillas,
     notificaciones push/email (el aviso de ficha nueva es in-app, no mail).
+
+---
+
+## 19. Actualización 08/09 — volver a Trabajos, Kanban con "asigna → responsable", tercerizadas ya en marcha, columnas renombradas, sin countdown en cerrados
+
+Ronda corta sobre lo del 07/09 ya deployado. Gonzalo confirmó que **ya corrió en
+Supabase** todo lo de la sección 18 (Gastón a `coordinador`, alta de Richard).
+
+### Migración a correr en Supabase
+
+`supabase/015_job_assigned_names.sql` (SQL Editor → New query → Run):
+
+```sql
+alter table jobs add column if not exists assigned_names text[] not null default '{}';
+```
+
+Sin esto, crear un trabajo con alguien en "Asignar también a" falla con
+"column assigned_names does not exist". Sumada también a `001_schema.sql`.
+
+### Cambios de código
+
+1. **Botón "← Volver a Trabajos"** arriba de la cabecera de la ficha
+   (`JobDetailPage.tsx`) — link fijo a `/trabajos` (siempre ahí, aunque hayas
+   entrado desde el Dashboard o el Kanban; Gonzalo lo pidió apuntando a Trabajos).
+
+2. **"Asignar también a" = lista fija de gente del taller** (punto 4). Ya no son
+   los productores (perfiles de la app) sino 6 nombres sueltos:
+   **Ares, Ariel, Hector, Jose, Jose Garra, Rolli** (constante `ASSIGN_ALSO_NAMES`
+   en `data/catalog.ts`, orden alfabético). Como no tienen cuenta, no van a
+   `job_assigned_users` (que referencia `profiles`) — se guardan como texto en
+   `jobs.assigned_names` (`Job.assignedNames: string[]`, migración 015). En Carga
+   rápida son chips toggle; en la ficha aparecen en el campo "Asignados" de la
+   pestaña General (junto con los asignados-usuario si hubiera, que hoy no hay
+   porque Carga rápida ya no setea `assignedUserIds` — lo manda vacío). Para
+   agregar/sacar gente de esa lista **es cambio de código** (la constante), no hay
+   UI.
+
+3. **Responsable: solo Gonzalo y Gastón** (punto 3). No es cambio de código —
+   `producers` filtra por `is_producer`. Gonzalo ya corrió el UPDATE en Supabase
+   para dejar `is_producer = true` solo en ellos dos.
+
+4. **Kanban — tarjeta rediseñada** (puntos 5 y 7). `CardBody` en `KanbanPage.tsx`
+   ahora muestra **solo**: N° de Copernico (chip), cliente (negrita), y
+   **`[asigna] → [responsable]`** con avatares 14px y nombres de pila. Se sacaron:
+   el nombre/descripción del trabajo, la línea de fecha ("Asignado/Listo dd/mm") y
+   el `CountdownBadge`. Mismo patrón visual `asigna → resp` que ya tienen
+   `DashboardJobCard` y la cabecera de la ficha — un solo modelo mental.
+   - **Nota:** con esto se perdió el "Listo dd/mm" que mostraban las columnas
+     Listo/Instalación (usaba `job.readyAt`). Gonzalo pidió explícito "solo esos
+     4 datos", así que quedó afuera; si lo extraña, se vuelve a sumar.
+   - El **botón "Filtros"** del Kanban (prioridad + responsable) **ya existía**
+     desde antes — cubre el punto 6, no se agregó nada. El filtro de responsable
+     ahora lista solo a Gonzalo/Gastón (por `is_producer`).
+
+5. **El countdown desaparece del todo en trabajos cerrados** (punto 7). Antes
+   (sección 18) mostraba un chip gris "✓ Entregado"; Gonzalo: "está pésimo eso".
+   Ahora `CountdownBadge` devuelve `null` si el estado está en `CLOSED_STATUSES`
+   (Listo para entregar / Listo para instalación / En instalación / Entregado /
+   Cancelado). En `JobsTable`, la columna "Entrega" de un trabajo cerrado muestra
+   la fecha en texto gris plano en vez de quedar vacía.
+
+6. **Columnas del Kanban renombradas** (puntos 8 y 9), en `data/catalog.ts`
+   `KANBAN_COLUMNS`:
+   - "Listo" → **"Listo para entregar"**
+   - "Terminado" → **"Entregado"**
+   Además `STATUS_LABELS.TERMINADO` pasó de "Terminado" a **"Entregado"** en toda
+   la app (badges, selectores, ficha). La key del enum sigue siendo `TERMINADO`,
+   solo cambió la etiqueta visible. (Para trabajos con instalación "Entregado"
+   se lee un poco raro pero el flujo termina igual.)
+
+7. **Skills** (punto 10): `frontend-design`, `design-critique` y
+   `accessibility-review` sobre lo nuevo. Correcciones: contraste de la fecha de
+   trabajos cerrados en `JobsTable` (`text-ink-600` ≈ 4.3:1 → `text-ink-700`
+   ≈ 5.6:1), `aria-hidden` en íconos decorativos nuevos (flecha del back, flecha
+   del Kanban), foco visible en el link "Volver a Trabajos".
+
+### Tintero — se suma a la lista de la sección 18
+
+- **Texto automático para enviar al cliente** (punto 8): cuando un trabajo llega
+  a "Listo para entregar", generar un texto listo para copiar/mandar al cliente
+  ("Tu pedido N° X está listo para retirar en…"). Todavía no se diseñó nada —
+  es una idea a desarrollar (¿dónde vive? ¿plantilla editable? ¿en la ficha, en
+  el Kanban?). Queda anotado.
+- **Gente de "Asignar también a"** es una constante en código (`ASSIGN_ALSO_NAMES`).
+  Si el equipo de taller cambia seguido, evaluar moverlo a una tabla/catálogo
+  editable. Por ahora lista fija.
+- Sigue todo lo demás del tintero de la sección 18 (base de materiales, estados
+  que sobran, manual, Nancy, fix `handle_new_user`, subida de archivos, etapas
+  del wizard, mobile, revisión visual con login).

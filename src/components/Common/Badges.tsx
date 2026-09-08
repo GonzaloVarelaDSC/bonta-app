@@ -126,24 +126,10 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
 }
 
 // Etiqueta de "cuánto falta / cuánto se atrasó" hasta la fecha de entrega. Una
-// vez que el trabajo está listo, entregado o cancelado deja de tener sentido
-// contar días — se muestra un cierre neutro en gris y el contador se congela.
-const CLOSED_COUNTDOWN_LABEL: Partial<Record<JobStatus, string>> = {
-  LISTO_PARA_ENTREGA: '✓ Listo',
-  LISTO_PARA_INSTALACION: '✓ Listo',
-  EN_INSTALACION: 'En obra',
-  TERMINADO: '✓ Entregado',
-  CANCELADO: 'Cancelado',
-};
-
+// vez que el trabajo está listo para entregar, entregado o cancelado deja de
+// tener sentido contar días — directamente no se muestra nada (Gonzalo, 08/09).
 export function CountdownBadge({ iso, status }: { iso: string; status?: JobStatus }) {
-  if (status && isClosedStatus(status)) {
-    return (
-      <span className={clsx('inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1', TONE_CLASSES.wait)}>
-        {CLOSED_COUNTDOWN_LABEL[status] ?? 'Cerrado'}
-      </span>
-    );
-  }
+  if (status && isClosedStatus(status)) return null;
   const c = countdown(iso);
   const tone = c.tone === 'ok' ? 'plan' : c.tone;
   // Cuando faltan pocos días (tono crit/urg) suma un borde del mismo color —

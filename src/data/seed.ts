@@ -248,6 +248,7 @@ export const JOBS: Job[] = S.map((s, idx) => {
     createdByUserId: s.responsibleUserId,
     responsibleUserId: s.responsibleUserId,
     assignedUserIds: s.assignedUserIds,
+    assignedNames: [],
     createdAt: daysAgo(s.createdDaysAgo),
     requestedDate: hoursFromNow(s.committedInHours - 4),
     committedDate: hoursFromNow(s.committedInHours),

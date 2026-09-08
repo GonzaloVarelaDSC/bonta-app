@@ -8,7 +8,7 @@ import { canEditAnyJob, canDeleteJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
-import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
+import { statusOptionsFor, tryChangeJobStatus, isClosedStatus } from '../../lib/statusChange';
 
 function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -117,7 +117,11 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 <td className="px-2 py-2.5">
                   {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} /><span className="text-xs text-ink-700">{resp.name.split(' ')[0]}</span></div>}
                 </td>
-                <td className="px-2 py-2.5"><CountdownBadge iso={j.committedDate} status={j.status} /></td>
+                <td className="px-2 py-2.5">
+                  {isClosedStatus(j.status)
+                    ? <span className="text-xs text-ink-700">{fmtShort(j.committedDate)}</span>
+                    : <CountdownBadge iso={j.committedDate} status={j.status} />}
+                </td>
                 {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}
                 <td className="px-2 py-2.5">
                   <div className="flex items-center gap-2">

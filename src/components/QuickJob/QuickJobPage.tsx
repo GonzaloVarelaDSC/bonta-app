@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, ArrowRight } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { JOB_TYPES } from '../../data/catalog';
+import { JOB_TYPES, ASSIGN_ALSO_NAMES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
@@ -101,7 +101,8 @@ export function QuickJobPage() {
   const [responsibleUserId, setResponsibleUserId] = useState(
     () => (producers.some((u) => u.id === user.id) ? user.id : producers[0]?.id ?? user.id)
   );
-  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
+  // "Asignar también a" = gente del taller sin cuenta (lista fija de nombres).
+  const [assignedNames, setAssignedNames] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -119,8 +120,8 @@ export function QuickJobPage() {
     setPriority(p);
     setPriorityTouched(true);
   }
-  function toggleAssigned(id: string) {
-    setAssignedUserIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id]);
+  function toggleAssignedName(name: string) {
+    setAssignedNames((a) => a.includes(name) ? a.filter((x) => x !== name) : [...a, name]);
   }
 
   // Única condición dura: sin al menos una medida cargada en algún producto,
@@ -157,7 +158,7 @@ export function QuickJobPage() {
           .filter((p) => p.label.trim() || p.materialIds.length > 0 || p.sizeItems.length > 0 || p.notes.trim()),
         observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
-        createdByUserId, responsibleUserId, assignedUserIds,
+        createdByUserId, responsibleUserId, assignedUserIds: [], assignedNames,
       });
       navigate(`/trabajos/${job.id}`);
     } catch (err: any) {
@@ -277,14 +278,14 @@ export function QuickJobPage() {
           <div>
             <span className={labelCls}>Asignar también a</span>
             <div className="flex flex-wrap gap-1.5">
-              {producers.map((u) => (
-                <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)} aria-pressed={assignedUserIds.includes(u.id)}
-                  className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedUserIds.includes(u.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
-                  {u.name}
+              {ASSIGN_ALSO_NAMES.map((name) => (
+                <button type="button" key={name} onClick={() => toggleAssignedName(name)} aria-pressed={assignedNames.includes(name)}
+                  className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedNames.includes(name) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
+                  {name}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-ink-700 mt-1">Opcional — otras personas que también trabajan en esto y lo ven en «A mí».</p>
+            <p className="text-[11px] text-ink-700 mt-1">Opcional — gente del taller / instaladores que también trabaja en este pedido.</p>
           </div>
         </Section>
       </div>

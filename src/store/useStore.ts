@@ -72,7 +72,7 @@ export interface NewJobInput {
   products: Job['products']; observations: string; specialRequirements: string;
   activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
-  createdByUserId: string; responsibleUserId: string; assignedUserIds: string[];
+  createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
 }
 
 async function insertActivity(
@@ -211,6 +211,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       created_by_user_id: input.createdByUserId,
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
       job_type_id: input.jobTypeId, description: input.description, products: input.products,
+      assigned_names: input.assignedNames,
       observations: input.observations, special_requirements: input.specialRequirements,
       status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,

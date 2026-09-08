@@ -74,10 +74,10 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   DISENO_LISTO: 'Procesado',
   EN_PRODUCCION: 'En producción',
   EN_CONTROL_CALIDAD: 'En control de calidad',
-  LISTO_PARA_ENTREGA: 'Listo para entrega',
+  LISTO_PARA_ENTREGA: 'Listo para entregar',
   LISTO_PARA_INSTALACION: 'Listo para instalación',
   EN_INSTALACION: 'En instalación',
-  TERMINADO: 'Terminado',
+  TERMINADO: 'Entregado',
   BLOQUEADO: 'Bloqueado',
   CANCELADO: 'Cancelado',
 };
@@ -97,10 +97,16 @@ export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]
   { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'], tone: 'info' },
   { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'], tone: 'norm' },
   { key: 'control_calidad', label: 'Control de calidad', statuses: ['EN_CONTROL_CALIDAD'], tone: 'review' },
-  { key: 'listo', label: 'Listo', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'], tone: 'plan' },
+  { key: 'listo', label: 'Listo para entregar', statuses: ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'], tone: 'plan' },
   { key: 'instalacion', label: 'Instalación', statuses: ['EN_INSTALACION'], tone: 'site' },
-  { key: 'terminado', label: 'Terminado', statuses: ['TERMINADO'], tone: 'done' },
+  { key: 'terminado', label: 'Entregado', statuses: ['TERMINADO'], tone: 'done' },
 ];
+
+// Gente del taller / instaladores que NO tienen cuenta en la app pero a los que
+// se les puede "asignar también" un trabajo desde Carga rápida (Gonzalo, 08/09).
+// Es una lista fija de nombres (no perfiles) — se guarda en `jobs.assigned_names`.
+// Orden alfabético.
+export const ASSIGN_ALSO_NAMES = ['Ares', 'Ariel', 'Hector', 'Jose', 'Jose Garra', 'Rolli'];
 
 export const QC_TEMPLATE = [
   { key: 'medidas', label: 'Medidas correctas', required: true },

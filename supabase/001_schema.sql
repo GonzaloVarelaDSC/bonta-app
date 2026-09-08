@@ -80,6 +80,8 @@ create table if not exists jobs (
   contact_phone text not null default '',
   created_by_user_id uuid references profiles(id),
   responsible_user_id uuid not null references profiles(id),
+  -- Gente del taller / instaladores sin cuenta en la app (ver 015). Texto plano.
+  assigned_names text[] not null default '{}',
   created_at timestamptz not null default now(),
   requested_date timestamptz,
   committed_date timestamptz not null,

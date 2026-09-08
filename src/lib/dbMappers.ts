@@ -74,6 +74,7 @@ export function mapJob(row: any): Job {
     createdByUserId: row.created_by_user_id ?? null,
     responsibleUserId: row.responsible_user_id,
     assignedUserIds: (row.job_assigned_users ?? []).map((a: any) => a.user_id),
+    assignedNames: (row.assigned_names ?? []) as string[],
     createdAt: row.created_at, requestedDate: row.requested_date ?? row.committed_date, committedDate: row.committed_date,
     finishedAt: row.finished_at ?? undefined,
     readyAt: row.ready_at ?? undefined,
