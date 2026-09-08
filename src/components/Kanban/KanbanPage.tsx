@@ -9,10 +9,11 @@ import {
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
-import { Avatar } from '../Common/Badges';
+import { Avatar, CountdownBadge } from '../Common/Badges';
 import type { Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
+import { fmtDate } from '../../lib/dates';
 
 // Mismo lenguaje de color que los badges de estado, más dos tonos nuevos
 // (review, site) para que cada columna tenga su propia identidad — ver
@@ -30,22 +31,35 @@ const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; co
   done: { header: 'bg-ink-100 text-ink-700', body: 'bg-ink-100/50', count: 'bg-ink-200 text-ink-700 border border-ink-300' },
 };
 
-// Ficha compacta, lo mínimo para reconocer un trabajo de un vistazo (Gonzalo,
-// 08/09): N° de Copernico, cliente, y quién asignó → a quién. Nada del nombre
-// ni la descripción del trabajo, ni el contador de días — eso se ve al abrir
-// la ficha. El estado ya lo dice la columna.
+const READY_STATUSES: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
+
+// En Listo/Instalación importa más "hace cuánto está listo" que "hace cuánto se
+// asignó"; en el resto de las columnas es al revés (Gonzalo, 25/08).
+function dateLabel(job: Job): string {
+  if (READY_STATUSES.includes(job.status) && job.readyAt) return `Listo ${fmtDate(job.readyAt)}`;
+  return `Asignado ${fmtDate(job.createdAt)}`;
+}
+
+// Ficha compacta (Gonzalo, 08/09): N° de Copernico + fecha de entrega arriba,
+// cliente, quién asignó → a quién, y la fecha de asignado/listo abajo. Sin
+// nombre/descripción del trabajo — eso se ve al abrir la ficha. El estado ya lo
+// dice la columna. El contador de días no aparece en estados cerrados (lo maneja
+// CountdownBadge con el `status`).
 function CardBody({ job, client }: { job: Job; client?: Client }) {
   const users = useStore((s) => s.users);
   const creator = users.find((u) => u.id === job.createdByUserId);
   const resp = users.find((u) => u.id === job.responsibleUserId);
   return (
     <>
-      <span className={clsx(
-        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight',
-        job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
-      )}>
-        {job.code ?? 'Sin N°'}
-      </span>
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className={clsx(
+          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
+          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
+        )}>
+          {job.code ?? 'Sin N°'}
+        </span>
+        <CountdownBadge iso={job.committedDate} status={job.status} />
+      </div>
       <div className="mt-1.5 text-sm font-bold text-ink-900 leading-snug truncate">{client?.name ?? 'Sin cliente'}</div>
       {(creator || resp) && (
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-ink-700 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
@@ -64,6 +78,7 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
           )}
         </div>
       )}
+      <div className="mt-1.5 text-[10px] font-medium text-ink-700 truncate">{dateLabel(job)}</div>
     </>
   );
 }

@@ -1317,14 +1317,15 @@ Sin esto, crear un trabajo con alguien en "Asignar también a" falla con
    para dejar `is_producer = true` solo en ellos dos.
 
 4. **Kanban — tarjeta rediseñada** (puntos 5 y 7). `CardBody` en `KanbanPage.tsx`
-   ahora muestra **solo**: N° de Copernico (chip), cliente (negrita), y
-   **`[asigna] → [responsable]`** con avatares 14px y nombres de pila. Se sacaron:
-   el nombre/descripción del trabajo, la línea de fecha ("Asignado/Listo dd/mm") y
-   el `CountdownBadge`. Mismo patrón visual `asigna → resp` que ya tienen
-   `DashboardJobCard` y la cabecera de la ficha — un solo modelo mental.
-   - **Nota:** con esto se perdió el "Listo dd/mm" que mostraban las columnas
-     Listo/Instalación (usaba `job.readyAt`). Gonzalo pidió explícito "solo esos
-     4 datos", así que quedó afuera; si lo extraña, se vuelve a sumar.
+   ahora muestra: N° de Copernico + contador de días arriba, cliente (negrita),
+   **`[asigna] → [responsable]`** (avatares 14px + nombres de pila), y la línea de
+   fecha abajo ("Asignado dd/mm" / "Listo dd/mm" en columnas Listo/Instalación).
+   Se sacó **solo** el nombre/descripción del trabajo. Mismo patrón visual
+   `asigna → resp` que ya tienen `DashboardJobCard` y la cabecera de la ficha.
+   - **Nota (corrección del mismo día):** primero se habían sacado también las
+     fechas y el contador; Gonzalo aclaró "las fechas son importantísimas, me
+     expresé mal" → se repusieron. El contador de días sigue sin aparecer en
+     estados cerrados (lo maneja `CountdownBadge` con `status`).
    - El **botón "Filtros"** del Kanban (prioridad + responsable) **ya existía**
      desde antes — cubre el punto 6, no se agregó nada. El filtro de responsable
      ahora lista solo a Gonzalo/Gastón (por `is_producer`).
