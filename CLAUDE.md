@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 19).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 20).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1365,3 +1365,58 @@ Sin esto, crear un trabajo con alguien en "Asignar también a" falla con
 - Sigue todo lo demás del tintero de la sección 18 (base de materiales, estados
   que sobran, manual, Nancy, fix `handle_new_user`, subida de archivos, etapas
   del wizard, mobile, revisión visual con login).
+
+---
+
+## 20. Actualización 08/09 (cont.) — puesto visible (`sector`) separado del permiso (`role`)
+
+Gonzalo quiso que en la app cada uno figure con su **puesto en la jerga de la
+empresa** (Pancho/Martín "Dueños/Dirección", Gastón "Diseñador", Richard/Alejandra
+"Coordinadores", él "Diseño/Producción") **sin tocar los permisos** — dueños y él
+tienen que seguir con acceso total.
+
+**Decisión:** no se agregó un rol nuevo (`role` sigue siendo el motor de permisos:
+`admin` = acceso total, `coordinador` = crea/asigna, etc. — meter un rol "dueño"
+obligaba a tocar el enum, el check constraint, `my_role()`, `is_admin_or_coordinador()`
+y varias policies de RLS para un cambio puramente cosmético). En su lugar se usa la
+columna que ya existía, **`profiles.sector`**, como "puesto" visible:
+
+- **Header** (`components/Layout/Header.tsx`): debajo del nombre ahora muestra
+  `user.sector` (y si estuviera vacío, cae al label del `role`). Antes mostraba
+  siempre el label del `role` ("Administrador", "Coordinador / Producción").
+- **UsersPage** ya mostraba `role · sector` — sin cambios ahí (en la pantalla de
+  admin sí conviene ver el permiso real).
+
+**Estado de roles/puestos objetivo** (Gonzalo corre el SQL de abajo; verificar con
+`select name, email, role, is_producer, sector from profiles order by role, name;`):
+
+| Persona | `role` (permiso) | `is_producer` | `sector` (puesto visible) |
+|---|---|---|---|
+| Gonzalo | `admin` (acceso total) | true | Diseño / Producción |
+| Pancho | `admin` (acceso total) | false | Dirección |
+| Martín | `admin` (acceso total) | false | Dirección |
+| Gastón | `coordinador` | true | Diseño |
+| Alejandra | `coordinador` | false | Coordinación |
+| Richard | `coordinador` | false | Coordinación |
+
+**Ojo con Gastón:** su *puesto* dice "Diseño" pero su *permiso* sigue siendo
+`coordinador` — lo necesita para poder crear fichas (RLS `jobs_insert` pide
+admin/coordinador). Si en algún momento se quiere que Gastón tenga permisos
+realmente de diseñador (no borrar trabajos, no cambiar prioridad de cualquiera,
+etc.) es un laburo aparte de RLS, no alcanza con cambiarle el `sector`.
+
+### SQL a correr en Supabase
+
+```sql
+update profiles set sector = 'Dirección'
+where email in ('panchobonta@gmail.com', 'martin@estudiobonta.com.ar');
+
+update profiles set sector = 'Diseño / Producción'
+where email = 'gonzaa.gd@gmail.com';
+
+update profiles set sector = 'Diseño'
+where email = 'gastonebenitez@outlook.com';
+
+update profiles set sector = 'Coordinación'
+where email in ('richard@estudiobonta.com.ar', 'alejandra@estudiobonta.com.ar');
+```

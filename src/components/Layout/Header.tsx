@@ -131,7 +131,9 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           <Avatar name={user.name} color={user.avatarColor} size={32} />
           <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-ink-900 leading-tight">{user.name}</div>
-            <div className="text-[11px] text-ink-700 leading-tight">{ROLES.find((r) => r.id === user.role)?.label}</div>
+            {/* El puesto "de la jerga" (Dirección, Diseño, Coordinación) vive en
+                `sector`; `role` es el permiso del sistema y se ve en Usuarios. */}
+            <div className="text-[11px] text-ink-700 leading-tight">{user.sector || ROLES.find((r) => r.id === user.role)?.label}</div>
           </div>
           <ChevronDown size={14} className="text-ink-700" />
         </button>
