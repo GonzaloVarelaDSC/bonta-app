@@ -10,22 +10,39 @@ import { DashboardJobCard } from './DashboardJobCard';
 
 type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
+// A mí = soy responsable o estoy asignado. Por mí = yo asigné el trabajo (lo
+// cargué). Todos = todo lo que puedo ver. El default se acomoda al perfil:
+// quien produce (Gastón, Gonzalo) arranca en "A mí" (su cola de trabajo); quien
+// coordina/dirige y no produce (Pancho, Martín, Alejandra...) arranca en "Por
+// mí" (lo que metió en la máquina). Cada uno lo puede cambiar y queda guardado.
+type ScopeMode = 'mine' | 'byMe' | 'all';
+const SCOPE_LABELS: Record<ScopeMode, string> = { mine: 'A mí', byMe: 'Por mí', all: 'Todos' };
+const SCOPE_KEY = 'bonta-dash-scope';
+
 export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
   const allJobs = useStore((s) => s.jobs);
   const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
   const [filter, setFilter] = useState<FilterKey>(null);
-  const [onlyMine, setOnlyMine] = useState(true);
+  const [scope, setScope] = useState<ScopeMode>(() => {
+    const saved = localStorage.getItem(SCOPE_KEY);
+    if (saved === 'mine' || saved === 'byMe' || saved === 'all') return saved;
+    return user.isProducer ? 'mine' : 'byMe';
+  });
+  function changeScope(next: ScopeMode) {
+    setScope(next);
+    localStorage.setItem(SCOPE_KEY, next);
+  }
 
   // Los cubos de arriba tienen que contar sobre el mismo conjunto que después
   // se ve al hacer click — si no, un cubo puede mostrar "1" y al tocarlo
-  // aparecer vacío porque ese trabajo es de otra persona y "Solo asignados a
-  // mí" lo saca. Se escopea acá, antes de calcular counts, para que el número
-  // y la lista siempre coincidan.
-  const scoped = useMemo(
-    () => (onlyMine ? jobs.filter((j) => j.responsibleUserId === user.id || j.assignedUserIds.includes(user.id)) : jobs),
-    [jobs, onlyMine, user.id]
-  );
+  // aparecer vacío. Se escopea acá, antes de calcular counts, para que el
+  // número y la lista siempre coincidan.
+  const scoped = useMemo(() => {
+    if (scope === 'all') return jobs;
+    if (scope === 'byMe') return jobs.filter((j) => j.createdByUserId === user.id);
+    return jobs.filter((j) => j.responsibleUserId === user.id || j.assignedUserIds.includes(user.id));
+  }, [jobs, scope, user.id]);
   const counts = useMemo(() => computeCounts(scoped), [scoped]);
 
   const filtered = useMemo(() => {
@@ -90,10 +107,18 @@ export function DashboardPage() {
         </span>
         <div className="flex items-center gap-3">
           {filter && <button onClick={() => setFilter(null)} className="text-xs text-brand-600 hover:underline">Ver todos</button>}
-          <label className="flex items-center gap-1.5 text-xs text-ink-700 cursor-pointer select-none">
-            <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} className="rounded" />
-            Solo asignados a mí
-          </label>
+          <div role="group" aria-label="Qué trabajos ver" className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
+            {(['mine', 'byMe', 'all'] as ScopeMode[]).map((m) => (
+              <button
+                key={m} onClick={() => changeScope(m)} aria-pressed={scope === m}
+                className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  scope === m ? 'bg-ink-950 text-white' : 'text-ink-700 hover:text-ink-900'
+                }`}
+              >
+                {SCOPE_LABELS[m]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

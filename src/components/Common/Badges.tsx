@@ -4,6 +4,7 @@ import { PRIORITY_META } from '../../lib/priority';
 import { RISK_META } from '../../lib/risk';
 import { STATUS_LABELS } from '../../data/catalog';
 import { countdown } from '../../lib/dates';
+import { isClosedStatus } from '../../lib/statusChange';
 
 const TONE_CLASSES: Record<string, string> = {
   crit: 'bg-crit-bg text-crit-text',
@@ -81,6 +82,30 @@ export function StatusBadge({ status }: { status: JobStatus }) {
   );
 }
 
+/** Select de prioridad con los mismos colores que PriorityBadge — para cambiar la
+ *  prioridad desde la lista sin abrir la ficha, sin que la fecha limite la opción
+ *  (un trabajo a 10 días puede ser crítico igual si es muy grande). */
+export function PrioritySelect({ priority, onChange, disabled }: { priority: Priority; onChange: (p: Priority) => void; disabled?: boolean }) {
+  return (
+    <select
+      value={priority}
+      disabled={disabled}
+      aria-label="Prioridad"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as Priority)}
+      className={clsx(
+        'text-[11px] font-semibold rounded-full px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+        TONE_CLASSES[PRIORITY_TONE[priority]]
+      )}
+    >
+      {(Object.keys(PRIORITY_META) as Priority[]).map((p) => (
+        <option key={p} value={p}>{PRIORITY_META[p].emoji} {PRIORITY_META[p].label}</option>
+      ))}
+    </select>
+  );
+}
+
 /** Select de estado con los mismos colores que StatusBadge — para cambiar el estado sin salir de la tarjeta/tabla. */
 export function StatusSelect({ status, options, onChange, disabled }: { status: JobStatus; options: JobStatus[]; onChange: (s: JobStatus) => void; disabled?: boolean }) {
   return (
@@ -100,7 +125,25 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
   );
 }
 
-export function CountdownBadge({ iso }: { iso: string }) {
+// Etiqueta de "cuánto falta / cuánto se atrasó" hasta la fecha de entrega. Una
+// vez que el trabajo está listo, entregado o cancelado deja de tener sentido
+// contar días — se muestra un cierre neutro en gris y el contador se congela.
+const CLOSED_COUNTDOWN_LABEL: Partial<Record<JobStatus, string>> = {
+  LISTO_PARA_ENTREGA: '✓ Listo',
+  LISTO_PARA_INSTALACION: '✓ Listo',
+  EN_INSTALACION: 'En obra',
+  TERMINADO: '✓ Entregado',
+  CANCELADO: 'Cancelado',
+};
+
+export function CountdownBadge({ iso, status }: { iso: string; status?: JobStatus }) {
+  if (status && isClosedStatus(status)) {
+    return (
+      <span className={clsx('inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1', TONE_CLASSES.wait)}>
+        {CLOSED_COUNTDOWN_LABEL[status] ?? 'Cerrado'}
+      </span>
+    );
+  }
   const c = countdown(iso);
   const tone = c.tone === 'ok' ? 'plan' : c.tone;
   // Cuando faltan pocos días (tono crit/urg) suma un borde del mismo color —

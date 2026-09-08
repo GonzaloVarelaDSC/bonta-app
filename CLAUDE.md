@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 03/09/2026 (sección 17).
+la contradiga más arriba**. Última actualización: 07/09/2026 (sección 18).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -858,7 +858,8 @@ Gonzalo explicó que un trabajo real casi nunca es "un material, una medida": so
 pedidos combinados de un mismo cliente (ej. "Corpóreo 3D" + "Corpóreo en acrílico"
 en el mismo trabajo), cada material tiene variables propias (espesor, PAI, color de
 acrílico lechoso/cristal, con o sin base, mate/brillo/satín, montado o no y su
-demasía de 5mm salvo montaje en PVC), y pidió poder chequear qué producto ya está
+demasía de 7mm por lado salvo montaje en PVC — valor confirmado por Gonzalo el
+07/09, reemplaza el "5mm" que se mencionó en alguna ronda anterior), y pidió poder chequear qué producto ya está
 procesado sin que eso bloquee cambiar el estado del trabajo. También pidió poder
 editar la fecha de entrega después de creada la ficha, y sacar el aviso de "falta
 archivo" que saltaba siempre.
@@ -1077,3 +1078,200 @@ como quien asignó". Dos cosas separadas que hasta ahora dependían las dos de
    roles, no un cambio de la regla — alguien con rol `produccion`/`instalacion`
    (ej. un instalador que se sume a futuro) seguiría sin poder cargar trabajos.
    No hace falta volver a explicar esto si no lo vuelve a preguntar.
+
+---
+
+## 18. Actualización 07/09 — acceso total dueños, filtro A mí / Por mí, tercerizadas, "Asignado por" = login, aviso de ficha nueva
+
+Ronda grande, 13 puntos que trajo Gonzalo. Lo que sigue **manda sobre todo lo de
+arriba que lo contradiga** — sobre todo la sección 17 (el desplegable editable de
+"Asignado por" y `credits_as_assigner` quedan sin uso, ver punto 1).
+
+### Cambios de código aplicados (build limpio; sin verificación visual con login — ver §3)
+
+1. **"Asignado por" = siempre quien está logueado.** Se eliminó el desplegable
+   editable de "Asignado por" de Carga rápida (`QuickJobPage.tsx`). Ahora
+   `createdByUserId = user.id` fijo — si entrás con la cuenta de Martín, la ficha
+   dice "Asignado por Martín", sin excepción. El que sí se elige es el
+   **Responsable** (desplegable de productores) y opcionalmente "Asignar también
+   a" (chips). **Consecuencia:** `User.creditsAsAssigner` /
+   `profiles.credits_as_assigner` quedan en el esquema pero **la app ya no los
+   lee** — ningún filtro los usa. No se borró la columna (no ameritaba otra
+   migración). El SQL pendiente de §17.3 sobre `credits_as_assigner=false` **ya
+   no hace falta**; lo único que queda de ese bloque es subir a Gastón a
+   `coordinador` (ver "SQL a correr").
+
+2. **Sección "Asignación" de Carga rápida rediseñada, con más peso visual**
+   (punto 8): tarjeta destacada con borde bronce que muestra "Asigna: [vos] →
+   Responsable: [select]" en una línea, con avatares. Copy nuevo aclara que el
+   responsable lo ve en el filtro «A mí» del Dashboard y quien asigna en «Por mí».
+   Los chips "Asignar a" pasaron a "Asignar también a".
+
+3. **Cartel de asignación reforzado en las fichas** (punto 8):
+   - `DashboardJobCard`: el pill de "Asignado por X" ahora muestra
+     **`[asigna] → [responsable]`** con los dos avatares y `title` con la frase
+     completa ("X asignó este trabajo a Y").
+   - `JobDetailPage` (cabecera): mismo pill `asigna → responsable` con avatares
+     20px y una micro-etiqueta "Asigna → Responsable" debajo.
+
+4. **Filtro del Dashboard: `A mí` / `Por mí` / `Todos`** (punto 9). Reemplaza el
+   checkbox "Solo asignados a mí" por un segmentado de 3 opciones
+   (`DashboardPage.tsx`, tipo `ScopeMode`):
+   - **A mí** = soy responsable o estoy en asignados.
+   - **Por mí** = `job.createdByUserId === user.id` (yo lo asigné/cargué).
+   - **Todos** = todo lo visible.
+   Default por perfil: `user.isProducer ? 'mine' : 'byMe'` — Gastón/Gonzalo
+   arrancan en "A mí" (su cola), Pancho/Martín/Alejandra/Richard/Nancy en "Por mí"
+   (lo que metieron a producción). La elección se guarda en `localStorage`
+   (`bonta-dash-scope`). Los cubos de KPI se escopean al mismo conjunto (igual que
+   antes con `scoped`), así el número del cubo y lo que aparece al clickearlo
+   siempre coinciden.
+
+5. **Acceso total para dueños / "deshacer todo lo posible"** (puntos 1 y 10).
+   Pancho, Martín y Gonzalo ya son `role='admin'` (confirmado §16.2), así que a
+   nivel base ya pueden tocar cualquier campo (el trigger `jobs_update_guard`
+   deja pasar a admin/coordinador). Lo que faltaba era en la UI: el **selector de
+   estado** ahora, para admin/coordinador, ofrece la **lista completa**
+   (`ADMIN_STATUSES` en `lib/statusChange.ts`) — incluye Procesado, Control de
+   calidad, Instalación, **Terminado y Cancelado** — para poder corregir o
+   **revertir** un estado puesto por error. `BLOQUEADO` no está en esa lista (se
+   llega por el botón "Bloquear trabajo" para que quede el motivo); `NUEVO`/
+   `APROBADO` tampoco (estados viejos, §7.4). Para roles no admin/coordinador el
+   selector sigue con las 5 de siempre. `statusOptionsFor(job, role?)` recibe
+   ahora el rol. `setStatus` además marca/limpia `finished_at` al entrar/salir de
+   TERMINADO.
+
+6. **Prioridad editable desde cualquier lado, sin que la fecha la trabe**
+   (punto 10). La prioridad ya era 100% manual (§9.7) — el problema era que en
+   Carga rápida, cambiar la fecha **pisaba** la prioridad elegida a mano. Ahora
+   `priorityTouched`: una vez que la tocás, la fecha no la cambia más. Además:
+   - `PrioritySelect` nuevo en `Common/Badges.tsx` (espejo de `StatusSelect`,
+     con los colores del `PriorityBadge`).
+   - `DashboardJobCard` usa `PrioritySelect` (para admin/coordinador) en vez del
+     badge estático — se puede subir un trabajo a Crítico desde la lista aunque
+     falten 10 días, si es un trabajo grande.
+   - La ficha ya tenía el select de prioridad con las 5 opciones sin gate de
+     fecha; sigue igual.
+
+7. **El contador de días se congela cuando el trabajo ya salió** (punto 4).
+   `CountdownBadge` recibe `status?` y, si el estado está en `CLOSED_STATUSES`
+   (`LISTO_PARA_ENTREGA`, `LISTO_PARA_INSTALACION`, `EN_INSTALACION`, `TERMINADO`,
+   `CANCELADO`), muestra un chip gris neutro ("✓ Listo" / "En obra" / "✓
+   Entregado" / "Cancelado") en vez de seguir sumando "Atrasado Nd". Actualizado
+   en `DashboardJobCard`, `JobsTable` y `JobDetailPage`.
+
+8. **Piezas tercerizadas** (punto 5). `Product.outsourced?: boolean` nuevo
+   (jsonb, sin migración). En `ProductsEditor` cada producto tiene un toggle
+   "Tercerizada" (ícono camión); cuando está activo, la tarjeta del producto se
+   marca con el color **`site`** (verde azulado — el mismo token de la columna
+   Instalación del Kanban, sin carga de alarma). En `ProductsView` aparece un
+   pill "Tercerizada" con ese color. Se ve en Carga rápida y en la pestaña
+   Productos de la ficha. Decisión de color: `site` estaba libre fuera del Kanban
+   y lee bien como "esto lo hace otro / está afuera".
+
+9. **Aviso de "cayó una ficha nueva"** (punto 13). Dos partes:
+   - `createJob` ahora notifica a: responsable + asignados + **todos los `admin`**
+     (dueños), menos quien la está cargando. Texto: `Nueva ficha: "<nombre>".`
+   - Suscripción realtime nueva a `notifications` (canal `my-notifications`) en
+     `useStore.init()` — cuando cae una notificación para el usuario logueado, se
+     prepende a la lista (la campana del Header se actualiza sola, sin recargar) y
+     dispara un **toast** liviano abajo a la derecha (`Toast` en `AppLayout.tsx`,
+     estado `toast` + `clearToast` en el store, se cierra solo a los 7s).
+   - De paso: `init()` ahora tiene un guardo de módulo `realtimeStarted` para no
+     registrar los canales de realtime dos veces (pasaba con StrictMode en dev y
+     tiraba "cannot add postgres_changes callbacks after subscribe()"). Esto
+     **arregla** un error que ya existía en `main`, no lo introduce.
+
+10. **Skills** (punto 6): se corrió `frontend-design` (guía para el rediseño del
+    cartel de asignación y el copy) y `accessibility-review` sobre lo nuevo. Se
+    corrigieron: contraste del toggle "Tercerizada" activo (era blanco 11px sobre
+    `site` `#0f9488` ≈ 3.3:1 — pasó a `site-text` `#0b6d63`, ~4.6:1), anillos de
+    foco visibles en el segmentado del Dashboard / toggle Tercerizada / botón de
+    cerrar el toast, y `aria-hidden` en íconos decorativos. El segmentado y los
+    chips chicos siguen bajo 44px de alto (igual que el resto de la app — 2.5.5
+    es AAA, no AA).
+
+11. **Mobile: pendiente a propósito** (punto 11). No se tocó nada de responsive
+    en esta ronda.
+
+### SQL a correr en Supabase (SQL Editor → New query → Run)
+
+**(a) Subir a Gastón a `coordinador`** — necesario para que pueda crear fichas
+(RLS `jobs_insert` y varias policies más piden `is_admin_or_coordinador()`):
+
+```sql
+update profiles set role = 'coordinador'
+where email = 'gastonebenitez@outlook.com';
+```
+
+**(b) Alta de Richard.** Primero crear el usuario en Supabase Dashboard →
+Authentication → Users → Add user → `richard@estudiobonta.com.ar` /
+contraseña `richard` (⚠️ débil — si Richard maneja datos reales conviene una más
+larga; queda a criterio de Gonzalo). El trigger `handle_new_user` crea la fila
+en `profiles` con rol `produccion`; después:
+
+```sql
+update profiles
+set name = 'Richard', role = 'coordinador', sector = 'Coordinación', is_producer = false
+where email = 'richard@estudiobonta.com.ar';
+```
+
+(Ajustar `name` al nombre completo real de Richard.)
+
+**(c) Verificación:**
+
+```sql
+select name, email, role, is_producer, credits_as_assigner from profiles order by role, name;
+```
+
+Esperado: Pancho/Martín/Gonzalo en `admin`; Gastón/Alejandra/Richard en
+`coordinador`; `is_producer=false` en Pancho/Martín/Alejandra/Richard.
+`credits_as_assigner` ya no lo usa la app — ignorar esa columna.
+
+### Lo que NO se pudo hacer en esta sesión (lo tiene que hacer Gonzalo)
+
+- **Contraseña de Alejandra (punto 2):** no la tengo ni la puedo sacar — Supabase
+  guarda solo el hash y la cuenta la creó Gonzalo a mano (§16.2). Email:
+  `alejandra@estudiobonta.com.ar`. Si se perdió la contraseña: Supabase Dashboard
+  → Authentication → Users → (Alejandra) → tres puntitos → "Reset password" o
+  editar y poner una nueva.
+- **Crear el usuario Auth de Richard (punto 3):** Claude no puede crear cuentas ni
+  escribir contraseñas. Pasos arriba, "SQL a correr" (b).
+
+### Tintero — cosas para definir/hacer más adelante (punto 12)
+
+De "se cierra rápido" a "proyecto aparte":
+
+1. **Base de conocimiento de materiales** — lo que íbamos a arrancar hoy (vinilo
+   montado = demasía 7mm/lado, distinto en PVC, etc.). Plan: extender el patrón
+   de banner sugerido dismissible que ya existe (Corpóreo → plantilla de vinilo)
+   a más reglas material→recordatorio + ayuda contextual al cargar. Conviene
+   conversación nueva por volumen de contexto. **Próximo gran tema.**
+2. **Estados que "sobran"** (`NUEVO`, `APROBADO`) — ningún flujo los produce. Si
+   Gonzalo confirma, sacarlos de `JobStatus` (types), `STATUS_LABELS`,
+   `KANBAN_COLUMNS` (catalog) y listas de `statusChange.ts`.
+3. **Manual de uso** (`ManualPage.tsx`) — estructura lista, contenido vacío a
+   propósito, esperando que Gonzalo dicte qué va en cada sección.
+4. **`credits_as_assigner`** — columna muerta desde esta ronda. Decidir si se
+   dropea en una migración futura o se deja.
+5. **Cuenta de Nancy** — falta su email real. Mismo perfil que Alejandra/Richard.
+6. **Backport del fix de `handle_new_user()`** (bug de `search_path` con
+   `SECURITY DEFINER`) — se parcheó en vivo hace tiempo pero `001_schema.sql`
+   local no lo refleja. Bajarlo del historial de queries de Supabase.
+7. **Subida real de archivos a Storage** — nunca implementado (`addFileVersion`
+   guarda nombre/tamaño, no el binario). Plan en `supabase/README.md` (bucket
+   `job-files`, columna `storage_path` ya existe).
+8. **Etapa 3 del wizard / checklist de etapas** — Gonzalo preguntó para qué
+   sirve; pendiente confirmar si se mantiene, simplifica o saca (vive en
+   `job_stages` + pestaña Producción de la ficha).
+9. **Revisión visual con login real** — esta sesión no pudo autenticarse (regla
+   de contraseñas), solo verificó build limpio + carga del login sin errores de
+   consola. Gonzalo tiene que mirar en `bonta-app.vercel.app`: Dashboard
+   (segmentado A mí/Por mí/Todos + prioridad editable en la lista), Carga rápida
+   (sección Asignación nueva), ficha (cartel asigna→responsable, selector de
+   estado completo), Productos (toggle Tercerizada).
+10. **Mobile** — responsive de verdad, diferido explícitamente (punto 11).
+11. **Fuera de alcance Fase 1** (no es deuda, es a propósito): calendario,
+    reportes completos, ficha de cliente extendida, checklist de calidad
+    configurable desde admin, dependencias entre trabajos, plantillas,
+    notificaciones push/email (el aviso de ficha nueva es in-app, no mail).

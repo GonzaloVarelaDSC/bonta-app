@@ -176,8 +176,8 @@ export interface SizeItem {
  *
  * `notes` es a propósito texto libre y no un campo estructurado por espesor/
  * terminación/montaje — las combinaciones reales (espesor de acrílico, mate/
- * brillo/satin según la máquina, con o sin base, demasía de 5mm si va montado
- * salvo que sea sobre PVC, etc.) son demasiado variables para forzarlas en
+ * brillo/satin según la máquina, con o sin base, demasía de 7mm por lado si va
+ * montado salvo que sea sobre PVC, etc.) son demasiado variables para forzarlas en
  * dropdowns sin arriesgar quedar mal o incompletas; un renglón de texto que la
  * gente que sabe del oficio complete a mano es más fiel que una UI rígida
  * adivinando reglas del rubro. Si con el uso real se ve un patrón que conviene
@@ -190,6 +190,10 @@ export interface Product {
   sizeItems: SizeItem[];
   notes: string; // espesor, color de acrílico, mate/brillo/satin, con o sin base, montado o no, etc.
   checked: boolean; // "ya lo procesé" — informativo, nunca bloquea el cambio de estado del trabajo
+  // Esta pieza la hace un proveedor externo, no el estudio. Se marca aparte
+  // (con color propio en la carga y en las fichas) porque cambia a quién hay
+  // que seguirle el trámite. Opcional: datos viejos no lo tienen.
+  outsourced?: boolean;
 }
 
 export interface Job {

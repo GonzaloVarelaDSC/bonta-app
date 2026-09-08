@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lightbulb, Plus, X } from 'lucide-react';
+import { Lightbulb, Plus, X, Truck } from 'lucide-react';
 import { SizeItemsEditor, SizeItemsView } from './SizeItemsEditor';
 import { MATERIALS } from '../../data/catalog';
 import type { JobTypeId, MaterialId, Product } from '../../types';
@@ -49,13 +49,23 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
         <p className="text-sm text-ink-700 italic">Todavía no hay productos cargados.</p>
       )}
       {products.map((product, i) => (
-        <div key={product.id} className="bg-white border border-ink-100 rounded-lg overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-ink-50 bg-ink-50/50">
+        <div key={product.id} className={`bg-white border rounded-lg overflow-hidden ${product.outsourced ? 'border-site/40' : 'border-ink-100'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 border-b ${product.outsourced ? 'border-site/20 bg-site-bg' : 'border-ink-50 bg-ink-50/50'}`}>
             <input
               value={product.label} onChange={(e) => update(i, { label: e.target.value })}
               placeholder={`Producto ${i + 1} — ej. "Corpóreo 3D"`}
               className="flex-1 bg-transparent text-sm font-semibold text-ink-900 placeholder:font-normal placeholder:text-ink-400 focus:outline-none"
             />
+            <button
+              type="button" onClick={() => update(i, { outsourced: !product.outsourced })}
+              aria-pressed={!!product.outsourced}
+              title="Marcar si esta pieza la hace un proveedor externo"
+              className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full border px-2 py-1 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                product.outsourced ? 'bg-site-text text-white border-site-text' : 'border-ink-200 text-ink-700 hover:border-site/50'
+              }`}
+            >
+              <Truck size={12} aria-hidden /> Tercerizada
+            </button>
             <button type="button" onClick={() => remove(i)} aria-label={`Quitar producto ${i + 1}`} className="text-ink-700 hover:text-crit-text shrink-0">
               <X size={15} />
             </button>
@@ -125,15 +135,22 @@ export function ProductsView({ products, onToggle }: { products: Product[]; onTo
   return (
     <div className="space-y-2">
       {products.map((p) => (
-        <div key={p.id} className="bg-white border border-ink-100 rounded-lg px-3 py-2.5">
+        <div key={p.id} className={`bg-white border rounded-lg px-3 py-2.5 ${p.outsourced ? 'border-site/40' : 'border-ink-100'}`}>
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
               type="checkbox" checked={p.checked} onChange={() => onToggle?.(p.id)}
               className="rounded mt-0.5" disabled={!onToggle}
             />
             <div className="flex-1 min-w-0">
-              <div className={`text-sm font-semibold ${p.checked ? 'text-ink-700 line-through decoration-ink-300' : 'text-ink-900'}`}>
-                {p.label || 'Producto sin nombre'}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-sm font-semibold ${p.checked ? 'text-ink-700 line-through decoration-ink-300' : 'text-ink-900'}`}>
+                  {p.label || 'Producto sin nombre'}
+                </span>
+                {p.outsourced && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-site-bg text-site-text rounded-full px-2 py-0.5">
+                    <Truck size={11} aria-hidden /> Tercerizada
+                  </span>
+                )}
               </div>
               {p.materialIds.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">

@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap } from 'lucide-react';
+import { Zap, ArrowRight } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canCreateJobs } from '../../lib/permissions';
 import { JOB_TYPES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
 import { ProductsEditor } from '../Common/ProductsEditor';
+import { Avatar } from '../Common/Badges';
 import type { JobTypeId, Priority, Product } from '../../types';
 
 function emptyProduct(): Product {
@@ -77,6 +77,9 @@ export function QuickJobPage() {
   const [description, setDescription] = useState('');
   const [committedDate, setCommittedDate] = useState('');
   const [priority, setPriority] = useState<Priority>('NORMAL');
+  // Una vez que se elige la prioridad a mano, la fecha no la vuelve a pisar — un
+  // trabajo a 10 días puede ser crítico igual si es muy grande (Gonzalo, 07/09).
+  const [priorityTouched, setPriorityTouched] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([emptyProduct()]);
   const [observations, setObservations] = useState('');
@@ -86,17 +89,10 @@ export function QuickJobPage() {
   const [installContactPhone, setInstallContactPhone] = useState('');
   const [installDate, setInstallDate] = useState('');
 
-  // "Asignado por" — quién de coordinación/dirección tomó/coordinó este
-  // trabajo con el cliente (Nancy, Richard, Alejandra, Gonzalo...). Gastón,
-  // Pancho y Martín pueden cargar un trabajo igual (tienen acceso a este
-  // formulario) pero no aparecen acá — `creditsAsAssigner` es un campo aparte
-  // de `role` (Gonzalo, 03/09): "permití cargar trabajos pero que no
-  // aparezcan como quien asignó". Arranca en quien está logueado si es una
-  // opción válida, si no en la primera de la lista.
-  const assigners = users.filter((u) => u.active && canCreateJobs(u.role) && u.creditsAsAssigner);
-  const [createdByUserId, setCreatedByUserId] = useState(
-    () => (assigners.some((u) => u.id === user.id) ? user.id : assigners[0]?.id ?? user.id)
-  );
+  // "Asignado por" = siempre quien está logueado (Gonzalo, 07/09: "que esté
+  // vinculado al usuario del login — si entro con la cuenta de Martín, que la
+  // ficha diga «Asignado por Martín»"). Ya no es un desplegable editable.
+  const createdByUserId = user.id;
 
   // Si quien crea el trabajo no es él mismo asignable (ej. Pancho, dueño), no
   // tiene sentido precargarlo a él como responsable — arranca en el primer
@@ -117,7 +113,11 @@ export function QuickJobPage() {
   }
   function changeDate(newDate: string) {
     setCommittedDate(newDate);
-    setPriority(suggestPriority(newDate));
+    if (!priorityTouched) setPriority(suggestPriority(newDate));
+  }
+  function changePriority(p: Priority) {
+    setPriority(p);
+    setPriorityTouched(true);
   }
   function toggleAssigned(id: string) {
     setAssignedUserIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id]);
@@ -214,10 +214,14 @@ export function QuickJobPage() {
           <div><label htmlFor="qj-description" className={labelCls}>Descripción — qué hay que producir</label>
             <textarea id="qj-description" className={inputCls} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div><label htmlFor="qj-priority" className={labelCls}>Prioridad</label>
-            <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+            <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => changePriority(e.target.value as Priority)}>
               {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
             </select>
-            <p className="text-[11px] text-ink-700 mt-1">Se sugiere sola según la fecha de entrega — la podés cambiar cuando quieras.</p>
+            <p className="text-[11px] text-ink-700 mt-1">
+              {priorityTouched
+                ? 'La elegiste a mano — la fecha ya no la cambia sola.'
+                : 'Se sugiere sola según la fecha de entrega. Podés forzarla (un trabajo grande puede ser crítico aunque falten días).'}
+            </p>
           </div>
         </Section>
 
@@ -244,23 +248,34 @@ export function QuickJobPage() {
           )}
         </Section>
 
-        <Section title="Asignación">
-          <div><label htmlFor="qj-assigner" className={labelCls}>Asignado por</label>
-            <select id="qj-assigner" className={inputCls} value={createdByUserId} onChange={(e) => setCreatedByUserId(e.target.value)}>
-              {assigners.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-            <p className="text-[11px] text-ink-700 mt-1">Quién decide asignar este trabajo — no siempre es quien lo está tipeando acá.</p>
-          </div>
-          <div><label htmlFor="qj-responsible" className={labelCls}>Responsable interno</label>
-            <select id="qj-responsible" className={inputCls} value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
-              {producers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-            <p className="text-[11px] text-ink-700 mt-1">
-              Quién se hace cargo de que este trabajo avance (normalmente quien lo va a diseñar o producir) — es distinto de quién lo cargó acá. Aparece en "Solo asignados a mí" del Dashboard.
+        <Section title="Asignación" hint="Queda registrado que este trabajo lo asignás vos. Elegí quién es el responsable de que avance.">
+          <div className="rounded-xl border border-brand-300 bg-brand-100/50 p-4">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Asigna</span>
+                <span className="inline-flex items-center gap-2 bg-white rounded-full pl-1 pr-3 py-1 border border-brand-200">
+                  <Avatar name={user.name} color={user.avatarColor} size={22} />
+                  <span className="text-sm font-semibold text-ink-900">{user.name}</span>
+                </span>
+              </div>
+              <ArrowRight size={18} className="text-brand-600 shrink-0 mb-2" aria-hidden />
+              <div className="flex flex-col gap-1.5 min-w-[200px] flex-1">
+                <label htmlFor="qj-responsible" className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Responsable</label>
+                <select
+                  id="qj-responsible"
+                  className="w-full border border-brand-200 bg-white rounded-full px-3.5 py-2 text-sm font-semibold text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}
+                >
+                  {producers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <p className="text-[11px] text-ink-700 mt-2.5">
+              El responsable ve el trabajo en el filtro <strong>«A mí»</strong> del Dashboard; vos lo ves en <strong>«Por mí»</strong>.
             </p>
           </div>
           <div>
-            <span className={labelCls}>Asignar a</span>
+            <span className={labelCls}>Asignar también a</span>
             <div className="flex flex-wrap gap-1.5">
               {producers.map((u) => (
                 <button type="button" key={u.id} onClick={() => toggleAssigned(u.id)} aria-pressed={assignedUserIds.includes(u.id)}
@@ -269,6 +284,7 @@ export function QuickJobPage() {
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-ink-700 mt-1">Opcional — otras personas que también trabajan en esto y lo ven en «A mí».</p>
           </div>
         </Section>
       </div>

@@ -25,8 +25,12 @@ interface StoreState {
   comments: Comment[];
   activityLog: ActivityLogEntry[];
   notifications: Notification[];
+  // Último aviso para mostrar como toast (una ficha nueva que cayó, una
+  // asignación, etc.). Lo pinta AppLayout y se limpia solo.
+  toast: string | null;
 
   init: () => Promise<void>;
+  clearToast: () => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 
@@ -90,6 +94,10 @@ async function insertNotifications(userIds: string[], jobId: string, text: strin
   return (data ?? []).map(mapNotification);
 }
 
+// Guardo de módulo: init() puede correr dos veces (StrictMode en dev) o si algún
+// componente lo vuelve a llamar — las suscripciones de realtime se arman una vez.
+let realtimeStarted = false;
+
 export const useStore = create<StoreState>()((set, get) => ({
   authReady: false,
   dataLoading: false,
@@ -101,8 +109,17 @@ export const useStore = create<StoreState>()((set, get) => ({
   comments: [],
   activityLog: [],
   notifications: [],
+  toast: null,
+
+  clearToast: () => set(() => ({ toast: null })),
 
   init: async () => {
+    // En dev, React StrictMode invoca el efecto de init() dos veces — sin este
+    // guardo se intenta registrar el mismo canal de realtime dos veces y
+    // Supabase tira "cannot add postgres_changes callbacks after subscribe()".
+    if (realtimeStarted) return;
+    realtimeStarted = true;
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData.session) {
       await loadCurrentUser(set);
@@ -124,6 +141,22 @@ export const useStore = create<StoreState>()((set, get) => ({
         if (!id) return;
         const job = await fetchJobById(id);
         set((s) => ({ jobs: job ? [job, ...s.jobs.filter((j) => j.id !== id)] : s.jobs.filter((j) => j.id !== id) }));
+      })
+      .subscribe();
+
+    // Aviso en vivo cuando cae una notificación para mí (ficha nueva, me
+    // asignaron, me mencionaron). RLS ya filtra a `user_id = auth.uid()`, pero
+    // igual chequeamos por las dudas. Prepende a la lista y dispara el toast.
+    supabase
+      .channel('my-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        const row = payload.new as any;
+        const me = get().currentUser?.id;
+        if (!row || !me || row.user_id !== me) return;
+        const notif = mapNotification(row);
+        set((s) => (s.notifications.some((n) => n.id === notif.id)
+          ? {}
+          : { notifications: [notif, ...s.notifications], toast: notif.text }));
       })
       .subscribe();
   },
@@ -206,7 +239,11 @@ export const useStore = create<StoreState>()((set, get) => ({
     // le dicta el pedido a Gonzalo y Gonzalo lo carga, pero el crédito es de Pancho).
     const actorId = get().currentUser?.id ?? input.createdByUserId;
     await insertActivity(set, jobId, actorId, 'crear', `Creó el trabajo — ${input.name}.`);
-    await insertNotifications(input.assignedUserIds.filter((id) => id !== input.responsibleUserId), jobId, `Nuevo trabajo asignado: ${input.name}.`);
+    // Aviso de "cayó una ficha nueva": al responsable, a los asignados, y a los
+    // dueños (admins) para que sepan qué entró — menos quien la está cargando.
+    const owners = get().users.filter((u) => u.active && u.role === 'admin').map((u) => u.id);
+    const newJobRecipients = [input.responsibleUserId, ...input.assignedUserIds, ...owners].filter((id) => id && id !== actorId);
+    await insertNotifications(newJobRecipients, jobId, `Nueva ficha: "${input.name}".`);
 
     const job = await fetchJobById(jobId);
     if (!job) throw new Error('No se pudo leer el trabajo recién creado.');
@@ -227,10 +264,15 @@ export const useStore = create<StoreState>()((set, get) => ({
     // cuándo quedó listo la producción.
     const readyStatuses: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
     const stampReady = readyStatuses.includes(status) && !readyStatuses.includes(before?.status ?? 'PENDIENTE' as JobStatus);
+    // Marca/limpia la fecha de terminado según el estado — así un admin que
+    // revierte un "Terminado" puesto por error deja la ficha coherente.
+    const finishedPatch = status === 'TERMINADO'
+      ? (before?.finishedAt ? {} : { finished_at: nowIso })
+      : (before?.status === 'TERMINADO' ? { finished_at: null } : {});
     // Optimista: refleja el cambio ya mismo (clave para que el drag&drop del kanban se sienta instantáneo)
     // y lo revierte si Supabase lo rechaza (por ejemplo, la regla de control de calidad obligatorio).
     set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, status, lastActivityAt: nowIso, ...(stampReady ? { readyAt: nowIso } : {}) } : j) }));
-    const { error } = await supabase.from('jobs').update({ status, last_activity_at: nowIso, ...(stampReady ? { ready_at: nowIso } : {}) }).eq('id', jobId);
+    const { error } = await supabase.from('jobs').update({ status, last_activity_at: nowIso, ...(stampReady ? { ready_at: nowIso } : {}), ...finishedPatch }).eq('id', jobId);
     if (error) {
       if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;

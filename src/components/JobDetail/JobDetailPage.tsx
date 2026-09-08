@@ -73,16 +73,30 @@ export function JobDetailPage() {
               <div className="font-mono text-xs text-ink-700 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
               <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
               <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
-              {creator && (
-                <div className="flex items-center gap-1.5 mt-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-semibold w-fit" title={`${creator.name} te asignó este trabajo`}>
-                  <Avatar name={creator.name} color={creator.avatarColor} size={18} /> Asignado por {creator.name}
+              {(creator || responsible) && (
+                <div
+                  className="flex items-center gap-2 mt-2 bg-brand-100 text-brand-700 rounded-full pl-1 pr-3 py-1 text-xs font-semibold w-fit"
+                  title={creator && responsible ? `${creator.name} asignó este trabajo a ${responsible.name}` : creator ? `Asignado por ${creator.name}` : `Responsable: ${responsible!.name}`}
+                >
+                  {creator && (
+                    <span className="flex items-center gap-1.5">
+                      <Avatar name={creator.name} color={creator.avatarColor} size={20} /> {creator.name}
+                    </span>
+                  )}
+                  {creator && responsible && <span className="text-brand-600" aria-hidden>→</span>}
+                  {responsible && (
+                    <span className="flex items-center gap-1.5">
+                      <Avatar name={responsible.name} color={responsible.avatarColor} size={20} /> {responsible.name}
+                    </span>
+                  )}
                 </div>
               )}
+              <div className="text-[11px] text-ink-700 mt-1 pl-1">Asigna → Responsable</div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <PriorityBadge priority={effectivePriority(job)} />
               <StatusBadge status={job.status} />
-              <CountdownBadge iso={job.committedDate} />
+              <CountdownBadge iso={job.committedDate} status={job.status} />
               <RiskBadge risk={calculateRisk(job)} />
             </div>
           </div>
@@ -123,7 +137,7 @@ export function JobDetailPage() {
               onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
               className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
             >
-              {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              {statusOptionsFor(job, user.role).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
             {!activeBlock && (
               <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">

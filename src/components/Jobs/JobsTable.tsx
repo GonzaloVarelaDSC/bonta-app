@@ -110,14 +110,14 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 </td>
                 <td className="px-2 py-2.5">
                   <StatusSelect
-                    status={j.status} options={statusOptionsFor(j)}
+                    status={j.status} options={statusOptionsFor(j, currentUser?.role)}
                     onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
                   />
                 </td>
                 <td className="px-2 py-2.5">
                   {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} /><span className="text-xs text-ink-700">{resp.name.split(' ')[0]}</span></div>}
                 </td>
-                <td className="px-2 py-2.5"><CountdownBadge iso={j.committedDate} /></td>
+                <td className="px-2 py-2.5"><CountdownBadge iso={j.committedDate} status={j.status} /></td>
                 {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}
                 <td className="px-2 py-2.5">
                   <div className="flex items-center gap-2">

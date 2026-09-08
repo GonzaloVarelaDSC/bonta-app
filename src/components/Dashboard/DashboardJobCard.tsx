@@ -5,8 +5,8 @@ import { ArrowRight, Phone } from 'lucide-react';
 import type { Job, Priority } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
-import { canEditAnyJob } from '../../lib/permissions';
-import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
+import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
+import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
@@ -74,11 +74,13 @@ export function DashboardJobCard({ job }: { job: Job }) {
   const users = useStore((s) => s.users);
   const setJobCode = useStore((s) => s.setJobCode);
   const setStatus = useStore((s) => s.setStatus);
+  const setPriority = useStore((s) => s.setPriority);
 
   const client = clients.find((c) => c.id === job.clientId);
   const resp = users.find((u) => u.id === job.responsibleUserId);
   const creator = users.find((u) => u.id === job.createdByUserId);
   const canEditCode = !!currentUser && canEditAnyJob(currentUser.role);
+  const canEditPriority = !!currentUser && canChangePriority(currentUser.role);
   const priority = effectivePriority(job);
 
   return (
@@ -93,10 +95,12 @@ export function DashboardJobCard({ job }: { job: Job }) {
       )}
     >
       <div className="flex items-center gap-3 flex-wrap">
-        <PriorityBadge priority={priority} size="sm" />
+        {canEditPriority
+          ? <PrioritySelect priority={priority} onChange={(p) => setPriority(job.id, p, currentUser!.id)} />
+          : <PriorityBadge priority={priority} size="sm" />}
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect
-          status={job.status} options={statusOptionsFor(job)}
+          status={job.status} options={statusOptionsFor(job, currentUser?.role)}
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
         <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />
@@ -106,7 +110,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
           <span>Asignado {fmtDate(job.createdAt)}</span>
           <span className="text-ink-700 font-normal">·</span>
           <span>Entrega {fmtDate(job.committedDate)}</span>
-          <CountdownBadge iso={job.committedDate} />
+          <CountdownBadge iso={job.committedDate} status={job.status} />
         </div>
 
         <button
@@ -133,12 +137,14 @@ export function DashboardJobCard({ job }: { job: Job }) {
               <span className="truncate max-w-[160px]">{job.contactName}{job.contactName && job.contactPhone ? ' · ' : ''}{job.contactPhone}</span>
             </div>
           )}
-          {resp && (
-            <span className="flex items-center gap-1"><Avatar name={resp.name} color={resp.avatarColor} size={18} /> {resp.name.split(' ')[0]}</span>
-          )}
-          {creator && (
-            <span className="flex items-center gap-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-2.5 py-0.5 font-semibold whitespace-nowrap" title={`${creator.name} te asignó este trabajo`}>
-              <Avatar name={creator.name} color={creator.avatarColor} size={18} /> Asignado por {creator.name.split(' ')[0]}
+          {(creator || resp) && (
+            <span
+              className="flex items-center gap-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-3 py-0.5 font-semibold whitespace-nowrap"
+              title={creator && resp ? `${creator.name} asignó este trabajo a ${resp.name}` : creator ? `Asignado por ${creator.name}` : `Responsable: ${resp!.name}`}
+            >
+              {creator && <><Avatar name={creator.name} color={creator.avatarColor} size={18} /> {creator.name.split(' ')[0]}</>}
+              {creator && resp && <ArrowRight size={12} className="text-brand-600 mx-0.5" aria-hidden />}
+              {resp && <><Avatar name={resp.name} color={resp.avatarColor} size={18} /> {resp.name.split(' ')[0]}</>}
             </span>
           )}
         </div>
