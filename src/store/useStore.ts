@@ -89,8 +89,16 @@ async function insertActivity(
 async function insertNotifications(userIds: string[], jobId: string, text: string): Promise<Notification[]> {
   const rows = userIds.filter((id, i, arr) => arr.indexOf(id) === i).map((userId) => ({ user_id: userId, job_id: jobId, text }));
   if (rows.length === 0) return [];
+  // Las notificaciones son un efecto secundario best-effort. Si el insert falla
+  // — típicamente porque la policy RLS de `notifications` en la base real quedó
+  // más restrictiva que el `with check (true)` de 002_policies.sql (ya pasó, ver
+  // CLAUDE.md §12.8/§22) — NO tiene que hacer fallar la acción que la disparó
+  // (crear la ficha, cambiar el estado, comentar, asignar...). Se loguea y sigue.
   const { data, error } = await supabase.from('notifications').insert(rows).select();
-  if (error) throw error;
+  if (error) {
+    console.warn('[notificaciones] no se pudieron crear, se ignora y la acción principal sigue:', error.message);
+    return [];
+  }
   return (data ?? []).map(mapNotification);
 }
 
