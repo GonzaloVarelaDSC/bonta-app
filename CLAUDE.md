@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 21).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 22).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1476,3 +1476,54 @@ conocimiento de materiales, estados que sobran (`NUEVO`/`APROBADO`), Manual de u
 `credits_as_assigner` (columna muerta), fix `handle_new_user()`, subida real de
 archivos a Storage, etapas del wizard, mobile, y el "texto automático para el
 cliente" cuando un trabajo llega a Listo para entregar.
+
+---
+
+## 22. Actualización 08/09 — fix: bug de RLS de `notifications` bloqueaba crear fichas
+
+**Síntoma:** al crear una ficha de trabajo saltaba `new row violates row-level
+security policy for table "notifications"` y el alta fallaba entera.
+
+**Por qué apareció ahora:** es el mismo problema de §12.8 (la policy de INSERT de
+`notifications` en la base real quedó, en algún momento, más restrictiva que el
+`with check (true)` que tiene `002_policies.sql`). Antes no se notaba al crear una
+ficha porque la lista de destinatarios de la notificación "nueva ficha" solía
+quedar vacía (`insertNotifications([])` corta antes del insert). La sección 18
+amplió esa lista a responsable + asignados + **todos los admins** — desde entonces
+siempre hay al menos una fila para insertar, y ahí la policy drift-eada la rechaza.
+
+**Arreglo aplicado en código (commit `5f1426f`, ya deployado):**
+`insertNotifications` (`store/useStore.ts`) ya **no hace `throw`** si el insert
+falla — loguea `console.warn` y devuelve `[]`. Las notificaciones son un efecto
+secundario best-effort: que fallen no tiene que tumbar la acción que las dispara
+(crear ficha, cambiar estado, comentar, asignar, subir archivo, etc.). Con esto
+crear fichas funciona aunque la policy siga mal — solo que no se genera el aviso.
+
+**Arreglo de fondo (lo tiene que correr Gonzalo en Supabase → SQL Editor):**
+reaplica las tres policies de `notifications` tal como están en `002_policies.sql`:
+
+```sql
+alter table notifications enable row level security;
+
+drop policy if exists notifications_select on notifications;
+create policy notifications_select on notifications
+  for select to authenticated using (user_id = auth.uid());
+
+drop policy if exists notifications_update on notifications;
+create policy notifications_update on notifications
+  for update to authenticated using (user_id = auth.uid());
+
+drop policy if exists notifications_insert on notifications;
+create policy notifications_insert on notifications
+  for insert to authenticated with check (true);
+```
+
+Para ver cómo quedó la policy actual (diagnóstico, opcional):
+```sql
+select policyname, cmd, qual, with_check from pg_policies where tablename = 'notifications';
+```
+
+**Pendiente de confirmar:** que Gonzalo corrió el SQL de arriba. Hasta que lo
+haga, la app anda pero nadie recibe el aviso de "cayó una ficha nueva" (§18.9) ni
+ninguna otra notificación in-app. Verificar con el `select` de diagnóstico o
+creando una ficha y mirando la campana de otro usuario.
