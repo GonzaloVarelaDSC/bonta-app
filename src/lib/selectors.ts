@@ -21,12 +21,13 @@ export function isActive(job: Job): boolean {
 }
 
 export interface DashboardCounts {
-  critical: number; urgent: number; dueToday: number; overdue: number;
+  pending: number; critical: number; urgent: number; dueToday: number; overdue: number;
   blocked: number; inDesign: number; inProduction: number; readyToDeliver: number; waitingInfo: number; silent: number;
 }
 
 export function computeCounts(jobs: Job[]): DashboardCounts {
   return {
+    pending: jobs.filter((j) => j.status === 'PENDIENTE').length,
     critical: jobs.filter((j) => isActive(j) && effectivePriority(j) === 'CRITICO').length,
     urgent: jobs.filter((j) => isActive(j) && effectivePriority(j) === 'URGENTE').length,
     dueToday: jobs.filter(isDueToday).length,

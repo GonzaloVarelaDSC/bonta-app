@@ -1,4 +1,4 @@
-import type { JobType, Material, Role, JobStatus, StageKey, BlockReason } from '../types';
+import type { JobType, Material, Role, JobStatus, StageKey, BlockReason, SampleReview } from '../types';
 
 export const ROLES: Role[] = [
   { id: 'admin', label: 'Administrador', description: 'Control total del sistema' },
@@ -52,6 +52,14 @@ export const MATERIALS: Material[] = [
   { id: 'tela', label: 'Tela' },
   { id: 'otros', label: 'Otros' },
 ];
+
+// Muestra/prueba al cliente. `option` = texto del selector en la ficha; `chip` =
+// texto corto del pill que aparece en las listas (vacío en 'none' = no se muestra).
+export const SAMPLE_REVIEW_META: Record<SampleReview, { option: string; chip: string }> = {
+  none: { option: 'Sin muestra', chip: '' },
+  awaiting: { option: 'Enviada, falta OK', chip: 'Muestra: falta OK' },
+  approved: { option: 'Aprobada por el cliente', chip: 'Muestra OK' },
+};
 
 export const BLOCK_REASON_LABELS: Record<BlockReason, string> = {
   falta_archivo: 'Falta archivo',

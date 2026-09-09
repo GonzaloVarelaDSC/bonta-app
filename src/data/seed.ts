@@ -269,6 +269,7 @@ export const JOBS: Job[] = S.map((s, idx) => {
     priorityAuto: 'NORMAL',
     priorityManual: null,
     requiresInstallation: !!s.requiresInstallation,
+    sampleReview: 'none',
     installation: s.requiresInstallation ? {
       address: s.installAddress ?? '',
       contactName: s.contactName,

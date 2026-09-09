@@ -87,6 +87,7 @@ export function mapJob(row: any): Job {
     status: row.status, stages: (row.job_stages ?? []).map(mapStage),
     priorityAuto: row.priority_auto, priorityManual: row.priority_manual ?? null,
     requiresInstallation: row.requires_installation, installation: mapInstallation(row.installations),
+    sampleReview: row.sample_review ?? 'none', sampleReviewAt: row.sample_review_at ?? undefined,
     qualityChecks: (row.quality_checks ?? []).map(mapQc),
     files: (row.job_files ?? []).map(mapFile),
     blockRecords: (row.block_records ?? []).map(mapBlock),

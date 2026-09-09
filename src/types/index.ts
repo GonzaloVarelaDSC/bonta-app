@@ -90,6 +90,12 @@ export type JobStatus =
 export type Priority = 'CRITICO' | 'URGENTE' | 'NORMAL' | 'PLANIFICADO' | 'EN_ESPERA';
 export type RiskLevel = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO';
 
+// Muchos clientes piden una muestra / prueba impresa (colores, definición,
+// textura) antes de mandar a producir el trabajo entero. `none` = no hay muestra
+// en juego; `awaiting` = se le mandó y falta el OK del cliente (no arrancar la
+// producción completa); `approved` = el cliente la aprobó, vía libre.
+export type SampleReview = 'none' | 'awaiting' | 'approved';
+
 export interface FileVersion {
   id: string;
   version: number;
@@ -243,6 +249,10 @@ export interface Job {
 
   requiresInstallation: boolean;
   installation?: InstallationInfo;
+
+  // Muestra/prueba al cliente antes de producir todo — ver type SampleReview.
+  sampleReview: SampleReview;
+  sampleReviewAt?: string; // cuándo se marcó por última vez (para "aprobada el ...")
 
   qualityChecks: QualityCheckItem[];
 

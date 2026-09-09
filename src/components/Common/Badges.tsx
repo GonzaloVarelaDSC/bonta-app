@@ -1,9 +1,9 @@
 import clsx from 'clsx';
-import type { Priority, RiskLevel, JobStatus } from '../../types';
+import type { Priority, RiskLevel, JobStatus, SampleReview } from '../../types';
 import { PRIORITY_META } from '../../lib/priority';
 import { RISK_META } from '../../lib/risk';
-import { STATUS_LABELS } from '../../data/catalog';
-import { countdown } from '../../lib/dates';
+import { STATUS_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
+import { countdown, fmtDate } from '../../lib/dates';
 import { isClosedStatus } from '../../lib/statusChange';
 
 const TONE_CLASSES: Record<string, string> = {
@@ -142,6 +142,26 @@ export function CountdownBadge({ iso, status }: { iso: string; status?: JobStatu
       urgent && 'border border-current/30'
     )}>
       {c.overdue ? '⚠️' : '⏱️'} {c.label}
+    </span>
+  );
+}
+
+// Pill discreto de "muestra/prueba al cliente" — no aparece si el trabajo no
+// tiene muestra en juego (`none`). Ámbar = falta el OK; verde = aprobada.
+export function SampleReviewBadge({ state, at, size = 'md' }: { state: SampleReview; at?: string; size?: 'sm' | 'md' }) {
+  if (state === 'none') return null;
+  const meta = SAMPLE_REVIEW_META[state];
+  const tone = state === 'awaiting' ? 'norm' : 'plan';
+  return (
+    <span
+      title={at ? `${meta.chip} · ${fmtDate(at)}` : meta.chip}
+      className={clsx(
+        'inline-flex items-center rounded-full font-semibold whitespace-nowrap border border-current/25',
+        TONE_CLASSES[tone],
+        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+      )}
+    >
+      {meta.chip}
     </span>
   );
 }

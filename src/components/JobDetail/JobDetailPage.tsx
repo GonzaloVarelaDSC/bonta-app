@@ -7,14 +7,14 @@ import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
-import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar } from '../Common/Badges';
+import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
-import { JOB_TYPES, STATUS_LABELS, BLOCK_REASON_LABELS } from '../../data/catalog';
+import { JOB_TYPES, STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
-import type { BlockReason, JobStatus, Priority, Product } from '../../types';
+import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Productos', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
 
@@ -27,6 +27,7 @@ export function JobDetailPage() {
   const activityLog = useStore((s) => s.activityLog).filter((a) => a.jobId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const setStatus = useStore((s) => s.setStatus);
   const setPriority = useStore((s) => s.setPriority);
+  const setSampleReview = useStore((s) => s.setSampleReview);
   const updateCommittedDate = useStore((s) => s.updateCommittedDate);
   const updateJobSpecs = useStore((s) => s.updateJobSpecs);
   const toggleProductChecked = useStore((s) => s.toggleProductChecked);
@@ -101,6 +102,7 @@ export function JobDetailPage() {
               <StatusBadge status={job.status} />
               <CountdownBadge iso={job.committedDate} status={job.status} />
               <RiskBadge risk={calculateRisk(job)} />
+              <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} />
             </div>
           </div>
 
@@ -142,6 +144,18 @@ export function JobDetailPage() {
             >
               {statusOptionsFor(job, user.role).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
+            <label className="text-xs text-ink-700 inline-flex items-center gap-1.5">
+              Muestra al cliente
+              <select
+                value={job.sampleReview}
+                onChange={(e) => setSampleReview(job.id, e.target.value as SampleReview, user.id)}
+                className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
+              >
+                {(Object.keys(SAMPLE_REVIEW_META) as SampleReview[]).map((k) => (
+                  <option key={k} value={k}>{SAMPLE_REVIEW_META[k].option}</option>
+                ))}
+              </select>
+            </label>
             {!activeBlock && (
               <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
                 <Lock size={13} /> Bloquear trabajo

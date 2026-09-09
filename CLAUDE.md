@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 22).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 23).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1527,3 +1527,74 @@ select policyname, cmd, qual, with_check from pg_policies where tablename = 'not
 haga, la app anda pero nadie recibe el aviso de "cayó una ficha nueva" (§18.9) ni
 ninguna otra notificación in-app. Verificar con el `select` de diagnóstico o
 creando una ficha y mirando la campana de otro usuario.
+
+---
+
+## 23. Actualización 08/09 — cubo "Pendientes" en el Dashboard + marca de "muestra/prueba al cliente"
+
+### 1. Cubo "Pendientes" (pedido 2 de la ronda)
+
+Se había quedado sin tarjeta de KPI para el estado `PENDIENTE` (estaban todos los
+demás). Vuelto a agregar: `computeCounts` (`lib/selectors.ts`) suma `pending`
+(cuenta `status === 'PENDIENTE'`), y `DashboardPage.tsx` tiene la tarjeta
+**"Pendientes"** (ícono `Inbox`, tono `wait`, entre "En diseño" y "Críticos") con
+su `case 'pending'` en el filtro. Clic → filtra la lista a los pendientes, igual
+que el resto de los cubos. No se tocó nada más del Dashboard.
+
+### 2. Muestra / prueba al cliente (pedido 1 de la ronda)
+
+**Problema que resuelve:** muchos clientes piden una muestra impresa (una parte del
+trabajo, una imagen) para chequear color/definición/textura *antes* de mandar a
+producir todo. Hasta ahora no había dónde marcar "este trabajo está esperando el
+OK de la muestra". Gonzalo pidió algo **poco protagónico**.
+
+**Cómo se modeló** (mirando cómo lo hacen Printavo/shopVOX — "proof approval" — y
+el patrón de "label / waiting on customer" de Trello/Linear, no una columna de
+Kanban ni un estado nuevo del flujo):
+
+- **Campo a nivel trabajo** `Job.sampleReview: 'none' | 'awaiting' | 'approved'`
+  (+ `sampleReviewAt` timestamp del último cambio). Columnas
+  `jobs.sample_review` (text, check, default `'none'`) y `jobs.sample_review_at`
+  (timestamptz) — **migración `016_job_sample_review.sql`, hay que correrla**.
+  Sumadas también a `001_schema.sql`. `dbMappers.mapJob` + `seed.ts` actualizados.
+- **`SAMPLE_REVIEW_META`** en `data/catalog.ts`: `option` (texto del selector) y
+  `chip` (texto corto del pill; vacío en `none` = no se muestra nada).
+- **Acción del store** `setSampleReview(jobId, state, byUserId)` — optimista, con
+  rollback, `insertActivity` (`action: 'muestra'`) y notificación best-effort al
+  responsable/asignados. **No** pasa por `jobs_update_guard` (no es campo
+  estructural) → cualquier rol con acceso al trabajo lo puede marcar (quien
+  produce suele ser el que se entera del OK).
+- **`SampleReviewBadge`** nuevo en `Common/Badges.tsx`: pill chico, **no renderiza
+  nada si `state === 'none'`**. Ámbar (`norm`) = "Muestra: falta OK";
+  verde (`plan`) = "Muestra OK". `title` con la fecha si hay `at`.
+
+**Dónde aparece (deliberadamente discreto — invisible en la mayoría de los
+trabajos, que no tienen muestra en juego):**
+- **Ficha** (`JobDetailPage`): un `<select>` "Muestra al cliente" en la fila de
+  acciones de la cabecera (al lado de prioridad/estado), + el `SampleReviewBadge`
+  en la tira de badges de arriba. Es el único lugar donde se *cambia*.
+- **Dashboard** (`DashboardJobCard`): el badge en la fila de metadata, después del
+  cliente. Se ve `awaiting` y `approved`.
+- **Kanban** (`KanbanPage`, `CardBody`): un tag mínimo "muestra" en ámbar al lado
+  del cliente, **solo cuando `awaiting`** (es el estado accionable: "no arranques
+  la producción completa"). `approved` no muestra nada en el Kanban.
+- **NO** se agregó a Carga rápida (la muestra suele surgir con el trabajo ya
+  empezado, no al darlo de alta) ni a la hoja de exportación al cliente (es
+  workflow interno). Si Gonzalo quiere en Carga rápida, se suma.
+
+**Skills usadas** (pedido 3): `frontend-design` (referentes + criterio de
+restraint), `design-critique` y `accessibility-review`. Ajuste post-crítica:
+el tag del Kanban pasó de 9px mayúsculas bold a 10px normal para no "gritar"
+siendo el elemento más chico. Contrastes verificados (norm 7.5:1, plan 6.4:1,
+ambos AA para texto chico); todos los estados llevan texto además del color.
+
+### SQL a correr en Supabase
+
+```sql
+alter table jobs add column if not exists sample_review text not null default 'none'
+  check (sample_review in ('none', 'awaiting', 'approved'));
+alter table jobs add column if not exists sample_review_at timestamptz;
+```
+
+Migraciones aplicadas en la base real ahora: **001–016** (015 y 016 pendientes de
+confirmar que Gonzalo las corrió).

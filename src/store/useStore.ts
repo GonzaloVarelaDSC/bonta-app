@@ -39,6 +39,7 @@ interface StoreState {
   setStatus: (jobId: string, status: JobStatus, movedByUserId: string) => Promise<void>;
   setJobCode: (jobId: string, code: string, byUserId: string) => Promise<void>;
   setPriority: (jobId: string, priority: Priority, byUserId: string) => Promise<void>;
+  setSampleReview: (jobId: string, state: import('../types').SampleReview, byUserId: string) => Promise<void>;
   updateCommittedDate: (jobId: string, committedDate: string, byUserId: string) => Promise<void>;
   updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
   toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
@@ -308,6 +309,25 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'prioridad', `Cambió la prioridad de ${before.priorityManual ?? before.priorityAuto} a ${priority}.`);
     await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `Cambió la prioridad de ${jobLabel(before)}.`);
+    await refreshJob(set, jobId);
+    await refreshMyNotifications(set, get);
+  },
+
+  // Muestra/prueba al cliente. No pasa por el trigger `jobs_update_guard` (no es
+  // un campo estructural), así que cualquier rol con acceso al trabajo lo puede
+  // marcar — quien está produciendo suele ser el que se entera del OK del cliente.
+  setSampleReview: async (jobId, state, byUserId) => {
+    const before = get().jobs.find((j) => j.id === jobId);
+    const nowIso = new Date().toISOString();
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, sampleReview: state, sampleReviewAt: nowIso } : j) }));
+    const { error } = await supabase.from('jobs').update({ sample_review: state, sample_review_at: nowIso, last_activity_at: nowIso }).eq('id', jobId);
+    if (error) {
+      if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
+      throw error;
+    }
+    const label = { none: 'sin muestra', awaiting: 'muestra enviada, falta OK del cliente', approved: 'muestra aprobada por el cliente' }[state];
+    await insertActivity(set, jobId, byUserId, 'muestra', `Marcó: ${label}.`);
+    if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)}: ${label}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },

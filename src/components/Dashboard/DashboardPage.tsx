@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool } from 'lucide-react';
+import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
@@ -8,7 +8,7 @@ import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
 
-type FilterKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
+type FilterKey = 'pending' | 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
 // A mí = soy responsable o estoy asignado. Por mí = yo asigné el trabajo (lo
 // cargué). Todos = todo lo que puedo ver. El default se acomoda al perfil:
@@ -52,6 +52,7 @@ export function DashboardPage() {
       case 'urgent': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
       case 'dueToday': base = scoped.filter(isDueToday); break;
       case 'overdue': base = scoped.filter(isOverdue); break;
+      case 'pending': base = scoped.filter((j) => j.status === 'PENDIENTE'); break;
       case 'inDesign': base = scoped.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO'); break;
       case 'inProduction': base = scoped.filter((j) => j.status === 'EN_PRODUCCION'); break;
       case 'readyToDeliver': base = scoped.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
@@ -68,6 +69,7 @@ export function DashboardPage() {
     { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
     { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
     { key: 'inDesign', label: 'En diseño', value: counts.inDesign, icon: PenTool, tone: 'info' },
+    { key: 'pending', label: 'Pendientes', value: counts.pending, icon: Inbox, tone: 'wait' },
     { key: 'critical', label: 'Críticos', value: counts.critical, icon: Flame, tone: 'crit' },
     { key: 'urgent', label: 'Urgentes', value: counts.urgent, icon: Zap, tone: 'urg' },
     { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, icon: CalendarClock, tone: 'norm' },

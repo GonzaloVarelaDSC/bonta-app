@@ -6,7 +6,7 @@ import type { Job, Priority } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
-import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
+import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
@@ -105,6 +105,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
         />
         <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
+        <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
 
         <div className="flex items-center gap-2 text-xs text-ink-800 font-medium ml-auto whitespace-nowrap">
           <span>Asignado {fmtDate(job.createdAt)}</span>

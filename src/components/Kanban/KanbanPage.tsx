@@ -60,7 +60,14 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
         </span>
         <CountdownBadge iso={job.committedDate} status={job.status} />
       </div>
-      <div className="mt-1.5 text-sm font-bold text-ink-900 leading-snug truncate">{client?.name ?? 'Sin cliente'}</div>
+      <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
+        <span className="text-sm font-bold text-ink-900 leading-snug truncate">{client?.name ?? 'Sin cliente'}</span>
+        {job.sampleReview === 'awaiting' && (
+          <span className="shrink-0 text-[10px] font-semibold bg-norm-bg text-norm-text rounded px-1.5 py-0.5" title="Muestra enviada — falta el OK del cliente">
+            muestra
+          </span>
+        )}
+      </div>
       {(creator || resp) && (
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-ink-700 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
           {creator && (
