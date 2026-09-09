@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 23).
+la contradiga más arriba**. Última actualización: 08/09/2026 (sección 24).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1598,3 +1598,35 @@ alter table jobs add column if not exists sample_review_at timestamptz;
 
 Migraciones aplicadas en la base real ahora: **001–016** (015 y 016 pendientes de
 confirmar que Gonzalo las corrió).
+
+---
+
+## 24. Actualización 08/09 — pestaña "Productos" → "Detalle", y su edición arranca como Carga rápida
+
+Gonzalo, mirando la ficha: la pestaña **"Productos"** no comunica bien que ahí se
+ve/carga de qué se trata el trabajo (cantidades, materiales, medidas), y al
+editar con el trabajo vacío mostraba un cartel de "nada cargado" en vez de un
+formulario listo para completar.
+
+1. **Tab renombrado `'Productos'` → `'Detalle'`** (`JobDetailPage.tsx`, `TABS` y el
+   `tab === 'Detalle'`). El editor de adentro **ya era** el mismo componente que
+   Carga rápida (`ProductsEditor`) — no cambió eso.
+2. **El modo edición arranca con un producto vacío** si el trabajo todavía no
+   tiene ninguno (`ProductsTab.startEdit`: `job.products.length ? job.products :
+   [emptyProduct()]`) — igual que Carga rápida, que siempre precarga uno. Antes
+   había que apretar "+ Agregar producto" desde un estado vacío.
+3. **Textos de la pestaña** para que se entienda qué es: línea de intro en modo
+   vista ("De qué se trata el trabajo: cada producto con su material, cantidades y
+   medidas.") y en modo edición ("Cargá cada producto... igual que en Carga
+   rápida."). El botón dice **"Cargar detalle del trabajo"** si está vacío,
+   **"Editar detalle del trabajo"** si ya hay algo (antes "Editar productos").
+4. **Consistencia de wording:** el aviso "Faltan datos para producción" ahora dice
+   "Detalle del trabajo (productos, materiales, medidas)" en vez de "Productos"
+   (`lib/selectors.ts`, `missingFields`); el log de actividad dice "Actualizó el
+   detalle del trabajo" (`useStore`, `updateJobSpecs`).
+
+**No se tocó** la palabra "producto" para los ítems individuales adentro del
+editor ("Agregar producto", "Producto 1", "N de M productos procesados") — un
+trabajo genuinamente tiene varios productos/renglones (ver §14), y mantenerlo
+igual que Carga rápida es justo el paralelo que pidió Gonzalo. Si quiere cambiar
+también ese wording interno, avisar.

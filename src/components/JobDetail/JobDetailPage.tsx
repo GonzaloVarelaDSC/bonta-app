@@ -16,7 +16,11 @@ import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
-const TABS = ['General', 'Productos', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+const TABS = ['General', 'Detalle', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+
+function emptyProduct(): Product {
+  return { id: crypto.randomUUID(), label: '', materialIds: [], sizeItems: [{ quantity: '', width: '', height: '' }], notes: '', checked: false };
+}
 
 export function JobDetailPage() {
   const { id } = useParams();
@@ -218,7 +222,7 @@ export function JobDetailPage() {
             </div>
           )}
 
-          {tab === 'Productos' && (
+          {tab === 'Detalle' && (
             <ProductsTab
               job={job}
               onSave={(specs) => updateJobSpecs(job.id, specs, user.id)}
@@ -387,10 +391,10 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
   );
 }
 
-// Los productos con checkbox siempre se pueden tildar (no hace falta entrar
-// en modo edición para eso — sería fricción justo en la parte que se usa todo
-// el tiempo mientras se procesa el trabajo). "Editar productos" es aparte,
-// para agregar/quitar productos o cambiar material/medidas/notas.
+// Es la pestaña "Detalle": acá se ve/carga de qué se trata el trabajo — cada
+// producto con su material, cantidades y medidas. El modo edición es el mismo
+// editor que Carga rápida (ProductsEditor). Los checkboxes de "procesado" se
+// pueden tildar sin entrar a editar (se usan todo el tiempo mientras se procesa).
 function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job; onSave: (specs: JobSpecs) => Promise<void>; onToggle: (productId: string) => void }) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [products, setProducts] = useState<Product[]>(job.products);
@@ -398,7 +402,9 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
   const [saving, setSaving] = useState(false);
 
   function startEdit() {
-    setProducts(job.products);
+    // Si todavía no hay nada cargado, arrancar con un producto vacío listo para
+    // completar — igual que Carga rápida, en vez de un cartel de "nada cargado".
+    setProducts(job.products.length ? job.products : [emptyProduct()]);
     setSpecialRequirements(job.specialRequirements);
     setMode('edit');
   }
@@ -419,6 +425,9 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
   if (mode === 'view') {
     return (
       <div className="max-w-3xl text-sm space-y-4">
+        <p className="text-xs text-ink-700">
+          De qué se trata el trabajo: cada producto con su material, cantidades y medidas.
+        </p>
         {job.products.length > 0 && (
           <div className="text-xs text-ink-700">{doneCount} de {job.products.length} productos procesados</div>
         )}
@@ -431,7 +440,7 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
           onClick={startEdit}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 border border-brand-300 rounded-lg px-4 py-2 hover:bg-brand-50"
         >
-          <Pencil size={14} /> Editar productos
+          <Pencil size={14} /> {job.products.length ? 'Editar detalle del trabajo' : 'Cargar detalle del trabajo'}
         </button>
       </div>
     );
@@ -439,6 +448,9 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
 
   return (
     <div className="max-w-3xl text-sm space-y-4">
+      <p className="text-xs text-ink-700">
+        Cargá cada producto con su material, cantidades y medidas — igual que en Carga rápida.
+      </p>
       <ProductsEditor products={products} onChange={setProducts} jobTypeId={job.jobTypeId} />
       <div>
         <label htmlFor="specs-special" className={labelCls}>Requisitos especiales</label>

@@ -43,7 +43,7 @@ export function computeCounts(jobs: Job[]): DashboardCounts {
 
 export function missingFields(job: Job): string[] {
   const missing: string[] = [];
-  if (job.products.length === 0) missing.push('Productos');
+  if (job.products.length === 0) missing.push('Detalle del trabajo (productos, materiales, medidas)');
   if (job.requiresInstallation && !job.installation?.address.trim()) missing.push('Dirección de instalación');
   return missing;
 }

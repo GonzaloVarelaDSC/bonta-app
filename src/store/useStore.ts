@@ -353,7 +353,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       special_requirements: specs.specialRequirements, last_activity_at: new Date().toISOString(),
     }).eq('id', jobId);
     if (error) throw error;
-    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó los productos del trabajo.');
+    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó el detalle del trabajo.');
     await refreshJob(set, jobId);
   },
 
