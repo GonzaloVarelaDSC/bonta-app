@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/09/2026 (sección 24).
+la contradiga más arriba**. Última actualización: 13/09/2026 (sección 25).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1630,3 +1630,72 @@ editor ("Agregar producto", "Producto 1", "N de M productos procesados") — un
 trabajo genuinamente tiene varios productos/renglones (ver §14), y mantenerlo
 igual que Carga rápida es justo el paralelo que pidió Gonzalo. Si quiere cambiar
 también ese wording interno, avisar.
+
+---
+
+## 25. Actualización 13/09 — auditoría UX en vivo de "crear ficha" (Carga rápida → ficha), técnica de testeo local sin login
+
+Gonzalo pidió recorrer el camino completo de crear un trabajo nuevo, "ponerlo en
+jaque" y sacar mejoras. Esta sesión **no puede loguearse con una cuenta real**
+(nunca se tipean contraseñas, ni las del propio Gonzalo — regla dura, ver reglas
+de seguridad del sistema), así que para poder ver la UI de verdad renderizada
+(no solo leer código) se usó una técnica nueva, documentada acá para reusar:
+
+### Técnica: bypass de auth 100% local, revertido antes de terminar
+Se editó `src/App.tsx` **temporalmente** (nunca commiteado) para que, con
+`?devpreview=1` en la URL y `import.meta.env.DEV`, la app llene el store de
+Zustand (`useStore.setState(...)`) con un usuario/clientes/trabajo **inventados**
+(nombres tipo "Gonzalo Varela"/"Bensimon" a propósito ficticios, sin ninguna
+credencial ni dato real de por medio) en vez de llamar a Supabase Auth. Con eso
+se pudo navegar Carga rápida, la ficha, el Dashboard y el Kanban con datos reales
+en pantalla (no solo texto extraído) usando `preview_start(name:"bonta-dev")` +
+`computer{screenshot}`. **Al terminar se revirtió con `git checkout -- src/App.tsx`
+y se confirmó `git status` limpio antes de seguir** — no quedó rastro en el repo
+ni se tocó Supabase. Nota para la próxima vez que haga falta un vistazo visual
+real sin pedirle login a Gonzalo: repetir este patrón (no usar `data/seed.ts`
+como fuente — su export `JOBS` rompe al importarlo, ver nota en el propio
+`App.tsx` de esa ronda / sección 7 de este archivo).
+
+### Hallazgos del recorrido (Carga rápida → ficha → Dashboard → Kanban)
+
+1. **Errores técnicos crudos llegan al usuario tal cual.** Se reprodujo dos
+   veces forzando ids inválidos: el pie de Carga rápida mostró literalmente
+   `invalid input syntax for type uuid: "..."` — el mismo patrón que ya causó el
+   bug de notificaciones (sección 22): cualquier error de Supabase/RLS se
+   muestra sin traducir (`err.message ?? 'No se pudo crear el trabajo.'`).
+   Pendiente: mapear errores conocidos a mensajes en criollo.
+2. **`confirm()`/`alert()`/`prompt()` nativos del navegador** rompen el
+   lenguaje visual en 3 lugares: confirmar campos faltantes en Carga rápida,
+   el recordatorio de control de calidad al pasar a Listo, y las notas de
+   instalación completada. Además, en el testeo el `confirm()` bloqueó el
+   submit sin dar ninguna señal visual clara de qué pasó. Reemplazar por un
+   modal propio (ya existe el patrón en `BlockModal.tsx`).
+3. **Truncamiento real en el Kanban**, no solo en pantallas chicas: probado a
+   1440px de ancho, "Bensimon" ya se corta a "Bens…" porque la grilla de 7
+   columnas fijas deja ~150px por columna sin importar el ancho de pantalla; el
+   renglón asigna→responsable también se corta a 2-3 letras por nombre.
+4. **La sugerencia de "plantilla de vinilo" (Corpóreo) agrega un producto sin
+   medida propia** — como el gate de creación solo exige que ALGÚN producto
+   tenga medida, es fácil terminar creando el trabajo con la plantilla sin sus
+   propias medidas. Podría heredar automáticamente la medida del primer
+   producto al aceptarla.
+5. **"Cliente" es texto libre sin aviso de duplicado** — `findOrCreateClient`
+   crea uno nuevo silencioso si el nombre no calza exacto (mayúsculas, tilde,
+   espacio de más), sin sugerir "¿quisiste decir X?". Con el tiempo puede
+   ensuciar la lista de clientes con casi-duplicados.
+6. **Confirmado en vivo, no es bug:** el botón "Crear trabajo" queda
+   deshabilitado hasta cargar al menos una medida (única condición dura,
+   documentado en §12.2) — se comporta como se espera.
+
+**No se pudo mirar trabajos reales de Gonzalo** (viven en Supabase con RLS —
+entrar a su cuenta real está fuera de lo permitido). Si en algún momento quiere
+un análisis calibrado con casos reales, la vía es que él pase ejemplos
+(capturas o descripción de 2-3 pedidos típicos), no que la sesión inicie sesión
+por él.
+
+### Tintero completo (recordatorio ≤10 palabras pedido por Gonzalo el 13/09)
+
+*"Materiales, estados sobrantes, Manual, Nancy, archivos reales, mobile,
+Configuración editable."* — versión larga con todo el detalle: secciones 18
+(tintero original), 19, 21, más los 5 hallazgos de arriba. Nada se descartó,
+solo se resumió para la pregunta puntual.
