@@ -8,17 +8,26 @@ import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
 import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
+import { friendlyError } from '../../lib/errors';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 
-function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void }) {
+function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void> }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(job.code ?? '');
 
   if (!editable) return <span className="font-mono text-sm font-semibold text-ink-900">{job.code ?? '—'}</span>;
 
   if (editing) {
-    const save = () => { setEditing(false); if (draft.trim() && draft.trim() !== job.code) onSave(draft); };
+    const save = async () => {
+      setEditing(false);
+      if (!draft.trim() || draft.trim() === job.code) return;
+      try {
+        await onSave(draft);
+      } catch (err: any) {
+        alert(friendlyError(err));
+      }
+    };
     return (
       <input
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}

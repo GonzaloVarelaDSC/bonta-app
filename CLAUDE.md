@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 13/09/2026 (sección 25).
+la contradiga más arriba**. Última actualización: 13/09/2026 (sección 26).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1699,3 +1699,148 @@ por él.
 Configuración editable."* — versión larga con todo el detalle: secciones 18
 (tintero original), 19, 21, más los 5 hallazgos de arriba. Nada se descartó,
 solo se resumió para la pregunta puntual.
+
+---
+
+## 26. Actualización 13/09 (cont.) — los 5 hallazgos de Carga rápida resueltos + Configuración: Tipos de trabajo y Materiales editables
+
+Ronda que ataca de punta a punta lo que dejó la auditoría de la sección 25, más el
+primer alcance real de "Configuración" (hasta ahora de solo lectura, ver §21).
+**No hace falta correr ningún SQL nuevo en Supabase para esta ronda** — las tablas
+`job_types`/`materials` y sus policies admin-only ya existían (001/002/003_seed_catalogs,
+ver §21) sin usarse; esta ronda las conecta.
+
+### 1. Los 5 hallazgos de §25, resueltos
+
+1. **Errores técnicos crudos → mensajes en criollo.** Nuevo [`lib/errors.ts`](src/lib/errors.ts),
+   función `friendlyError()`: reconoce los códigos/patrones de Postgres que ya
+   causaron incidentes reales en este proyecto (`23505` duplicado, `42501`/RLS,
+   `22P02` invalid input syntax — el bug exacto que se reprodujo en la auditoría,
+   `column ... does not exist` → probablemente falta una migración) y los traduce;
+   si el error ya es un `Error` en criollo armado por la propia app (ej. "Falta el
+   nombre del cliente."), lo deja pasar tal cual. Aplicado en: `QuickJobPage` (crear
+   trabajo), `JobsTable` (eliminar trabajo), `EditableCode` en `JobsTable`/
+   `DashboardJobCard` (antes el error al guardar un N° de Copernico duplicado
+   fallaba en silencio total, sin ningún aviso — ahora se atrapa y se muestra),
+   `ConfigPage` (agregar/renombrar catálogo), y `get_loadAll` en el store (la carga
+   inicial de datos). Verificado en vivo contra un rechazo real de RLS (ver
+   técnica de testeo en la sección 3 de más abajo): mostró "No tenés permiso para
+   hacer esto, o falta una configuración de acceso en la base — avisale a Gonzalo."
+   en vez del `new row violates row-level security policy...` crudo.
+2. **`confirm()`/`prompt()` nativos → modal propio.** Nuevo
+   [`components/Common/Modal.tsx`](src/components/Common/Modal.tsx) con
+   `ConfirmDialog` y `PromptDialog` (mismo lenguaje visual que `BlockModal.tsx`).
+   Reemplazados los 3 casos que señaló la auditoría: el `confirm()` de campos
+   faltantes en `QuickJobPage` (ahora separa `handleSubmitClick` de `submit()` y
+   muestra `ConfirmDialog` antes de crear si hay `softWarnings`), el `alert()` del
+   recordatorio de control de calidad al pasar a Listo (`lib/statusChange.ts` —
+   ver punto de arquitectura abajo), y el `prompt()` de notas de instalación
+   completada (`InstallationTab` en `JobDetailPage.tsx`, ahora con su propio
+   `showComplete` + `PromptDialog`). El `confirm()` de "¿Eliminar trabajo?" y el de
+   "¿Eliminar archivo?" quedaron sin tocar a propósito — no estaban entre los 3
+   que señaló la auditoría, se puede sumar en otra ronda si Gonzalo lo pide.
+   - **Nota de arquitectura:** `lib/statusChange.ts` ahora importa `useStore` para
+     poder empujar el recordatorio al toast global (`useStore.setState({ toast })`)
+     en vez de un callback — es la única excepción a "`lib/` no toca el store"
+     documentada en el propio archivo; no genera ciclo de imports porque
+     `useStore.ts` no importa `statusChange.ts`. Beneficio: como los 4 lugares que
+     llaman a `tryChangeJobStatus` (Kanban, JobsTable, DashboardJobCard, ficha) usan
+     la misma función, el fix aplica a los 4 con un solo cambio.
+3. **Truncamiento real del Kanban a 1440px.** `KanbanPage.tsx`: el nombre de
+   cliente en `CardBody` pasó de `truncate` a `line-clamp-2 break-words` (envuelve
+   en 2 líneas en vez de cortar texto), y el mínimo de ancho de la grilla subió de
+   `min-w-[1120px]` a `min-w-[1400px]` (~200px por columna en vez de ~155px) —
+   antes el mínimo viejo coincidía casi exacto con el ancho real disponible en un
+   monitor normal, así que nunca llegaba a scrollear y las columnas quedaban
+   apretadas siempre. Ahora scrollea antes pero cada columna respira. Verificado
+   visualmente a 1440px: "Constructora del Plata SA" ahora envuelve en 2 líneas
+   completas en vez de cortarse a "Constructora d…".
+4. **Plantilla de vinilo de corte hereda la medida.** `ProductsEditor.tsx`, el
+   botón "+ Agregar" de la sugerencia de Corpóreo ahora busca el primer producto
+   que ya tenga alguna medida cargada y clona su `sizeItems` en el producto nuevo
+   (antes nacía con una medida vacía, y como el gate de creación solo exige que
+   ALGÚN producto tenga medida, era fácil terminar creando el trabajo con la
+   plantilla sin la suya). Verificado en vivo: CANT=5/ANCHO=40x60 cargados en el
+   producto 1 aparecieron ya completos en "Plantilla de vinilo de corte" al
+   aceptar la sugerencia.
+5. **Aviso de cliente casi-duplicado.** `QuickJobPage.tsx`: si lo tipeado en
+   "Cliente" matchea a un cliente existente salvo mayúsculas/tildes/espacios
+   (`normalizeClientName()`, sin librería de fuzzy-matching — alcanza para el caso
+   que señaló la auditoría), aparece un banner discreto "¿Quisiste decir X? Ya
+   existe un cliente con ese nombre." con un botón para usar el nombre existente
+   tal cual. No bloquea, solo avisa. Verificado en vivo tipeando "bensimón" con
+   "Bensimon" ya cargado.
+
+### 2. Configuración: Tipos de trabajo y Materiales editables (alcance acotado)
+
+Gonzalo eligió explícitamente el alcance más chico entre tres opciones: **solo
+agregar/renombrar** Tipos de trabajo y Materiales, sin activar/desactivar ni tocar
+Etapas/Control de calidad (eso sigue "checklist configurable", fuera de alcance).
+
+1. **`JobTypeId`/`MaterialId` pasan de union cerrado a `string`** (`types/index.ts`)
+   — un admin puede agregar tipos/materiales nuevos en cualquier momento, así que
+   ya no hay una lista fija conocida en tiempo de compilación. No había ningún
+   switch/`Record<JobTypeId,...>` exhaustivo en el código que dependiera del union
+   cerrado, así que el cambio es de bajo riesgo (verificado con build limpio).
+2. **`JOB_TYPES`/`MATERIALS` de `data/catalog.ts` renombrados a
+   `DEFAULT_JOB_TYPES`/`DEFAULT_MATERIALS`** — ahora son solo el valor semilla
+   (estado inicial del store antes de que responda el fetch a Supabase, y fuente
+   de `seed.ts`/instalación nueva). La fuente real en producción es el store:
+   `useStore((s) => s.jobTypes)` / `s.materials`, poblado en `get_loadAll()` desde
+   las tablas `job_types`/`materials` (ya existían con RLS admin-only, ver §21 —
+   **no hizo falta ninguna migración nueva**). Si el fetch de catálogos falla, no
+   tumba la carga de datos: se loguea un `console.warn` y se sigue con el valor
+   semilla en memoria (mismo criterio best-effort que `insertNotifications`, §22).
+3. **`LEGACY_JOB_TYPE_IDS`** (`data/catalog.ts`) — los 14 ids del catálogo
+   original de 17 verticales (`impresion_uv`, `senaletica`, `stands`, etc., ver
+   `011_job_types_synthesized.sql`) siguen en la tabla real por trabajos de prueba
+   que los referencian, pero **nunca se ofrecen** en ningún selector — antes esto
+   pasaba solo porque `catalog.ts` los omitía a mano; ahora que el catálogo viene
+   de la base (con esas 14 filas también), hace falta este filtro explícito para
+   no resucitarlos. `visibleJobTypes(all)` aplica el filtro; un tipo agregado desde
+   Configuración nunca cae en esta lista, así que aparece solo. Los materiales no
+   tienen este problema (no hay materiales "legacy" en la tabla).
+4. **Store**: `jobTypes`/`materials` en el estado, y 4 acciones nuevas —
+   `addJobType`, `renameJobType`, `addMaterial`, `renameMaterial` (`store/useStore.ts`).
+   El `id` de un ítem nuevo se genera con un slug del label (`slugifyId()`, sin
+   tildes/espacios, con sufijo numérico si choca) — la tabla no tiene autonumérico,
+   `id` es `text primary key`. Un tipo de trabajo nuevo nace con etapas por defecto
+   genéricas (`['diseno', 'control_calidad']`) porque este alcance no incluye
+   elegir etapas al crearlo. **No hay acción de borrar** — `jobs.job_type_id`
+   referencia `job_types(id)` con FK, así que borrar un tipo en uso rompería
+   trabajos existentes; coherente con la decisión de Gonzalo de no incluir esto.
+5. **`ConfigPage.tsx`** reescrita: cada catálogo es una lista de chips con
+   click-to-rename (mismo patrón que `EditableCode` de `JobsTable`/
+   `DashboardJobCard` — lápiz al lado del label, un click abre un input inline) +
+   un chip "+ Agregar" al final. Gateado por `canManageCatalog(role)` (nueva en
+   `lib/permissions.ts`, espejo de las policies `job_types_write`/`materials_write`:
+   solo admin) — sin ese permiso se ve de solo lectura, igual que antes. "Motivos
+   de bloqueo" sigue de solo lectura (no estaba en el alcance elegido).
+6. Los 4 consumidores que importaban `JOB_TYPES`/`MATERIALS` directo de
+   `data/catalog.ts` (`QuickJobPage`, `ProductsEditor`, `JobDetailPage`,
+   `JobExportPage`) pasan a leerlos del store; `seed.ts` (código muerto, §2) se
+   actualizó para seguir compilando contra `DEFAULT_JOB_TYPES`.
+
+### 3. Nota de proceso: técnica de testeo visual reusada de la sección 25
+
+Se repitió el bypass de auth 100% local (`?devpreview=1` + `useStore.setState` con
+datos inventados, nunca contraseñas reales) para poder ver los 5 fixes y
+Configuración renderizados de verdad en el navegador — Kanban a 1440px con nombres
+largos, el `ConfirmDialog`/`PromptDialog` en pantalla, la sugerencia de cliente, la
+herencia de medida en la plantilla, y el error de RLS real traducido a criollo. El
+cambio en `App.tsx` se revirtió con `git checkout -- src/App.tsx` antes de cerrar la
+ronda (confirmado con `git status` limpio en ese archivo) — no quedó rastro en el
+repo. Mismo patrón documentado en §25, para la próxima vez que haga falta.
+
+### 4. Tintero — sin cambios más allá de lo resuelto arriba
+
+Los 5 hallazgos de §25 y el ítem "Configuración editable" del tintero de §21/25
+quedan resueltos por esta ronda. Todo lo demás del tintero sigue en pie tal cual
+las secciones 18/19/21 lo dejaron: base de conocimiento de materiales, estados que
+sobran (`NUEVO`/`APROBADO`), Manual de uso, cuenta de Nancy, fix de
+`handle_new_user()`, subida real de archivos a Storage, confirmar la Etapa 3 del
+wizard, mobile, `credits_as_assigner` (columna muerta), y el texto automático para
+el cliente al llegar a "Listo para entregar". Dentro de Configuración específicamente,
+sigue pendiente si en algún momento Gonzalo quiere sumar activar/desactivar sin
+borrar, o extender lo editable a Etapas/Control de calidad — se dejó afuera a
+propósito esta vez, no es un olvido.

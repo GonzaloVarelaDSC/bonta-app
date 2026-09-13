@@ -27,7 +27,12 @@ export const STAGE_LABELS: Record<StageKey, string> = {
 // de impresión son máquinas distintas a propósito — Gonzalo pidió dejarlas
 // separadas. El resto de la lista es una síntesis razonable a confirmar/ajustar
 // con él, no un relevamiento exhaustivo de todo lo que hace el estudio.
-export const JOB_TYPES: JobType[] = [
+//
+// Desde el 13/09 esto es solo el valor semilla — la fuente real en producción
+// es la tabla `job_types` de Supabase (editable desde Configuración, admin).
+// `DEFAULT_JOB_TYPES`/`DEFAULT_MATERIALS` se usan como estado inicial del store
+// antes de que responda el fetch, y en `resetDemoData`/seed.ts.
+export const DEFAULT_JOB_TYPES: JobType[] = [
   { id: 'impresion_v7000', label: 'Impresión V7000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
   { id: 'impresion_s40', label: 'Impresión S40', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
   { id: 'impresion_p9000', label: 'Impresión P9000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
@@ -40,7 +45,23 @@ export const JOB_TYPES: JobType[] = [
   { id: 'otro', label: 'Otro', defaultStages: ['diseno', 'control_calidad'] },
 ];
 
-export const MATERIALS: Material[] = [
+// Ids del catálogo original de 17 verticales (pre-26/08, ver 003_seed_catalogs.sql)
+// que NO se borraron de la tabla porque hay trabajos de prueba que todavía los
+// referencian (FK), pero que ya no se ofrecen en ningún selector — el criterio
+// de "qué se ofrece" vive en el código, no en la base (ver 011_job_types_synthesized.sql).
+// Un tipo agregado desde Configuración nunca cae acá, así que aparece solo.
+export const LEGACY_JOB_TYPE_IDS = [
+  'impresion_uv', 'bajo_acrilico', 'plotter_vinilo', 'vidrieras', 'senaletica',
+  'carteleria', 'letras_corporeas', 'backlight', 'stands', 'eventos',
+  'ambientacion', 'trofeos', 'impresion_3d', 'piezas_especiales',
+];
+
+/** Los tipos que se ofrecen para elegir — excluye los legacy pero conserva todo lo demás (incluido lo que un admin agregue). */
+export function visibleJobTypes(all: JobType[]): JobType[] {
+  return all.filter((t) => !LEGACY_JOB_TYPE_IDS.includes(t.id));
+}
+
+export const DEFAULT_MATERIALS: Material[] = [
   { id: 'acrilico', label: 'Acrílico' },
   { id: 'pvc', label: 'PVC' },
   { id: 'mdf', label: 'MDF' },

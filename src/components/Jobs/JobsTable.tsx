@@ -9,15 +9,24 @@ import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/B
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { statusOptionsFor, tryChangeJobStatus, isClosedStatus } from '../../lib/statusChange';
+import { friendlyError } from '../../lib/errors';
 
-function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void }) {
+function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void> }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(job.code ?? '');
 
   if (!editable) return <span className="font-mono text-xs text-ink-700">{job.code ?? '—'}</span>;
 
   if (editing) {
-    const save = () => { setEditing(false); if (draft.trim() && draft.trim() !== job.code) onSave(draft); };
+    const save = async () => {
+      setEditing(false);
+      if (!draft.trim() || draft.trim() === job.code) return;
+      try {
+        await onSave(draft);
+      } catch (err: any) {
+        alert(friendlyError(err));
+      }
+    };
     return (
       <input
         autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
@@ -60,7 +69,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
     try {
       await deleteJob(j.id);
     } catch (err: any) {
-      alert(err.message ?? 'No se pudo eliminar el trabajo.');
+      alert(friendlyError(err));
     }
   }
 

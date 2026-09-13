@@ -5,6 +5,8 @@ export function canEditAnyJob(role: RoleId) { return role === 'admin' || role ==
 export function canChangePriority(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
 export function canAssign(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
 export function canManageUsers(role: RoleId) { return role === 'admin'; }
+// Espejo de las policies job_types_write/materials_write (002_policies.sql) — solo admin.
+export function canManageCatalog(role: RoleId) { return role === 'admin'; }
 export function canApproveFiles(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
 export function canUploadFiles(role: RoleId) { return role !== 'instalacion'; }
 export function canSeeStats(role: RoleId) { return role === 'admin' || role === 'coordinador'; }

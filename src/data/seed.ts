@@ -6,7 +6,7 @@
 import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobStage, StageKey,
 } from '../types';
-import { JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from './catalog';
+import { DEFAULT_JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from './catalog';
 
 // ---------- Usuarios ----------
 export const USERS: User[] = [
@@ -222,7 +222,7 @@ const S: Seed[] = [
 ];
 
 function buildStages(jobTypeId: Job['jobTypeId'], requiresInstallation: boolean, doneCount: number, inProgress?: StageKey): JobStage[] {
-  const base = JOB_TYPES.find((t) => t.id === jobTypeId)!.defaultStages;
+  const base = DEFAULT_JOB_TYPES.find((t) => t.id === jobTypeId)!.defaultStages;
   const keys = requiresInstallation && !base.includes('instalacion') ? [...base, 'instalacion' as StageKey] : base;
   return makeStages(keys, doneCount, inProgress);
 }

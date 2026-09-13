@@ -60,8 +60,8 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
         </span>
         <CountdownBadge iso={job.committedDate} status={job.status} />
       </div>
-      <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
-        <span className="text-sm font-bold text-ink-900 leading-snug truncate">{client?.name ?? 'Sin cliente'}</span>
+      <div className="mt-1.5 flex items-start gap-1.5 min-w-0">
+        <span className="text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>
         {job.sampleReview === 'awaiting' && (
           <span className="shrink-0 text-[10px] font-semibold bg-norm-bg text-norm-text rounded px-1.5 py-0.5" title="Muestra enviada — falta el OK del cliente">
             muestra
@@ -309,7 +309,15 @@ export function KanbanPage() {
       </div>
       <div className="flex-1 min-h-0 mt-4 overflow-x-auto">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>
-          <div className="grid grid-cols-7 gap-3 h-full min-w-[1120px]">
+          {/* 7 columnas fijas dejan poco margen por columna incluso en un monitor
+              normal (a 1440px de ancho de pantalla ya se veía "Bensimon" cortado a
+              "Bens…" — ver CLAUDE.md §25, hallazgo 3). Antes el mínimo de 1120px
+              coincidía casi exacto con el ancho disponible real, así que nunca
+              scrolleaba y las columnas quedaban en ~155px. Con 1400px de piso
+              (200px/columna) se scrollea antes pero cada columna tiene aire real;
+              el nombre de cliente además ahora envuelve en 2 líneas en vez de
+              truncar (ver CardBody) para no perder información igual. */}
+          <div className="grid grid-cols-7 gap-3 h-full min-w-[1400px]">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumnView
                 key={col.key} colKey={col.key} label={col.label} tone={col.tone}

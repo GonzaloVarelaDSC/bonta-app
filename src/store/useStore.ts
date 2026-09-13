@@ -1,13 +1,26 @@
 import { create } from 'zustand';
 import type {
   User, Job, Comment, ActivityLogEntry, Notification, Priority, JobStatus,
-  BlockReason, StageKey, StageStatus,
+  BlockReason, StageKey, StageStatus, JobType, Material,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
-import { mapProfile, mapClient, mapComment, mapActivity, mapNotification } from '../lib/dbMappers';
-import { JOB_TYPES, QC_TEMPLATE, STAGE_LABELS } from '../data/catalog';
+import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial } from '../lib/dbMappers';
+import { friendlyError } from '../lib/errors';
+import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, QC_TEMPLATE, STAGE_LABELS } from '../data/catalog';
 import type { Client } from '../types';
+
+// Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
+// libre, no autonumérico) — sin tildes/espacios, y con un sufijo numérico si ya
+// existe, para no chocar con la primary key.
+function slugifyId(label: string, existingIds: string[]): string {
+  const base = label.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'item';
+  let id = base;
+  let n = 2;
+  while (existingIds.includes(id)) { id = `${base}_${n}`; n += 1; }
+  return id;
+}
 
 /** El número de trabajo puede no estar cargado todavía — para mensajes/logs mostramos el nombre igual. */
 function jobLabel(job: Pick<Job, 'code' | 'name'>): string {
@@ -21,6 +34,8 @@ interface StoreState {
   currentUser: User | null;
   users: User[];
   clients: Client[];
+  jobTypes: JobType[];
+  materials: Material[];
   jobs: Job[];
   comments: Comment[];
   activityLog: ActivityLogEntry[];
@@ -33,6 +48,12 @@ interface StoreState {
   clearToast: () => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
+
+  // Catálogos editables desde Configuración (admin) — ver lib/permissions.ts canManageCatalog.
+  addJobType: (label: string) => Promise<void>;
+  renameJobType: (id: string, label: string) => Promise<void>;
+  addMaterial: (label: string) => Promise<void>;
+  renameMaterial: (id: string, label: string) => Promise<void>;
 
   findOrCreateClient: (name: string) => Promise<string>;
   createJob: (input: NewJobInput) => Promise<Job>;
@@ -114,6 +135,8 @@ export const useStore = create<StoreState>()((set, get) => ({
   currentUser: null,
   users: [],
   clients: [],
+  jobTypes: DEFAULT_JOB_TYPES,
+  materials: DEFAULT_MATERIALS,
   jobs: [],
   comments: [],
   activityLog: [],
@@ -208,8 +231,45 @@ export const useStore = create<StoreState>()((set, get) => ({
     return client.id;
   },
 
+  addJobType: async (rawLabel) => {
+    const label = rawLabel.trim();
+    if (!label) throw new Error('Falta el nombre del tipo de trabajo.');
+    const id = slugifyId(label, get().jobTypes.map((t) => t.id));
+    // Etapas por defecto genéricas — este alcance de Configuración no incluye
+    // elegir etapas al crear un tipo nuevo (ver CLAUDE.md §21); se puede ajustar
+    // después desde la ficha de un trabajo concreto si hace falta más detalle.
+    const { data, error } = await supabase.from('job_types').insert({ id, label, default_stages: ['diseno', 'control_calidad'] }).select().single();
+    if (error) throw error;
+    set((s) => ({ jobTypes: [...s.jobTypes, mapJobType(data)] }));
+  },
+
+  renameJobType: async (id, rawLabel) => {
+    const label = rawLabel.trim();
+    if (!label) throw new Error('Falta el nombre del tipo de trabajo.');
+    const { error } = await supabase.from('job_types').update({ label }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ jobTypes: s.jobTypes.map((t) => t.id === id ? { ...t, label } : t) }));
+  },
+
+  addMaterial: async (rawLabel) => {
+    const label = rawLabel.trim();
+    if (!label) throw new Error('Falta el nombre del material.');
+    const id = slugifyId(label, get().materials.map((m) => m.id));
+    const { data, error } = await supabase.from('materials').insert({ id, label }).select().single();
+    if (error) throw error;
+    set((s) => ({ materials: [...s.materials, mapMaterial(data)] }));
+  },
+
+  renameMaterial: async (id, rawLabel) => {
+    const label = rawLabel.trim();
+    if (!label) throw new Error('Falta el nombre del material.');
+    const { error } = await supabase.from('materials').update({ label }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ materials: s.materials.map((m) => m.id === id ? { ...m, label } : m) }));
+  },
+
   createJob: async (input) => {
-    const jobType = JOB_TYPES.find((t) => t.id === input.jobTypeId)!;
+    const jobType = get().jobTypes.find((t) => t.id === input.jobTypeId)!;
     // Falta dirección de instalación es lo único que de verdad bloquea un trabajo
     // recién creado — medidas/material/técnica se cargan después si hacen falta,
     // no ameritan nacer en "Falta información".
@@ -538,17 +598,31 @@ async function loadCurrentUser(set: (fn: (s: StoreState) => Partial<StoreState>)
 async function get_loadAll(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState) {
   set(() => ({ dataLoading: true, loadError: null }));
   try {
-    const [{ data: profiles, error: e1 }, { data: clients, error: e2 }, jobs] = await Promise.all([
+    const [
+      { data: profiles, error: e1 }, { data: clients, error: e2 }, jobs,
+      { data: jobTypes, error: e3 }, { data: materials, error: e4 },
+    ] = await Promise.all([
       supabase.from('profiles').select('*').order('name'),
       supabase.from('clients').select('*, client_contacts(*)').order('name'),
       fetchAllJobs(),
+      supabase.from('job_types').select('*').order('label'),
+      supabase.from('materials').select('*').order('label'),
     ]);
     if (e1) throw e1;
     if (e2) throw e2;
-    set(() => ({ users: (profiles ?? []).map(mapProfile), clients: (clients ?? []).map(mapClient), jobs }));
+    // Catálogos: si el fetch falla (ej. tabla sin migrar todavía en una base
+    // vieja) no tumba la carga entera — se sigue con los valores semilla en
+    // memoria (DEFAULT_JOB_TYPES/DEFAULT_MATERIALS) en vez de dejar la app sin cargar.
+    if (e3) console.warn('[catálogos] no se pudieron leer job_types, se usa el valor semilla:', e3.message);
+    if (e4) console.warn('[catálogos] no se pudieron leer materials, se usa el valor semilla:', e4.message);
+    set(() => ({
+      users: (profiles ?? []).map(mapProfile), clients: (clients ?? []).map(mapClient), jobs,
+      ...(e3 ? {} : { jobTypes: (jobTypes ?? []).map(mapJobType) }),
+      ...(e4 ? {} : { materials: (materials ?? []).map(mapMaterial) }),
+    }));
     await refreshMyNotifications(set, get);
   } catch (err: any) {
-    set(() => ({ loadError: err.message ?? 'No se pudieron cargar los datos.' }));
+    set(() => ({ loadError: friendlyError(err) }));
   } finally {
     set(() => ({ dataLoading: false }));
   }

@@ -42,17 +42,15 @@ export interface Client {
   tier: 'estandar' | 'prioritario';
 }
 
-// Catálogo sintetizado (26/08) alrededor de máquina/proceso real en vez de
-// "vertical" abstracta — ver data/catalog.ts. Los ids viejos (abajo) se dejan
-// en el tipo por los pocos trabajos de prueba que ya los tienen guardados;
-// `JOB_TYPES` (lo que se ofrece para elegir) ya no los incluye.
-export type JobTypeId =
-  | 'impresion_v7000' | 'impresion_s40' | 'impresion_p9000'
-  | 'corte_laser' | 'corte_cnc' | 'corporeo' | 'carpinteria' | 'acrilico' | 'vidrieras_stands' | 'otro'
-  // @deprecated ids viejos, ya no aparecen en el selector — quedan para no romper el tipado de trabajos de prueba existentes.
-  | 'impresion_uv' | 'bajo_acrilico' | 'plotter_vinilo' | 'vidrieras' | 'senaletica'
-  | 'carteleria' | 'letras_corporeas' | 'backlight' | 'stands' | 'eventos'
-  | 'ambientacion' | 'trofeos' | 'impresion_3d' | 'piezas_especiales';
+// Catálogo editable desde Configuración (13/09) — vive en la tabla `job_types`
+// de Supabase, no en una lista fija de código. El id es un string libre
+// (slug generado a partir del label al crearlo desde la UI), no un union
+// cerrado: un admin puede agregar tipos nuevos en cualquier momento. Los ids
+// "viejos" del catálogo sintetizado original (impresion_uv, senaletica, etc.)
+// siguen en la tabla por trabajos de prueba que ya los tienen guardados, pero
+// dejaron de ofrecerse en el selector — ver `LEGACY_JOB_TYPE_IDS` en
+// data/catalog.ts.
+export type JobTypeId = string;
 
 export interface JobType {
   id: JobTypeId;
@@ -60,8 +58,8 @@ export interface JobType {
   defaultStages: StageKey[];
 }
 
-export type MaterialId =
-  | 'acrilico' | 'pvc' | 'mdf' | 'madera' | 'metal' | 'vidrio' | 'vinilo' | 'papel' | 'tela' | 'otros';
+// Editable desde Configuración, igual que JobTypeId — ver ese comentario arriba.
+export type MaterialId = string;
 
 export interface Material {
   id: MaterialId;

@@ -1,12 +1,12 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { MATERIALS } from '../../data/catalog';
 import { fmtDate } from '../../lib/dates';
 import { SizeItemsView } from '../Common/SizeItemsEditor';
+import type { Material } from '../../types';
 
-function materialLabels(materialIds: string[]): string {
-  return materialIds.map((m) => MATERIALS.find((mm) => mm.id === m)?.label).filter(Boolean).join(', ');
+function materialLabels(materialIds: string[], materials: Material[]): string {
+  return materialIds.map((m) => materials.find((mm) => mm.id === m)?.label).filter(Boolean).join(', ');
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -30,6 +30,7 @@ export function JobExportPage() {
   const user = useStore((s) => s.currentUser);
   const job = useStore((s) => s.jobs).find((j) => j.id === id);
   const client = useStore((s) => s.clients).find((c) => c.id === job?.clientId);
+  const materials = useStore((s) => s.materials);
 
   if (!user) return <Navigate to="/login" replace />;
   if (!job) return <Navigate to="/trabajos" replace />;
@@ -70,7 +71,7 @@ export function JobExportPage() {
 
         {job.products.map((p, i) => (
           <Section key={p.id} title={p.label || `Producto ${i + 1}`}>
-            {materialLabels(p.materialIds) && <p className="mb-1.5">Material: {materialLabels(p.materialIds)}</p>}
+            {materialLabels(p.materialIds, materials) && <p className="mb-1.5">Material: {materialLabels(p.materialIds, materials)}</p>}
             <SizeItemsView items={p.sizeItems} />
             {p.notes && <p className="mt-1.5 text-ink-700">{p.notes}</p>}
           </Section>

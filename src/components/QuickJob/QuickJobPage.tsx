@@ -1,12 +1,21 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, ArrowRight } from 'lucide-react';
+import { Zap, ArrowRight, Lightbulb } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { JOB_TYPES, ASSIGN_ALSO_NAMES } from '../../data/catalog';
+import { visibleJobTypes, ASSIGN_ALSO_NAMES } from '../../data/catalog';
 import { PRIORITY_META } from '../../lib/priority';
+import { friendlyError } from '../../lib/errors';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
+import { ConfirmDialog } from '../Common/Modal';
 import type { JobTypeId, Priority, Product } from '../../types';
+
+// Case/tilde/espacios de más son la variación más común al tipear un cliente
+// que ya existe (ver CLAUDE.md §25, hallazgo 5) — normalizando así alcanza
+// para avisar sin sumar una librería de fuzzy-matching para un problema chico.
+function normalizeClientName(s: string): string {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+}
 
 function emptyProduct(): Product {
   return { id: crypto.randomUUID(), label: '', materialIds: [], sizeItems: [{ quantity: '', width: '', height: '' }], notes: '', checked: false };
@@ -65,6 +74,7 @@ export function QuickJobPage() {
   const user = useStore((s) => s.currentUser)!;
   const clients = useStore((s) => s.clients);
   const users = useStore((s) => s.users);
+  const jobTypes = visibleJobTypes(useStore((s) => s.jobTypes));
   const createJob = useStore((s) => s.createJob);
   const findOrCreateClient = useStore((s) => s.findOrCreateClient);
 
@@ -72,7 +82,7 @@ export function QuickJobPage() {
   const [name, setName] = useState('');
   const [jobTypeId, setJobTypeId] = useState<JobTypeId>(() => {
     const saved = localStorage.getItem(LAST_TYPE_KEY);
-    return JOB_TYPES.some((t) => t.id === saved) ? (saved as JobTypeId) : JOB_TYPES[0].id;
+    return jobTypes.some((t) => t.id === saved) ? (saved as JobTypeId) : jobTypes[0].id;
   });
   const [description, setDescription] = useState('');
   const [committedDate, setCommittedDate] = useState('');
@@ -106,7 +116,17 @@ export function QuickJobPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showSoftWarnings, setShowSoftWarnings] = useState(false);
   const nameFieldRef = useRef<HTMLInputElement>(null);
+
+  // Si lo tipeado matchea un cliente existente salvo mayúsculas/tildes/espacios,
+  // se sugiere usar el nombre existente tal cual está — evita ensuciar la lista
+  // de clientes con casi-duplicados silenciosos.
+  const clientSuggestion = useMemo(() => {
+    const typed = clientName.trim();
+    if (!typed) return null;
+    return clients.find((c) => c.name !== typed && normalizeClientName(c.name) === normalizeClientName(typed)) ?? null;
+  }, [clientName, clients]);
 
   function selectJobType(id: JobTypeId) {
     setJobTypeId(id);
@@ -136,15 +156,20 @@ export function QuickJobPage() {
   if (!committedDate) softWarnings.push('fecha de entrega');
   if (requiresInstallation && !installAddress.trim()) softWarnings.push('dirección de instalación');
 
-  async function submit() {
+  function handleSubmitClick() {
     if (softWarnings.length > 0) {
-      const ok = confirm(`Vas a crear el trabajo sin completar: ${softWarnings.join(', ')}. Se puede completar después desde la ficha — ¿confirmás igual?`);
-      if (!ok) return;
+      setShowSoftWarnings(true);
+      return;
     }
+    submit();
+  }
+
+  async function submit() {
+    setShowSoftWarnings(false);
     setSubmitting(true);
     setSubmitError('');
     try {
-      const jobType = JOB_TYPES.find((t) => t.id === jobTypeId)!;
+      const jobType = jobTypes.find((t) => t.id === jobTypeId)!;
       const finalName = name.trim() || description.trim().slice(0, 60) || 'Trabajo sin nombre';
       const finalClientName = clientName.trim() || 'Cliente sin especificar';
       const finalDate = committedDate || addDaysLocal(7);
@@ -162,7 +187,7 @@ export function QuickJobPage() {
       });
       navigate(`/trabajos/${job.id}`);
     } catch (err: any) {
-      setSubmitError(err.message ?? 'No se pudo crear el trabajo.');
+      setSubmitError(friendlyError(err));
     } finally {
       setSubmitting(false);
     }
@@ -189,13 +214,23 @@ export function QuickJobPage() {
             <datalist id="qj-clientes-existentes">
               {clients.map((c) => <option key={c.id} value={c.name} />)}
             </datalist>
+            {clientSuggestion && (
+              <p className="flex items-center gap-1.5 text-xs text-review-text bg-review-bg rounded-md px-2.5 py-1.5 mt-1.5">
+                <Lightbulb size={13} className="shrink-0" aria-hidden />
+                ¿Quisiste decir{' '}
+                <button type="button" onClick={() => setClientName(clientSuggestion.name)} className="font-semibold hover:underline">
+                  {clientSuggestion.name}
+                </button>
+                ? Ya existe un cliente con ese nombre.
+              </p>
+            )}
           </div>
           <div><label htmlFor="qj-name" className={labelCls}>Nombre del trabajo</label>
             <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label htmlFor="qj-type" className={labelCls}>Tipo de trabajo</label>
               <select id="qj-type" className={inputCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
-                {JOB_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                {jobTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
             <div><label htmlFor="qj-date" className={labelCls}>Fecha de entrega</label>
@@ -301,13 +336,22 @@ export function QuickJobPage() {
         <div className="flex items-center gap-2">
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button
-            disabled={!hasSizeData || submitting} onClick={submit}
+            disabled={!hasSizeData || submitting} onClick={handleSubmitClick}
             className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-5 py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Zap size={15} /> {submitting ? 'Creando...' : 'Crear trabajo'}
           </button>
         </div>
       </div>
+
+      {showSoftWarnings && (
+        <ConfirmDialog
+          title="Faltan algunos datos"
+          message={<>Vas a crear el trabajo sin completar: <strong>{softWarnings.join(', ')}</strong>. Se puede completar después desde la ficha.</>}
+          confirmLabel="Crear igual" cancelLabel="Volver a completar"
+          onConfirm={submit} onClose={() => setShowSoftWarnings(false)}
+        />
+      )}
     </div>
   );
 }

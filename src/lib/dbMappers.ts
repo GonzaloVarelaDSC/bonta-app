@@ -3,7 +3,7 @@
 // es lo que permite que los componentes no sepan que existe una base de datos detrás.
 import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobStage, JobFile, BlockRecord,
-  QualityCheckItem, InstallationInfo, MaterialId, StageKey, SizeItem, Product,
+  QualityCheckItem, InstallationInfo, MaterialId, StageKey, SizeItem, Product, JobType, Material,
 } from '../types';
 
 export function mapProfile(row: any): User {
@@ -33,6 +33,14 @@ export function mapActivity(row: any): ActivityLogEntry {
 
 export function mapNotification(row: any): Notification {
   return { id: row.id, userId: row.user_id, jobId: row.job_id ?? undefined, text: row.text, read: row.read, createdAt: row.created_at };
+}
+
+export function mapJobType(row: any): JobType {
+  return { id: row.id, label: row.label, defaultStages: (row.default_stages ?? []) as StageKey[] };
+}
+
+export function mapMaterial(row: any): Material {
+  return { id: row.id, label: row.label };
 }
 
 function mapStage(row: any): JobStage {

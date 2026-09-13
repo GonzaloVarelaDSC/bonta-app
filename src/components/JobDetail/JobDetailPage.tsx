@@ -9,11 +9,12 @@ import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
-import { JOB_TYPES, STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
+import { STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
+import { PromptDialog } from '../Common/Modal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Detalle', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
@@ -28,6 +29,7 @@ export function JobDetailPage() {
   const job = useStore((s) => s.jobs).find((j) => j.id === id);
   const client = useStore((s) => s.clients).find((c) => c.id === job?.clientId);
   const users = useStore((s) => s.users);
+  const jobTypes = useStore((s) => s.jobTypes);
   const activityLog = useStore((s) => s.activityLog).filter((a) => a.jobId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const setStatus = useStore((s) => s.setStatus);
   const setPriority = useStore((s) => s.setPriority);
@@ -214,7 +216,7 @@ export function JobDetailPage() {
               ) : (
                 <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
               )}
-              <Field label="Tipo de trabajo" value={JOB_TYPES.find((t) => t.id === job.jobTypeId)?.label} />
+              <Field label="Tipo de trabajo" value={jobTypes.find((t) => t.id === job.jobTypeId)?.label} />
               <div className="sm:col-span-2">
                 <Field label="Descripción" value={job.description} block />
               </div>
@@ -471,6 +473,7 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
 
 function InstallationTab({ job, onComplete }: { job: import('../../types').Job; onComplete: (notes: string) => void }) {
   const inst = job.installation!;
+  const [showComplete, setShowComplete] = useState(false);
   return (
     <div className="max-w-2xl space-y-4">
       <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm bg-white border border-ink-100 rounded-lg p-4">
@@ -486,11 +489,20 @@ function InstallationTab({ job, onComplete }: { job: import('../../types').Job; 
         </div>
       ) : (
         <button
-          onClick={() => { const n = prompt('Observaciones de la instalación (opcional):') ?? ''; onComplete(n); }}
+          onClick={() => setShowComplete(true)}
           className="bg-ink-950 text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-ink-800"
         >
           Marcar instalación completada
         </button>
+      )}
+      {showComplete && (
+        <PromptDialog
+          title="Instalación completada" label="Observaciones (opcional)"
+          placeholder="Ej: instalado sin inconvenientes, cliente presente."
+          confirmLabel="Marcar completada"
+          onConfirm={(notes) => { onComplete(notes); setShowComplete(false); }}
+          onClose={() => setShowComplete(false)}
+        />
       )}
     </div>
   );

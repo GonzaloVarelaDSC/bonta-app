@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Lightbulb, Plus, X, Truck } from 'lucide-react';
 import { SizeItemsEditor, SizeItemsView } from './SizeItemsEditor';
-import { MATERIALS } from '../../data/catalog';
+import { useStore } from '../../store/useStore';
 import type { JobTypeId, MaterialId, Product } from '../../types';
 
 function newProduct(overrides: Partial<Product> = {}): Product {
@@ -21,6 +21,7 @@ const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
  * medidas. Se usa tanto en Carga rápida (alta) como en la ficha (edición).
  */
 export function ProductsEditor({ products, onChange, jobTypeId }: { products: Product[]; onChange: (products: Product[]) => void; jobTypeId?: JobTypeId }) {
+  const materials = useStore((s) => s.materials);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   function update(i: number, patch: Partial<Product>) {
@@ -74,7 +75,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
             <div>
               <span className={labelCls}>Material</span>
               <div className="flex flex-wrap gap-1.5">
-                {MATERIALS.map((m) => (
+                {materials.map((m) => (
                   <button type="button" key={m.id} onClick={() => toggleMaterial(i, m.id)} aria-pressed={product.materialIds.includes(m.id)}
                     className={`text-xs px-2.5 py-1.5 rounded-full border ${product.materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                     {m.label}
@@ -108,7 +109,18 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
             <div className="flex gap-3 mt-1.5">
               <button
                 type="button"
-                onClick={() => { add({ label: 'Plantilla de vinilo de corte', materialIds: ['vinilo'] }); setSuggestionDismissed(true); }}
+                onClick={() => {
+                  // Hereda la medida del primer producto que ya tenga alguna cargada — sin
+                  // esto era fácil terminar creando el trabajo con la plantilla sin su
+                  // propia medida, porque el gate de creación solo exige que ALGÚN
+                  // producto tenga medida (ver CLAUDE.md §25, hallazgo 4).
+                  const withSize = products.find((p) => p.sizeItems.some((it) => it.quantity.trim() || it.width.trim() || it.height.trim()));
+                  add({
+                    label: 'Plantilla de vinilo de corte', materialIds: ['vinilo'],
+                    ...(withSize ? { sizeItems: withSize.sizeItems.map((it) => ({ ...it })) } : {}),
+                  });
+                  setSuggestionDismissed(true);
+                }}
                 className="font-semibold hover:underline"
               >
                 + Agregar
@@ -131,6 +143,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
 
 /** Vista de solo lectura — con checkbox siempre clickeable (ver ProductsChecklist) para no tener que entrar en modo edición solo para tildar. */
 export function ProductsView({ products, onToggle }: { products: Product[]; onToggle?: (productId: string) => void }) {
+  const materials = useStore((s) => s.materials);
   if (products.length === 0) return <p className="text-sm text-ink-700 italic">Todavía no hay productos cargados.</p>;
   return (
     <div className="space-y-2">
@@ -155,7 +168,7 @@ export function ProductsView({ products, onToggle }: { products: Product[]; onTo
               {p.materialIds.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {p.materialIds.map((id) => (
-                    <span key={id} className="text-[11px] bg-ink-100 text-ink-700 rounded-full px-2 py-0.5">{MATERIALS.find((m) => m.id === id)?.label}</span>
+                    <span key={id} className="text-[11px] bg-ink-100 text-ink-700 rounded-full px-2 py-0.5">{materials.find((m) => m.id === id)?.label}</span>
                   ))}
                 </div>
               )}
