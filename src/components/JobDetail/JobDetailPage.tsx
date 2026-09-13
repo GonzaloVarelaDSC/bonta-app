@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
@@ -14,10 +14,15 @@ import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
+import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog } from '../Common/Modal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Detalle', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+
+// Estados en los que el trabajo ya está a disposición del cliente — acá tiene
+// sentido ofrecer el mensaje de "está listo" (Gonzalo, tintero de §19).
+const CLIENT_MSG_STATUSES: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION'];
 
 function emptyProduct(): Product {
   return { id: crypto.randomUUID(), label: '', materialIds: [], sizeItems: [{ quantity: '', width: '', height: '' }], notes: '', checked: false };
@@ -49,6 +54,7 @@ export function JobDetailPage() {
 
   const [tab, setTab] = useState<(typeof TABS)[number]>('General');
   const [showBlock, setShowBlock] = useState(false);
+  const [showClientMsg, setShowClientMsg] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -165,6 +171,11 @@ export function JobDetailPage() {
             {!activeBlock && (
               <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
                 <Lock size={13} /> Bloquear trabajo
+              </button>
+            )}
+            {CLIENT_MSG_STATUSES.includes(job.status) && (
+              <button onClick={() => setShowClientMsg(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-plan-text bg-plan-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
+                <MessageCircle size={13} /> Mensaje para el cliente
               </button>
             )}
             <a
@@ -295,6 +306,9 @@ export function JobDetailPage() {
 
       {showBlock && (
         <BlockModal onClose={() => setShowBlock(false)} onConfirm={(reason, desc) => { blockJob(job.id, reason, desc, user.id); setShowBlock(false); }} />
+      )}
+      {showClientMsg && (
+        <ClientMessageModal job={job} client={client} onClose={() => setShowClientMsg(false)} />
       )}
     </div>
   );

@@ -116,10 +116,10 @@ export function DashboardJobCard({ job }: { job: Job }) {
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
         <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
 
-        <div className="flex items-center gap-2 text-xs text-ink-800 font-medium ml-auto whitespace-nowrap">
-          <span>Asignado {fmtDate(job.createdAt)}</span>
-          <span className="text-ink-700 font-normal">·</span>
-          <span>Entrega {fmtDate(job.committedDate)}</span>
+        <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium ml-auto flex-wrap justify-end">
+          <span className="whitespace-nowrap">Asignado {fmtDate(job.createdAt)}</span>
+          <span className="text-ink-700 font-normal hidden sm:inline">·</span>
+          <span className="whitespace-nowrap">Entrega {fmtDate(job.committedDate)}</span>
           <CountdownBadge iso={job.committedDate} status={job.status} />
         </div>
 

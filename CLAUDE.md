@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 13/09/2026 (sección 26).
+la contradiga más arriba**. Última actualización: 13/09/2026 (sección 27).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1844,3 +1844,114 @@ el cliente al llegar a "Listo para entregar". Dentro de Configuración específi
 sigue pendiente si en algún momento Gonzalo quiere sumar activar/desactivar sin
 borrar, o extender lo editable a Etapas/Control de calidad — se dejó afuera a
 propósito esta vez, no es un olvido.
+
+---
+
+## 27. Actualización 13/09 (cont.) — SQL de 015/016 pendiente, mensaje automático al cliente, primer paso de mobile
+
+### 1. Migraciones 015/016 — Gonzalo confirmó que nunca las corrió
+
+Pese a que §21 decía "confirmado", Gonzalo aclaró en esta ronda que ese SQL nunca
+le llegó para correrlo de verdad — **tratar como NO aplicado hasta que lo
+confirme**. Si en algún momento aparece un error de "column does not exist" al
+tocar `assigned_names`/`sample_review` en un trabajo, es por esto. SQL a correr
+en Supabase (SQL Editor → New query → pegar → Run), en este orden:
+
+```sql
+-- 015: "Asignar también a" (gente del taller sin cuenta)
+alter table jobs add column if not exists assigned_names text[] not null default '{}';
+
+-- 016: muestra/prueba al cliente
+alter table jobs add column if not exists sample_review text not null default 'none'
+  check (sample_review in ('none', 'awaiting', 'approved'));
+alter table jobs add column if not exists sample_review_at timestamptz;
+```
+
+Verificación después de correrlo:
+```sql
+select column_name from information_schema.columns
+where table_name = 'jobs' and column_name in ('assigned_names', 'sample_review', 'sample_review_at');
+```
+Debería devolver las 3 columnas. **Mientras no se corra**, crear un trabajo con
+"Asignar también a" o tocar "Muestra al cliente" va a tirar un error de columna
+inexistente — desde esta ronda ese error ya se traduce en criollo (`lib/errors.ts`,
+§26) en vez de mostrarse crudo, pero la causa de fondo sigue siendo esta.
+
+### 2. Texto automático para el cliente al llegar a "Listo para entregar" (tintero de §19, hecho)
+
+1. **`lib/clientMessage.ts`** (nuevo) — `buildClientReadyMessage(job, client)` arma
+   un texto en criollo ("¡Hola {contacto}! Te escribimos de Estudio Bonta para
+   avisarte que tu pedido "{nombre}" (N° {code}) ya está listo — nos comunicamos
+   para {coordinar el retiro | coordinar la instalación, según
+   `requiresInstallation`}. ¡Gracias por tu confianza!"), y `whatsappLink(phone,
+   text)` arma un link `wa.me/<dígitos>?text=...` si hay teléfono de contacto
+   cargado.
+2. **`ClientMessageModal.tsx`** (nuevo, `components/JobDetail/`) — mismo lenguaje
+   visual que `BlockModal`/`Modal.tsx`: el texto sale en un `<textarea>` editable
+   (nunca se manda solo), con botón "Copiar mensaje" (`navigator.clipboard`, con
+   confirmación visual "Copiado") y, si hay teléfono, "Abrir en WhatsApp" (abre
+   `wa.me` en pestaña nueva — el envío final lo hace la persona a mano dentro de
+   WhatsApp, esto solo prellena el texto). Si no hay teléfono cargado, avisa dónde
+   cargarlo en vez de ocultar el botón sin explicar por qué.
+3. **Botón "Mensaje para el cliente"** en la cabecera de la ficha
+   (`JobDetailPage.tsx`), visible solo cuando `job.status` es
+   `LISTO_PARA_ENTREGA` o `LISTO_PARA_INSTALACION` (`CLIENT_MSG_STATUSES`).
+4. **Recordatorio en el toast global** al pasar a cualquiera de esos dos estados
+   (`lib/statusChange.ts`, `tryChangeJobStatus` — mismo mecanismo que ya usaba el
+   recordatorio de control de calidad, ver §26): "No te olvides de avisarle al
+   cliente — desde la ficha podés generar el mensaje...". Si además quedan ítems
+   de control de calidad sin marcar, los dos avisos se combinan en un solo toast
+   en vez de pisarse (el toast global es un único string a la vez). Dispara desde
+   los 4 lugares que cambian el estado (Kanban, JobsTable, DashboardJobCard,
+   ficha) porque todos pasan por `tryChangeJobStatus`.
+5. **No se tocó** Carga rápida ni la hoja de exportación al cliente — el mensaje
+   es de cuando el trabajo YA está listo, no al cargarlo (mismo criterio que
+   "muestra al cliente", §23).
+
+### 3. Mobile — primer paso: 2 bugs de overflow reales corregidos, resto ya andaba mejor de lo esperado
+
+Antes de tocar nada se relevó el estado real en 375px de ancho (Dashboard, Kanban,
+Carga rápida, ficha) con la técnica de bypass de auth local (§25/§26) — **la base
+ya venía razonablemente responsive** (el shell con `Sidebar`/`Header` ya tiene
+menú hamburguesa, las tarjetas/badges ya usan `flex-wrap`) pese a que el tintero
+decía "no se tocó nada de responsive". Se encontraron y corrigieron 2 overflows
+horizontales reales (contenido cortado + scroll horizontal indebido, no solo
+"apretado"):
+
+1. **`DashboardJobCard.tsx`** — el grupo "Asignado X · Entrega Y + countdown" tenía
+   `whitespace-nowrap` sin `flex-wrap` propio dentro de una fila que sí wrappeaba:
+   en 375px ese grupo no entraba en su renglón y se salía del borde de la tarjeta
+   en vez de bajar de línea. Se le sacó `whitespace-nowrap` al contenedor (queda
+   solo en los `<span>` individuales) y se agregó `flex-wrap` — ahora el chip de
+   countdown baja a su propia línea en vez de cortarse.
+2. **`ProductsEditor.tsx`** — la cabecera de cada producto (input de nombre +
+   toggle "Tercerizada" + botón de borrar) no tenía `flex-wrap`, y el input no
+   tenía `min-width` explícito — en 375px se salía del contorno de la tarjeta.
+   Se agregó `flex-wrap` a la fila y `min-w-[140px]` al input: ahora el toggle/
+   botón de borrar bajan a una segunda línea cuando no entran, en vez de
+   desbordar. Mismo componente se usa en Carga rápida y en la pestaña Detalle de
+   la ficha, así que el fix vale para las dos.
+3. **Kanban**: el scroll horizontal de 7 columnas ya funciona razonablemente en
+   mobile (patrón esperable tipo Trello, swipe entre columnas) — no se tocó.
+4. **Ficha (`JobDetailPage`)**: badges, selects y tabs ya wrappean/scrollean bien
+   en 375px — no se tocó.
+5. **No revisado todavía** (queda para la próxima pasada de mobile): `JobsTable`/
+   `ClientsPage` (tabla ancha — probablemente necesite scroll horizontal
+   deliberado, no está mal per se pero no se confirmó), `UsersPage`/`ConfigPage`,
+   el dropdown de notificaciones y el buscador del `Header`, el grid CANT/ANCHO/
+   ALTO de `SizeItemsEditor` (funciona pero el placeholder "cm o «a medida»" se
+   corta visualmente en columnas muy angostas — cosmético, no bloquea cargar
+   datos), la apertura/cierre del menú hamburguesa en sí, y `CommentsPanel` en la
+   pestaña "Comentarios" de la ficha en mobile. Ninguno de estos se relevó a
+   fondo todavía — es la lista para continuar la próxima vez que se retome mobile.
+
+### 4. Tintero — actualizado
+
+Resuelto por esta ronda: texto automático para el cliente (ítem de §19). En curso,
+no cerrado: mobile (ver punto 3 de arriba, sigue en la lista general). El resto
+sin cambios: base de conocimiento de materiales, estados que sobran
+(`NUEVO`/`APROBADO`), Manual de uso, cuenta de Nancy, fix de `handle_new_user()`,
+subida real de archivos a Storage, confirmar la Etapa 3 del wizard,
+`credits_as_assigner` (columna muerta), y **confirmar que Gonzalo corrió el SQL
+del punto 1 de esta sección** (015/016) — no asumir que ya está aplicado la
+próxima vez, verificar con el `select` de arriba.

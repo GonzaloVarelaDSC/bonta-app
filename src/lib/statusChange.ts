@@ -72,11 +72,15 @@ export function tryChangeJobStatus(
 ): boolean {
   if (targetStatus === 'LISTO_PARA_ENTREGA' || targetStatus === 'LISTO_PARA_INSTALACION') {
     const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
+    const lines: string[] = [];
     if (requiredPending.length > 0) {
-      useStore.setState({
-        toast: `Recordatorio: quedan ${requiredPending.length} ítems obligatorios del control de calidad sin marcar. Podés completarlos desde la ficha cuando quieras — esto no impide pasar a "${STATUS_LABELS[targetStatus]}".`,
-      });
+      lines.push(`Recordatorio: quedan ${requiredPending.length} ítems obligatorios del control de calidad sin marcar. Podés completarlos desde la ficha cuando quieras — esto no impide pasar a "${STATUS_LABELS[targetStatus]}".`);
     }
+    // "Texto automático para el cliente" (tintero §19) — se sugiere acá mismo,
+    // no se manda solo: el mensaje se genera y se puede copiar/abrir en WhatsApp
+    // desde la ficha (botón "Mensaje para el cliente", ver ClientMessageModal.tsx).
+    lines.push('No te olvides de avisarle al cliente — desde la ficha podés generar el mensaje listo para copiar o mandar por WhatsApp.');
+    useStore.setState({ toast: lines.join(' ') });
   }
   setStatus(job.id, targetStatus, byUserId);
   return true;

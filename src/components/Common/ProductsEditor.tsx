@@ -51,11 +51,11 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
       )}
       {products.map((product, i) => (
         <div key={product.id} className={`bg-white border rounded-lg overflow-hidden ${product.outsourced ? 'border-site/40' : 'border-ink-100'}`}>
-          <div className={`flex items-center gap-2 px-3 py-2 border-b ${product.outsourced ? 'border-site/20 bg-site-bg' : 'border-ink-50 bg-ink-50/50'}`}>
+          <div className={`flex items-center gap-2 flex-wrap px-3 py-2 border-b ${product.outsourced ? 'border-site/20 bg-site-bg' : 'border-ink-50 bg-ink-50/50'}`}>
             <input
               value={product.label} onChange={(e) => update(i, { label: e.target.value })}
               placeholder={`Producto ${i + 1} — ej. "Corpóreo 3D"`}
-              className="flex-1 bg-transparent text-sm font-semibold text-ink-900 placeholder:font-normal placeholder:text-ink-400 focus:outline-none"
+              className="flex-1 min-w-[140px] bg-transparent text-sm font-semibold text-ink-900 placeholder:font-normal placeholder:text-ink-400 focus:outline-none"
             />
             <button
               type="button" onClick={() => update(i, { outsourced: !product.outsourced })}
