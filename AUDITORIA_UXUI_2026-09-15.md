@@ -234,6 +234,11 @@ propia librería para este caso exacto.
 
 ### 7. Los campos de medida (Cantidad/Ancho/Alto) son ilegibles para un lector de pantalla
 
+**Estado: resuelto.** Se agregó `aria-label="Cantidad"`/`"Ancho"`/`"Alto"` a los 3
+inputs (`src/components/Common/SizeItemsEditor.tsx:33-35`), sin tocar placeholders
+ni layout. Cubre las 2 pantallas que usan el componente (Carga rápida y la pestaña
+Detalle de la ficha, ambas vía `ProductsEditor.tsx`).
+
 **Dónde:** `src/components/Common/SizeItemsEditor.tsx:33-35` — los 3 inputs de cada
 renglón de medida.
 

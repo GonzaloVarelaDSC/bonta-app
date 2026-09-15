@@ -30,9 +30,9 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
         {items.length === 0 && <div className="px-3 py-4 text-sm text-ink-700 italic text-center">Sin renglones todavía — agregá uno abajo.</div>}
         {items.map((item, i) => (
           <div key={i} className={`${GRID_COLS} items-center px-3 py-2`}>
-            <input value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
-            <input value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
-            <input value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <input aria-label="Cantidad" value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
+            <input aria-label="Ancho" value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <input aria-label="Alto" value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
             <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-1 justify-self-center">
               <X size={15} />
             </button>
