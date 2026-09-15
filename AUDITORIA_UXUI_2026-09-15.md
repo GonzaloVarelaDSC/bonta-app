@@ -42,6 +42,15 @@ llamando a su acción del store directo desde el `onChange`, sin manejo de error
 `setStatus` en el store (`src/store/useStore.ts`) sí es optimista con rollback si
 Supabase rechaza el cambio, pero el rollback es silencioso: la persona ve que el
 estado "vuelve solo" al valor anterior sin ninguna explicación de por qué.
+`setSampleReview` (líneas 379-393) y `updateCommittedDate` (líneas 398-408) tienen
+el mismo patrón optimista-con-rollback que `setStatus` — confirmado, no requieren
+nota aparte. **`setPriority` (líneas 366-374) es un caso distinto: deuda conocida.**
+No es optimista — no toca el store hasta que Supabase confirma el éxito (recién ahí
+`refreshJob()` trae el valor nuevo) — así que no hay un valor "de mentira" para
+revertir, pero tampoco hay feedback visual inmediato mientras la operación está en
+curso, ni el `<select>` queda deshabilitado mientras tanto: si la persona vuelve a
+tocarlo antes de que la primera llamada termine, puede haber una carrera entre dos
+`setPriority` en simultáneo sin ningún orden garantizado.
 
 **Por qué importa para Bonta:** este proyecto ya tuvo, documentado en su propio
 historial (CLAUDE.md), al menos 3 incidentes reales de este tipo exacto — la
