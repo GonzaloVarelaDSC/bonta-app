@@ -459,8 +459,10 @@ export const useStore = create<StoreState>()((set, get) => ({
   },
 
   blockJob: async (jobId, reason, description, byUserId) => {
-    await supabase.from('block_records').insert({ job_id: jobId, reason, description, opened_by: byUserId });
-    await supabase.from('jobs').update({ status: 'BLOQUEADO', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    const { error: blockError } = await supabase.from('block_records').insert({ job_id: jobId, reason, description, opened_by: byUserId });
+    if (blockError) throw blockError;
+    const { error } = await supabase.from('jobs').update({ status: 'BLOQUEADO', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'bloqueo', `Bloqueó el trabajo — ${description}`);
     if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(job)} está bloqueado.`);
@@ -471,8 +473,12 @@ export const useStore = create<StoreState>()((set, get) => ({
   unblockJob: async (jobId, byUserId) => {
     const job = get().jobs.find((j) => j.id === jobId);
     const openBlock = job?.blockRecords.find((b) => !b.closedAt);
-    if (openBlock) await supabase.from('block_records').update({ closed_at: new Date().toISOString() }).eq('id', openBlock.id);
-    await supabase.from('jobs').update({ status: 'EN_PRODUCCION', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (openBlock) {
+      const { error: closeError } = await supabase.from('block_records').update({ closed_at: new Date().toISOString() }).eq('id', openBlock.id);
+      if (closeError) throw closeError;
+    }
+    const { error } = await supabase.from('jobs').update({ status: 'EN_PRODUCCION', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'desbloqueo', 'Desbloqueó el trabajo.');
     await refreshJob(set, jobId);
   },
@@ -502,10 +508,11 @@ export const useStore = create<StoreState>()((set, get) => ({
     }
     const existing = job?.files.find((f) => f.id === fileId);
     const nextVersion = (existing?.versions.length ?? 0) + 1;
-    await supabase.from('file_versions').insert({
+    const { error: versionError } = await supabase.from('file_versions').insert({
       file_id: fileId, version: nextVersion, file_name: file.name,
       size_kb: Math.max(1, Math.round(file.size / 1024)), uploaded_by: byUserId,
     });
+    if (versionError) throw versionError;
     await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
     await insertActivity(set, jobId, byUserId, 'archivo', `Subió ${file.name}.`);
     if (job) await insertNotifications([job.responsibleUserId, ...job.assignedUserIds].filter((id) => id !== byUserId), jobId, `Se cargó un nuevo archivo en ${jobLabel(job)}.`);
@@ -517,17 +524,23 @@ export const useStore = create<StoreState>()((set, get) => ({
     const job = get().jobs.find((j) => j.id === jobId);
     const file = job?.files.find((f) => f.id === fileId);
     const versionName = file?.versions.find((v) => v.id === versionId)?.fileName ?? 'un archivo';
-    await supabase.from('file_versions').delete().eq('id', versionId);
+    const { error } = await supabase.from('file_versions').delete().eq('id', versionId);
+    if (error) throw error;
     // Si era la última versión de ese archivo, no dejar el grupo vacío colgado.
-    if (file && file.versions.length <= 1) await supabase.from('job_files').delete().eq('id', fileId);
+    if (file && file.versions.length <= 1) {
+      const { error: groupError } = await supabase.from('job_files').delete().eq('id', fileId);
+      if (groupError) throw groupError;
+    }
     await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
     await insertActivity(set, jobId, byUserId, 'archivo', `Eliminó ${versionName}.`);
     await refreshJob(set, jobId);
   },
 
   approveFileVersion: async (jobId, fileId, versionId, byUserId) => {
-    await supabase.from('file_versions').update({ approved: false }).eq('file_id', fileId);
-    await supabase.from('file_versions').update({ approved: true }).eq('id', versionId);
+    const { error: unsetError } = await supabase.from('file_versions').update({ approved: false }).eq('file_id', fileId);
+    if (unsetError) throw unsetError;
+    const { error } = await supabase.from('file_versions').update({ approved: true }).eq('id', versionId);
+    if (error) throw error;
     const job = await fetchJobById(jobId);
     const v = job?.files.find((f) => f.id === fileId)?.versions.find((vv) => vv.id === versionId);
     await insertActivity(set, jobId, byUserId, 'aprobacion', `Aprobó ${v?.fileName} para producción.`);
@@ -539,14 +552,17 @@ export const useStore = create<StoreState>()((set, get) => ({
   toggleQualityCheck: async (jobId, key, byUserId) => {
     const job = get().jobs.find((j) => j.id === jobId);
     const item = job?.qualityChecks.find((q) => q.key === key);
-    await supabase.from('quality_checks').update({ checked: !item?.checked }).eq('job_id', jobId).eq('key', key);
+    const { error } = await supabase.from('quality_checks').update({ checked: !item?.checked }).eq('job_id', jobId).eq('key', key);
+    if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'control_calidad', 'Actualizó el checklist de control de calidad.');
     await refreshJob(set, jobId);
   },
 
   completeInstallation: async (jobId, notes, byUserId) => {
-    await supabase.from('installations').update({ completed: true, completed_at: new Date().toISOString(), completed_notes: notes }).eq('job_id', jobId);
-    await supabase.from('jobs').update({ status: 'TERMINADO', finished_at: new Date().toISOString(), last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    const { error: instError } = await supabase.from('installations').update({ completed: true, completed_at: new Date().toISOString(), completed_notes: notes }).eq('job_id', jobId);
+    if (instError) throw instError;
+    const { error } = await supabase.from('jobs').update({ status: 'TERMINADO', finished_at: new Date().toISOString(), last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'instalacion', 'Registró la instalación como completada.');
     if (job) await insertNotifications([job.responsibleUserId].filter((id) => id !== byUserId), jobId, `${jobLabel(job)} — instalación completada.`);

@@ -133,7 +133,10 @@ export function JobDetailPage() {
                 <div className="text-xs mt-0.5">{activeBlock.description}</div>
               </div>
               {(canBlock() || user.role === 'coordinador' || user.role === 'admin') && (
-                <button onClick={() => unblockJob(job.id, user.id)} className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold bg-white/70 hover:bg-white rounded-md px-2.5 py-1.5">
+                <button
+                  onClick={async () => { try { await unblockJob(job.id, user.id); } catch (err) { alert(friendlyError(err)); } }}
+                  className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold bg-white/70 hover:bg-white rounded-md px-2.5 py-1.5"
+                >
                   <Unlock size={13} /> Desbloquear
                 </button>
               )}
@@ -244,7 +247,7 @@ export function JobDetailPage() {
             <ProductsTab
               job={job}
               onSave={(specs) => updateJobSpecs(job.id, specs, user.id)}
-              onToggle={(productId) => toggleProductChecked(job.id, productId, user.id)}
+              onToggle={async (productId) => { try { await toggleProductChecked(job.id, productId, user.id); } catch (err) { alert(friendlyError(err)); } }}
             />
           )}
 
@@ -258,7 +261,11 @@ export function JobDetailPage() {
               <div className="bg-white border border-ink-100 rounded-lg divide-y divide-ink-50">
                 {job.qualityChecks.map((q) => (
                   <label key={q.key} className="flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer hover:bg-ink-50/50">
-                    <input type="checkbox" checked={q.checked} onChange={() => toggleQualityCheck(job.id, q.key, user.id)} className="rounded" />
+                    <input
+                      type="checkbox" checked={q.checked}
+                      onChange={async () => { try { await toggleQualityCheck(job.id, q.key, user.id); } catch (err) { alert(friendlyError(err)); } }}
+                      className="rounded"
+                    />
                     <span className={q.checked ? 'text-ink-700 line-through decoration-ink-300' : 'text-ink-800'}>{q.label}{q.required && ' *'}</span>
                   </label>
                 ))}
@@ -269,14 +276,14 @@ export function JobDetailPage() {
           {tab === 'Archivos' && (
             <FilesTab
               job={job}
-              onUpload={(file, targetFileId) => addFileVersion(job.id, file, user.id, targetFileId)}
-              onApprove={(fid, vid) => approveFileVersion(job.id, fid, vid, user.id)}
-              onDelete={(fid, vid) => deleteFileVersion(job.id, fid, vid, user.id)}
+              onUpload={async (file, targetFileId) => { try { await addFileVersion(job.id, file, user.id, targetFileId); } catch (err) { alert(friendlyError(err)); } }}
+              onApprove={async (fid, vid) => { try { await approveFileVersion(job.id, fid, vid, user.id); } catch (err) { alert(friendlyError(err)); } }}
+              onDelete={async (fid, vid) => { try { await deleteFileVersion(job.id, fid, vid, user.id); } catch (err) { alert(friendlyError(err)); } }}
             />
           )}
 
           {tab === 'Instalación' && job.installation && (
-            <InstallationTab job={job} onComplete={(notes) => completeInstallation(job.id, notes, user.id)} />
+            <InstallationTab job={job} onComplete={async (notes) => { try { await completeInstallation(job.id, notes, user.id); } catch (err) { alert(friendlyError(err)); } }} />
           )}
 
           {tab === 'Comentarios' && (
@@ -310,7 +317,13 @@ export function JobDetailPage() {
       </div>
 
       {showBlock && (
-        <BlockModal onClose={() => setShowBlock(false)} onConfirm={(reason, desc) => { blockJob(job.id, reason, desc, user.id); setShowBlock(false); }} />
+        <BlockModal
+          onClose={() => setShowBlock(false)}
+          onConfirm={async (reason, desc) => {
+            try { await blockJob(job.id, reason, desc, user.id); } catch (err) { alert(friendlyError(err)); }
+            setShowBlock(false);
+          }}
+        />
       )}
       {showClientMsg && (
         <ClientMessageModal job={job} client={client} onClose={() => setShowClientMsg(false)} />
@@ -435,6 +448,8 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
     try {
       await onSave({ products, specialRequirements });
       setMode('view');
+    } catch (err) {
+      alert(friendlyError(err));
     } finally {
       setSaving(false);
     }

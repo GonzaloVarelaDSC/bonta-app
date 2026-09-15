@@ -112,7 +112,57 @@ componente lo tiene que manejar él mismo.
 
 ### 3. Resto de acciones de la ficha de trabajo sin manejo de error
 
-**Dónde:** `src/components/JobDetail/JobDetailPage.tsx` —
+**Estado: resuelto — con un hallazgo adicional al aplicar el fix.** Al revisar las
+7 funciones del store detrás de estas acciones (bloquear, desbloquear, control de
+calidad, archivos ×3, instalación completada) se encontró que **6 de las 7 no
+chequeaban el `error` de Supabase en su escritura principal** — no era solo falta
+de `try/catch` en el componente, sino que la propia función del store nunca se
+enteraba del fallo (`supabase-js` no lanza excepción por sí solo; si no se lee
+`error` explícitamente, el fallo queda invisible). Envolver el call site en
+`try/catch` sin tocar el store no hubiera alcanzado: el `alert()` casi nunca se
+hubiera disparado, porque `insertActivity()` (que sí lanza) suele tener éxito
+igual aunque la escritura anterior haya fallado — el log de actividad diría
+"Bloqueó el trabajo" o "Eliminó archivo.pdf" aunque esa escritura puntual nunca
+haya llegado a la base.
+
+**Fix aplicado — dos capas:**
+1. **Store (`src/store/useStore.ts`)** — se agregó `if (error) throw error` (o el
+   equivalente con la variable destructurada) a cada escritura de Supabase que lo
+   omitía, en `blockJob`, `unblockJob`, `toggleQualityCheck`, `addFileVersion`
+   (el insert a `file_versions`, que es el que faltaba — el insert a `job_files`
+   ya estaba protegido), `approveFileVersion` (las 2 actualizaciones a
+   `file_versions`) y `completeInstallation` (`installations` + el `jobs.update`
+   de estado). Los `jobs.update({ last_activity_at })` que son solo un "touch" de
+   timestamp (no el cambio de estado real) se dejaron sin chequear a propósito —
+   mismo criterio que ya usa el resto del store en acciones no relacionadas
+   (`assignJob`, `setStageStatus`, `addComment`), es un efecto secundario menor,
+   no el dato que le importa a quien hizo la acción.
+   - `toggleProductChecked` (la única de las 7 que ya chequeaba `error`) no
+     necesitó cambios en el store.
+2. **Componente (`JobDetailPage.tsx`)** — mismo patrón que el crítico #1:
+   `try { await accion(...) } catch (err) { alert(friendlyError(err)) }` en los 8
+   call sites (bloquear, desbloquear, control de calidad, toggle de producto,
+   subir/aprobar/eliminar archivo, instalación completada), más el `catch` que
+   faltaba en `ProductsTab.save()` (tenía `try/finally` sin `catch` — el error de
+   `updateJobSpecs`, que sí estaba bien chequeado en el store, se perdía como
+   unhandled rejection sin avisar).
+
+**Ninguna de las 7 tiene rollback optimista** (a diferencia de `setStatus` o
+`toggleProductChecked`, que si Supabase rechaza el cambio revierten el store a la
+mano). Estas 7 no tocan el store hasta que `refreshJob()` trae el valor real al
+final — por eso un fallo a mitad de camino (ej. `block_records` insertado pero
+`jobs.status` sin actualizar; o el primer `update` de `approveFileVersion` sin
+aplicar el segundo) **no se revierte visualmente en pantalla porque nunca se
+había aplicado nada visualmente para revertir** — solo se avisa con el `alert()`.
+Es una diferencia real con el rollback de `setStatus`, documentada acá para no
+asumir a futuro que las 7 se comportan igual.
+
+**Deuda que queda (fuera de este alcance, ya señalada en el ítem original):** el
+`alert()` nativo sigue siendo un patrón temporal — pendiente reemplazarlo por
+algo consistente con el resto de la UI, junto con los 2 `confirm()` nativos que
+ya estaban señalados como corte de alcance deliberado (ver 🟢 Bajo).
+
+**Dónde (call sites originales, referencia):** `src/components/JobDetail/JobDetailPage.tsx` —
 - Bloquear/desbloquear: `blockJob` (línea 308, dentro del `onConfirm` del modal —
   el modal se cierra igual haya fallado o no) y `unblockJob` (líneas 135-137)
 - Control de calidad: `toggleQualityCheck` (línea 256)
@@ -448,7 +498,7 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 |---|---|---|---|
 | 1 | 🔴 Crítico | Cambios de estado/prioridad sin manejo de error | Try/catch en ~6 puntos, patrón ya probado en el código |
 | 2 | 🔴 Crítico | `setUserActive` sin manejo de error | 1 función, try/catch + rollback visual |
-| 3 | 🟠 Alto | Resto de acciones de la ficha sin manejo de error | Try/catch en ~7 puntos |
+| 3 | 🟠 Alto | Resto de acciones de la ficha sin manejo de error | **Resuelto** — try/catch en 8 puntos + `if (error) throw` agregado en 6 de las 7 funciones del store que no lo tenían |
 | 4 | 🟠 Alto | `loadError`/`dataLoading` nunca se muestran | 1 banner en AppLayout/DashboardPage |
 | 5 | 🟠 Alto | Kanban no entra en notebooks comunes | Angostar `min-w` de la grilla |
 | 6 | 🟠 Alto | Sin alternativa de teclado para mover tarjetas | Sumar `KeyboardSensor` de dnd-kit |
