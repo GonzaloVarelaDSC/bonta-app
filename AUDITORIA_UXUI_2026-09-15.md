@@ -415,7 +415,16 @@ sola vez y reusado en los dos lugares.
 
 ### 10. `aria-label` faltante o inconsistente en varios selects/inputs
 
-**Dónde:**
+**Estado: resuelto.** Se agregaron los 7 atributos exactos que proponía el fix
+concreto de este ítem, sin tocar layout ni placeholders — mismo criterio que ya
+se usó en el ítem #7 (`SizeItemsEditor`): `aria-label="Estado"` en `StatusSelect`
+(`Badges.tsx:114`, el `<select>` — ver la línea de más abajo, la numeración
+original decía 110-126 para todo el componente); `aria-label="Buscar"` en el
+input de búsqueda de `JobsPage.tsx:55-58`, y `"Prioridad"`/`"Estado"`/`"Cliente"`/
+`"Responsable"` en los 4 `<select>` de filtro (`JobsPage.tsx:59/63/67/71`);
+`aria-label="Buscar"` en el input del buscador del Header (`Header.tsx:65-71`).
+
+**Dónde (referencia original):**
 - `StatusSelect` (`src/components/Common/Badges.tsx:110-126`) no tiene
   `aria-label`, a diferencia de `PrioritySelect` (mismo archivo, línea ~93) que sí
   tiene `aria-label="Prioridad"` — mismo archivo, mismo patrón de componente,
@@ -531,7 +540,8 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 | 7 | 🟠 Alto | Inputs de medida sin nombre accesible | 3 atributos `aria-label` |
 | 8 | 🟡 Medio | Color inconsistente entre Kanban y resto | Cambio acotado, sin riesgo |
 | 9 | 🟡 Medio | Scroll sin señal (Kanban y Tabla mobile) | **Resuelto** — `ScrollFadeX` compartido, degradé que se apaga solo al llegar al final |
-| 10-11 | 🟡 Medio | `aria-label` sueltos, `EditableCode` duplicado | Cambios acotados, sin riesgo |
+| 10 | 🟡 Medio | `aria-label` faltante/inconsistente | **Resuelto** — 7 atributos agregados (`StatusSelect`, filtros de `JobsPage`, buscador del Header) |
+| 11 | 🟡 Medio | `EditableCode` duplicado | Cambio acotado, sin riesgo |
 | resto | 🟢 Bajo | Pulido visual y limpieza de código | Sin apuro, sin impacto de uso real |
 
 Los ítems 1-7 (crítico + alto) son los que recomendaría atacar primero — todos

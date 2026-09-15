@@ -53,22 +53,22 @@ export function JobsPage() {
 
       <div className="flex flex-wrap gap-2 mb-4">
         <input
-          value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..."
+          value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." aria-label="Buscar"
           className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
-        <select className={selectCls} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}>
+        <select aria-label="Prioridad" className={selectCls} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}>
           <option value="all">Toda prioridad</option>
           {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
         </select>
-        <select className={selectCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+        <select aria-label="Estado" className={selectCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
           <option value="all">Todo estado</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select className={selectCls} value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+        <select aria-label="Cliente" className={selectCls} value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
           <option value="all">Todo cliente</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select className={selectCls} value={respFilter} onChange={(e) => setRespFilter(e.target.value)}>
+        <select aria-label="Responsable" className={selectCls} value={respFilter} onChange={(e) => setRespFilter(e.target.value)}>
           <option value="all">Todo responsable</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>

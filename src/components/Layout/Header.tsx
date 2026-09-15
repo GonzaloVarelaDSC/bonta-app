@@ -66,7 +66,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
           onFocus={() => setShowResults(true)}
-          placeholder="Buscar trabajo, cliente, material..."
+          placeholder="Buscar trabajo, cliente, material..." aria-label="Buscar"
           className="w-full pl-9 pr-3 py-2 rounded-lg bg-ink-50 border border-transparent text-sm focus:bg-white focus:border-brand-400 focus:outline-none transition-colors"
         />
         {showResults && results.length > 0 && (

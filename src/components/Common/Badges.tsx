@@ -112,6 +112,7 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
     <select
       value={status}
       disabled={disabled}
+      aria-label="Estado"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value as JobStatus)}
