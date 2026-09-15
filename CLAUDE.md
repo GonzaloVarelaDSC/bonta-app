@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 15/09/2026 (sección 28).
+la contradiga más arriba**. Última actualización: 15/09/2026 (sección 29).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2011,3 +2011,172 @@ la conversación nueva):**
 
 No se tocó código en esta ronda para este ítem — es puramente de alcance/
 planificación, a la espera de que Gonzalo junte los 3 datos de arriba.
+
+---
+
+## 29. Actualización 15/09 (cont.) — auditoría UX/UI + accesibilidad + código, y primeros 4 fixes críticos/altos
+
+Ronda dedicada a auditar la app (no a pedidos de feature nuevos) y arrancar a
+resolver lo más grave de lo que salió. Todo documentado en detalle en un archivo
+nuevo, **[`AUDITORIA_UXUI_2026-09-15.md`](AUDITORIA_UXUI_2026-09-15.md)** en la
+raíz del proyecto — este resumen es solo el punteo, el detalle completo (por qué
+importa cada cosa para el uso real del estudio, fix concreto, línea exacta) vive
+ahí.
+
+### 1. Se corrieron 3 auditorías, consolidadas en un solo informe
+
+- **`design-critique`** sobre 7 capturas reales tomadas con Playwright (Dashboard,
+  Tabla de trabajos, Kanban, ficha con comentarios, Carga rápida, y Dashboard/Tabla
+  en mobile 375px) — con foco puntual en si el Kanban entra sin scroll en
+  resoluciones de notebook reales (no solo si la captura ajustada se ve bien).
+- **`accessibility-review`** sobre las mismas 7 capturas + una 8va tomada aparte
+  (Carga rápida en mobile, con scroll real hasta el final, para confirmar que la
+  barra fija no tapa el último campo).
+- **Revisión de código** (agente de exploración) sobre `src/components` y
+  `src/store/useStore.ts` buscando específicamente: estados de carga/error
+  faltantes, spacing/tipografía hardcodeados fuera de los tokens de Tailwind, y
+  componentes duplicados.
+- Los tres informes se consolidaron en un único Markdown, **reordenado por
+  severidad real de uso** (no por el orden en que salió cada hallazgo) — un fallo
+  silencioso en una acción que cambia datos (estado, prioridad, usuarios) se
+  clasificó por encima de una inconsistencia visual, aunque los informes de origen
+  los hubieran marcado igual.
+- Técnica de testeo reusada de §25/§26/§27 (bypass de auth 100% local vía
+  `?devpreview=1`, revertido con `git checkout` antes de cada commit — nunca quedó
+  rastro en el repo).
+
+### 2. Resuelto en esta ronda (4 ítems, cada uno en su propio commit)
+
+1. **Crítico — manejo de error en 16 ubicaciones de cambio de estado/prioridad/
+   usuario** (`98b2a6e`). `tryChangeJobStatus` (`lib/statusChange.ts`) ahora atrapa
+   con `.catch(err => alert(friendlyError(err)))` — arregla de una sola vez los 4
+   lugares que lo llaman (Kanban, Tabla, Dashboard, ficha). `setPriority`,
+   `setSampleReview`, `updateCommittedDate` (ficha/Dashboard) y `setUserActive`
+   (Usuarios) se envolvieron uno por uno en try/catch. Extensión necesaria fuera de
+   las 16 ubicaciones originales: `setUserActive` en `useStore.ts` no revisaba el
+   `error` de Supabase y aplicaba el cambio local igual aunque fallara — sin ese
+   fix de 2 líneas, el try/catch del componente nunca se hubiera disparado (riesgo
+   real de control de acceso: desactivar a alguien podía "verse" aplicado sin
+   estarlo).
+   - **Deuda documentada #1:** el `alert()` nativo es un patrón temporal — sigue
+     pendiente reemplazarlo por algo consistente con el resto de la UI (mismo
+     tema que el `confirm()` nativo ya señalado como corte de alcance, ver tintero).
+   - **Deuda documentada #2:** se confirmó que `setSampleReview` y
+     `updateCommittedDate` ya tenían rollback optimista idéntico al de `setStatus`
+     (no hacía falta tocarlas para eso). `setPriority` es distinto: no es
+     optimista (no toca el store hasta que Supabase confirma éxito), así que no
+     hay nada que revertir, pero tampoco hay feedback visual inmediato ni
+     protección contra doble-click mientras la llamada está en curso — queda
+     anotado como deuda conocida, no arreglado en esta ronda.
+2. **Alto — `SizeItemsEditor` sin nombre accesible** (`30807bd`). Los 3 inputs de
+   Cantidad/Ancho/Alto (`Common/SizeItemsEditor.tsx:33-35`) no tenían
+   `aria-label`, y Ancho/Alto compartían el mismo placeholder literal —
+   indistinguibles para un lector de pantalla. Se agregaron
+   `aria-label="Cantidad"/"Ancho"/"Alto"`, sin tocar el layout visual. Cubre las 2
+   pantallas que usan el componente (Carga rápida y la pestaña Detalle de la
+   ficha, ambas vía `ProductsEditor.tsx`).
+3. **Alto — Kanban no entraba en notebooks comunes** (`27ed425`). `min-w-[1400px]`
+   bajó a `min-w-[1150px]` (`Kanban/KanbanPage.tsx`) — recupera las 7 columnas sin
+   scroll en 1440-1536px (antes solo entraban ~5-6) y mejora 1366px, sin
+   reintroducir el truncamiento de texto (el fix de `line-clamp-2` en `CardBody`
+   es independiente del ancho de la grilla). Se evaluó agregar en cambio una señal
+   visual de scroll (sombra/degradé) en vez de tocar el ancho — se descartó porque
+   no resuelve el problema real (columnas que no entran *sin* scrollear, no falta
+   de aviso de que hay que scrollear — eso es un problema distinto, sigue abierto).
+4. **Alto — carga inicial silenciosa** (`004182b`). `loadError`/`dataLoading`
+   existían en el store pero ningún componente los leía. Se agregó `refreshAll()`
+   al store (solo expone la función privada `get_loadAll` ya existente, para poder
+   reintentar desde la UI) y un banner nuevo en `AppLayout.tsx`
+   (`DataLoadBanner`, entre el Header y el contenido): si hay error, mensaje +
+   botón "Reintentar"; si está cargando sin error, una franja liviana
+   "Actualizando datos...". Antes de aplicar se confirmó que `jobs`/`users`/
+   `clients` NO se resetean a `[]` en el catch de `get_loadAll` — quedan en lo que
+   tenían antes, que en el boot inicial o justo después de loguearse **es** `[]`
+   — por eso el copy del banner es explícito ("lo que ves en esta pantalla puede
+   estar vacío o desactualizado, no que no haya nada cargado hoy") para que no se
+   confunda con "sin trabajos activos".
+
+### 3. Pendiente, documentado en el informe (no resuelto esta ronda)
+
+- **Alto → bajado de prioridad:** falta de alternativa de teclado para mover
+  tarjetas en el Kanban (`useSensors` solo tiene `PointerSensor`, sin
+  `KeyboardSensor`). Se confirmó con Gonzalo que nadie del equipo opera la app sin
+  mouse hoy — sigue siendo una barrera de accesibilidad real (WCAG 2.1.1), pero se
+  baja de prioridad de implementación hasta que haga falta de verdad.
+- **Medio:** inconsistencia de color de estado entre el Kanban (7 tonos en
+  `KANBAN_COLUMNS`) y el resto de las pantallas (5 tonos en `StatusTone` de
+  `Badges.tsx` — `EN_DISENO`/`EN_PRODUCCION`/`EN_CONTROL_CALIDAD`/
+  `EN_INSTALACION` se ven todos del mismo azul fuera del Kanban).
+- **Medio:** falta de affordance de scroll horizontal en Kanban y Tabla de
+  trabajos en mobile (ningún degradé/sombra que avise que hay más columnas/
+  columnas a la derecha).
+- **Medio:** `aria-label` faltante/inconsistente (`StatusSelect` vs
+  `PrioritySelect` en el mismo archivo, filtros de `JobsPage`, buscador del
+  Header).
+- **Bajo:** hardcodes de spacing/tipografía sueltos (`text-[11px]`/`[10px]`/
+  `[13px]` repetidos sin token, `font-brand` en `JobExportPage.tsx` fuera de su
+  alcance documentado, colores/sombras hardcodeados como `'#999'` y
+  `shadow-[...]`).
+- **Bajo:** componentes duplicados — `EditableCode` (Tabla/Dashboard, ya con una
+  diferencia real entre copias), 3 versiones separadas de un wrapper `Section`,
+  el Kanban con su propio pill de "muestra" en vez de `SampleReviewBadge`, y
+  `confirm()` nativo todavía en 2 lugares (borrar trabajo, borrar archivo) en vez
+  del `ConfirmDialog` ya construido — este último ya venía señalado como corte de
+  alcance deliberado de una ronda anterior.
+
+Ver `AUDITORIA_UXUI_2026-09-15.md` para el detalle completo de cada ítem pendiente
+(archivo + línea exacta + por qué importa + fix concreto propuesto) cuando se
+retome.
+
+### 4. Estado de git (al cierre de la ronda de los 4 primeros fixes)
+
+Todos los commits de esa ronda quedaron pusheados a `origin/main`, hasta
+**`004182b`** inclusive (`f881f94` → `98b2a6e` → `464fff3` → `30807bd` →
+`27ed425` → `004182b`).
+
+### 5. Actualización (sesión siguiente) — 🟠 Alto #3 resuelto: manejo de error en el resto de la ficha
+
+Se cerró el ítem 🟠 Alto #3 del informe (`AUDITORIA_UXUI_2026-09-15.md`) que había
+quedado pendiente al final de la sección anterior: las 7 acciones restantes de
+`JobDetailPage.tsx` sin manejo de error (bloquear/desbloquear, control de calidad,
+tildar producto, subir/aprobar/eliminar archivo, instalación completada).
+
+**Hallazgo antes de aplicar el fix:** al revisar las funciones del store detrás de
+esas 7 acciones, **6 de las 7 no chequeaban el `error` de Supabase en su escritura
+principal** (`blockJob`, `unblockJob`, `toggleQualityCheck`, `addFileVersion`,
+`approveFileVersion`, `completeInstallation`) — no era solo falta de `try/catch`
+en el componente, la propia función del store nunca se enteraba del fallo
+(`supabase-js` no lanza excepción sola; si no se lee `error` explícitamente, el
+fallo queda invisible). Solo `toggleProductChecked` ya estaba bien. Envolver el
+call site en `try/catch` sin tocar el store no hubiera alcanzado: el `alert()`
+casi nunca se hubiera disparado, porque `insertActivity()` (que sí lanza) suele
+tener éxito igual aunque la escritura anterior haya fallado.
+
+**Fix aplicado (commit `513cb44`), dos capas:**
+1. **Store** (`useStore.ts`) — se agregó `if (error) throw error` a cada
+   escritura que lo omitía en las 6 funciones de arriba. Los `jobs.update({
+   last_activity_at })` que son solo un "touch" de timestamp (no el cambio de
+   estado real) se dejaron sin chequear a propósito, mismo criterio que ya usa el
+   resto del store (`assignJob`, `setStageStatus`, `addComment`).
+2. **Componente** (`JobDetailPage.tsx`) — mismo patrón que el Crítico ya resuelto:
+   `try { await accion(...) } catch (err) { alert(friendlyError(err)) }` en los 8
+   call sites, más el `catch` que faltaba en `ProductsTab.save()` (tenía
+   `try/finally` sin `catch`).
+
+**Deuda documentada, igual que ya se había anotado para `setPriority` (§29.2):**
+ninguna de estas 7 tiene rollback optimista como `setStatus`/`toggleProductChecked`
+— no tocan el store hasta que `refreshJob()` trae el valor real al final, así que
+un fallo a mitad de camino (ej. `block_records` insertado pero `jobs.status` sin
+actualizar) no se revierte visualmente porque nunca se había aplicado nada
+visualmente para revertir — solo avisa con el `alert()`. Sigue pendiente
+reemplazar el `alert()` nativo por un patrón consistente con el resto de la UI
+(mismo tema que los `confirm()` nativos ya señalados como corte de alcance).
+
+Verificado con `npm run build` (tsc + vite) y `npm run lint` limpios antes de
+commitear. **Pusheado a `origin/main`: `004182b..513cb44`.** Nada pendiente de
+subir de este ítem.
+
+Quedan del informe: 🟡 Medio #8 (color inconsistente Kanban vs. resto), #9
+(affordance de scroll mobile), #10 (`aria-label` sueltos), #11 (`EditableCode`
+duplicado), y todo lo 🟢 Bajo. 🟠 Alto #6 (teclado en Kanban) sigue bajado de
+prioridad, sin cambios.
