@@ -105,7 +105,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
     >
       <div className="flex items-center gap-3 flex-wrap">
         {canEditPriority
-          ? <PrioritySelect priority={priority} onChange={(p) => setPriority(job.id, p, currentUser!.id)} />
+          ? <PrioritySelect priority={priority} onChange={async (p) => { try { await setPriority(job.id, p, currentUser!.id); } catch (err) { alert(friendlyError(err)); } }} />
           : <PriorityBadge priority={priority} size="sm" />}
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect

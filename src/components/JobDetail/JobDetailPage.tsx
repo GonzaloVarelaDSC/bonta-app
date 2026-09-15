@@ -7,6 +7,7 @@ import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
+import { friendlyError } from '../../lib/errors';
 import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
 import { STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
@@ -143,7 +144,7 @@ export function JobDetailPage() {
             {canChangePriority(user.role) && (
               <select
                 value={effectivePriority(job)}
-                onChange={(e) => setPriority(job.id, e.target.value as Priority, user.id)}
+                onChange={async (e) => { try { await setPriority(job.id, e.target.value as Priority, user.id); } catch (err) { alert(friendlyError(err)); } }}
                 className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
               >
                 {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
@@ -160,7 +161,7 @@ export function JobDetailPage() {
               Muestra al cliente
               <select
                 value={job.sampleReview}
-                onChange={(e) => setSampleReview(job.id, e.target.value as SampleReview, user.id)}
+                onChange={async (e) => { try { await setSampleReview(job.id, e.target.value as SampleReview, user.id); } catch (err) { alert(friendlyError(err)); } }}
                 className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
               >
                 {(Object.keys(SAMPLE_REVIEW_META) as SampleReview[]).map((k) => (
@@ -220,7 +221,11 @@ export function JobDetailPage() {
                   <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Fecha comprometida</div>
                   <input
                     type="date" value={job.committedDate.slice(0, 10)}
-                    onChange={(e) => e.target.value && updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id)}
+                    onChange={async (e) => {
+                      if (!e.target.value) return;
+                      try { await updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id); }
+                      catch (err) { alert(friendlyError(err)); }
+                    }}
                     className="text-ink-800 bg-transparent border border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-1.5 -ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>

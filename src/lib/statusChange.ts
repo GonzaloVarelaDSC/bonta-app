@@ -1,5 +1,6 @@
 import type { Job, JobStatus, RoleId } from '../types';
 import { STATUS_LABELS } from '../data/catalog';
+import { friendlyError } from './errors';
 // Excepción puntual a "lib/ no toca el store" — el toast global (AppLayout)
 // vive en el store y ya se usa como canal de avisos no bloqueantes en toda la
 // app (ver §18.9); reusarlo acá evita duplicar el callback en los 4 lugares
@@ -82,6 +83,9 @@ export function tryChangeJobStatus(
     lines.push('No te olvides de avisarle al cliente — desde la ficha podés generar el mensaje listo para copiar o mandar por WhatsApp.');
     useStore.setState({ toast: lines.join(' ') });
   }
-  setStatus(job.id, targetStatus, byUserId);
+  // AUDITORIA_UXUI_2026-09-15.md, ítem crítico #1: antes fire-and-forget — si
+  // Supabase rechazaba el cambio, el rollback optimista del store pasaba en
+  // silencio total, sin que la persona supiera por qué "volvió solo".
+  setStatus(job.id, targetStatus, byUserId).catch((err) => alert(friendlyError(err)));
   return true;
 }

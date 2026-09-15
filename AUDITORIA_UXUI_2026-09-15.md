@@ -18,6 +18,10 @@ están agrupados en un solo ítem con todas sus ubicaciones, no repetidos uno po
 
 ### 1. Cambiar el estado o la prioridad de un trabajo puede fallar en silencio total
 
+**Estado: resuelto (temporal, con `alert()` nativo — pendiente reemplazar por un
+patrón de notificación consistente con el resto de la UI, ver ítem de `confirm()`
+nativo ya señalado como corte de alcance).**
+
 **Dónde:** el flujo más usado del día a día — Kanban, Tabla de trabajos, Dashboard y
 la ficha completa.
 
@@ -63,6 +67,13 @@ mitad de estos archivos para otro uso.
 ---
 
 ### 2. Activar/desactivar un usuario puede fallar sin que nadie se entere
+
+**Estado: resuelto (temporal, con `alert()` nativo — pendiente reemplazar por un
+patrón de notificación consistente con el resto de la UI, ver ítem de `confirm()`
+nativo ya señalado como corte de alcance). Además se corrigió `setUserActive` en
+`src/store/useStore.ts:562-565`, que no revisaba el `error` de Supabase y aplicaba
+el cambio local igual aunque el update real hubiera fallado — sin ese fix, el
+`try/catch` del componente nunca se hubiera disparado.**
 
 **Dónde:** `src/components/Users/UsersPage.tsx:24` — el checkbox "Activo" de cada
 fila, `onChange={(e) => setUserActive(u.id, e.target.checked)}`.

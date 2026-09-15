@@ -1,6 +1,7 @@
 import { useStore } from '../../store/useStore';
 import { Avatar } from '../Common/Badges';
 import { ROLES } from '../../data/catalog';
+import { friendlyError } from '../../lib/errors';
 
 export function UsersPage() {
   const users = useStore((s) => s.users);
@@ -21,7 +22,22 @@ export function UsersPage() {
               </div>
             </div>
             <label className="flex items-center gap-2 text-xs text-ink-700">
-              <input type="checkbox" checked={u.active} onChange={(e) => setUserActive(u.id, e.target.checked)} className="rounded" />
+              <input
+                type="checkbox" checked={u.active} className="rounded"
+                onChange={async (e) => {
+                  const target = e.target;
+                  const next = target.checked;
+                  try {
+                    await setUserActive(u.id, next);
+                  } catch (err) {
+                    // Sin rollback propio en el store (a diferencia de setStatus) —
+                    // se revierte el checkbox a mano para no mostrar un cambio de
+                    // acceso que en realidad no se aplicó (AUDITORIA_UXUI_2026-09-15.md, crítico #2).
+                    target.checked = u.active;
+                    alert(friendlyError(err));
+                  }
+                }}
+              />
               Activo
             </label>
           </div>

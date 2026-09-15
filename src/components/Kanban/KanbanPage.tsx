@@ -12,6 +12,7 @@ import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
 import { Avatar, CountdownBadge } from '../Common/Badges';
 import type { Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
+import { friendlyError } from '../../lib/errors';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { fmtDate } from '../../lib/dates';
 
@@ -287,11 +288,15 @@ export function KanbanPage() {
     }
   }
 
-  function undo() {
+  async function undo() {
     if (!undoAction) return;
-    setStatus(undoAction.jobId, undoAction.fromStatus, user.id);
     setUndoAction(null);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    try {
+      await setStatus(undoAction.jobId, undoAction.fromStatus, user.id);
+    } catch (err) {
+      alert(friendlyError(err));
+    }
   }
 
   return (

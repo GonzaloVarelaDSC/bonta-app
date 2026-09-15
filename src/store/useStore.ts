@@ -560,7 +560,8 @@ export const useStore = create<StoreState>()((set, get) => ({
   },
 
   setUserActive: async (userId, active) => {
-    await supabase.from('profiles').update({ active }).eq('id', userId);
+    const { error } = await supabase.from('profiles').update({ active }).eq('id', userId);
+    if (error) throw error;
     set((s) => ({ users: s.users.map((u) => u.id === userId ? { ...u, active } : u) }));
   },
 
