@@ -144,6 +144,18 @@ deshabilitar el botón de subida mientras esa versión puntual está en curso.
 
 ### 4. Si falla la carga inicial de datos, la pantalla queda vacía sin explicación
 
+**Estado: resuelto.** Se agregó `refreshAll()` al store (`src/store/useStore.ts`,
+solo expone la función privada `get_loadAll` ya existente) y un banner en
+`AppLayout.tsx` (`DataLoadBanner`) entre el Header y el contenido: si `loadError`
+tiene contenido, muestra el mensaje + botón "Reintentar"; si `dataLoading` es
+`true` sin error, una franja liviana "Actualizando datos...". Se verificó antes de
+aplicar que `jobs`/`users`/`clients` no se resetean a vacío en el catch de
+`get_loadAll` — quedan en lo que tenían antes, que en el boot inicial o justo
+después de loguearse **es** `[]` — así que el copy del banner de error es
+explícito sobre que la pantalla de abajo puede estar vacía por el error, no
+porque no haya nada cargado hoy (evita que se confunda con "sin trabajos
+activos").
+
 **Dónde:** `src/store/useStore.ts:599, 618-628` — `dataLoading` y `loadError` se
 setean correctamente en `get_loadAll()`, pero no los lee ningún componente
 (`src/App.tsx` solo evalúa `authReady`, no `dataLoading`; `loadError` no aparece en

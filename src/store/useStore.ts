@@ -79,6 +79,10 @@ interface StoreState {
   setUserActive: (userId: string, active: boolean) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
   resetDemoData: () => Promise<void>;
+  // AUDITORIA_UXUI_2026-09-15.md ítem #4 — expone get_loadAll() para el botón
+  // "Reintentar" del banner de error de AppLayout.tsx (antes era una función
+  // privada del módulo, sin forma de volver a dispararla desde un componente).
+  refreshAll: () => Promise<void>;
   loadJobComments: (jobId: string) => Promise<void>;
   loadJobActivity: (jobId: string) => Promise<void>;
 }
@@ -578,6 +582,7 @@ export const useStore = create<StoreState>()((set, get) => ({
   },
 
   resetDemoData: async () => { await get_loadAll(set, get); },
+  refreshAll: async () => { await get_loadAll(set, get); },
 
   loadJobComments: async (jobId) => { await refreshComments(set, jobId); },
   loadJobActivity: async (jobId) => {
