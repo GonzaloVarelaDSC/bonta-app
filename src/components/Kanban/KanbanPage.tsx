@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
 import { Avatar, CountdownBadge } from '../Common/Badges';
+import { ScrollFadeX } from '../Common/ScrollFade';
 import type { Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
@@ -312,7 +313,7 @@ export function KanbanPage() {
         </div>
         <span className="text-xs text-ink-700 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
-      <div className="flex-1 min-h-0 mt-4 overflow-x-auto">
+      <ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-4" className="h-full overflow-x-auto" fadeFrom="from-ink-50">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>
           {/* 7 columnas fijas dejan poco margen por columna incluso en un monitor
               normal (a 1440px de ancho de pantalla ya se veía "Bensimon" cortado a
@@ -337,7 +338,7 @@ export function KanbanPage() {
             {activeJob && <KanbanCardOverlay job={activeJob} client={clients.find((c) => c.id === activeJob.clientId)} />}
           </DragOverlay>
         </DndContext>
-      </div>
+      </ScrollFadeX>
 
       {undoAction && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-ink-950 text-white text-sm rounded-lg shadow-pop px-4 py-2.5">

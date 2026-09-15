@@ -10,6 +10,7 @@ import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { statusOptionsFor, tryChangeJobStatus, isClosedStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
+import { ScrollFadeX } from '../Common/ScrollFade';
 
 function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void> }) {
   const [editing, setEditing] = useState(false);
@@ -78,7 +79,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
   }
 
   return (
-    <div className="overflow-x-auto">
+    <ScrollFadeX className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-ink-700 border-b border-ink-100">
@@ -157,6 +158,6 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollFadeX>
   );
 }

@@ -363,7 +363,33 @@ color nueva.
 
 ### 9. Scroll horizontal sin ninguna señal de que hay más contenido (Kanban y Tabla en mobile)
 
-**Dónde:** `src/components/Kanban/KanbanPage.tsx` (contenedor `overflow-x-auto` de
+**Estado: resuelto.** Se creó `src/components/Common/ScrollFade.tsx`
+(`ScrollFadeX`) — un wrapper reusable que mide `scrollWidth`/`clientWidth`/
+`scrollLeft` del contenedor scrolleable (con `onScroll` + `ResizeObserver`, sin
+depender de una librería nueva) y superpone un degradé sutil de 40px en el borde
+derecho, con `opacity-0`/`opacity-100` + `transition-opacity` — **no es una
+sombra fija**: se apaga solo en cuanto `scrollLeft` llega al final del contenido
+(con 1px de margen para redondeo de subpíxel), y vuelve a aparecer si se scrollea
+para atrás. Aplicado en los dos lugares que señalaba el informe:
+- `KanbanPage.tsx` — el contenedor `overflow-x-auto` de la grilla de 7 columnas
+  (línea ~315) ahora es `<ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-4"
+  className="h-full overflow-x-auto" fadeFrom="from-ink-50">` — `fadeFrom` en
+  `from-ink-50` porque el Kanban se ve directo sobre el fondo crema de la app
+  (`bg-ink-50` en `AppLayout`), no sobre una tarjeta blanca.
+- `JobsTable.tsx` — el `<div className="overflow-x-auto">` que envuelve la
+  `<table>` (línea ~81) ahora es `<ScrollFadeX className="overflow-x-auto">`, con
+  el `fadeFrom` por default (`from-white`) porque tanto `JobsPage` como
+  `ClientsPage` (las dos pantallas que reusan `JobsTable`, ver CLAUDE.md
+  estructura de carpetas) envuelven la tabla en una tarjeta blanca
+  (`bg-white rounded-xl ... overflow-hidden`) — el fix llega gratis a las dos.
+
+Verificado en vivo con la técnica de bypass de auth local (§25/§26/§27/§29 de
+CLAUDE.md, revertida con `git checkout` antes de commitear): en Kanban a 900px
+de ancho (`scrollWidth` 1150 vs. `clientWidth` 852) el degradé arranca en
+`opacity: 1` y cae a `opacity: 0` al llegar al final del scroll; en la Tabla a
+375px (`scrollWidth` 1166 vs. `clientWidth` 318) mismo comportamiento.
+
+**Dónde (referencia original):** `src/components/Kanban/KanbanPage.tsx` (contenedor `overflow-x-auto` de
 la grilla) y `src/components/Jobs/JobsTable.tsx` (`overflow-x-auto` alrededor de
 la tabla) en viewport de 375px.
 
@@ -503,7 +529,9 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 | 5 | 🟠 Alto | Kanban no entra en notebooks comunes | Angostar `min-w` de la grilla |
 | 6 | 🟠 Alto | Sin alternativa de teclado para mover tarjetas | Sumar `KeyboardSensor` de dnd-kit |
 | 7 | 🟠 Alto | Inputs de medida sin nombre accesible | 3 atributos `aria-label` |
-| 8-11 | 🟡 Medio | Color inconsistente, scroll sin señal, labels sueltos, `EditableCode` duplicado | Cambios acotados, sin riesgo |
+| 8 | 🟡 Medio | Color inconsistente entre Kanban y resto | Cambio acotado, sin riesgo |
+| 9 | 🟡 Medio | Scroll sin señal (Kanban y Tabla mobile) | **Resuelto** — `ScrollFadeX` compartido, degradé que se apaga solo al llegar al final |
+| 10-11 | 🟡 Medio | `aria-label` sueltos, `EditableCode` duplicado | Cambios acotados, sin riesgo |
 | resto | 🟢 Bajo | Pulido visual y limpieza de código | Sin apuro, sin impacto de uso real |
 
 Los ítems 1-7 (crítico + alto) son los que recomendaría atacar primero — todos
