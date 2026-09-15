@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 13/09/2026 (sección 27).
+la contradiga más arriba**. Última actualización: 15/09/2026 (sección 28).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -1955,3 +1955,59 @@ subida real de archivos a Storage, confirmar la Etapa 3 del wizard,
 `credits_as_assigner` (columna muerta), y **confirmar que Gonzalo corrió el SQL
 del punto 1 de esta sección** (015/016) — no asumir que ya está aplicado la
 próxima vez, verificar con el `select` de arriba.
+
+---
+
+## 28. Actualización 15/09 — se agrega al tintero: facturación electrónica AFIP (proyecto grande, aparte)
+
+Gonzalo pidió sumar "poder facturar los trabajos". Se conversó el alcance antes
+de tocar nada (nunca se llegó a escribir código esta ronda) — resultado: **es un
+proyecto propio, no una funcionalidad más de esta app**, y arranca en una
+conversación nueva y dedicada cuando Gonzalo junte los datos que faltan (mismo
+criterio que se usó para la base de materiales, §16 punto 4).
+
+**Decidido en la conversación:**
+- Gonzalo quiere una **factura real con validez fiscal** (CAE de AFIP), no un
+  comprobante interno ni un PDF de referencia — Copernico no la emite hoy, la
+  idea es que la emita esta app.
+- El estudio **ya tiene el certificado digital de AFIP** dado de alta para
+  facturación electrónica (WSFE) — el bloqueo más grande (trámite en AFIP) ya
+  no existe.
+- Condición frente al IVA: **Responsable Inscripto** → va a necesitar poder
+  emitir **Factura A** (a otros responsables inscriptos) y **Factura B** (a
+  consumidor final / monotributistas), según la condición fiscal de cada
+  cliente.
+
+**Restricción de seguridad no negociable, ya acordada con Gonzalo:** el
+certificado y la clave privada de AFIP **nunca** pueden ir al repo de GitHub
+(es público) ni a una variable de entorno con prefijo `VITE_` (esas quedan
+embebidas en el bundle que baja al navegador de cualquiera). Van a vivir en un
+secreto server-side (candidato: Supabase Edge Function secrets) — la app hoy no
+tiene ningún componente server-side propio, así que esto es sumar una pieza de
+arquitectura nueva, no reusar algo existente. Cuando se llegue a esa parte,
+Gonzalo tiene que cargar el certificado él mismo directo en el dashboard de
+Supabase/Vercel — **nunca pegarlo en el chat**.
+
+**Datos que todavía faltan (Gonzalo los tiene que conseguir antes de arrancar
+la conversación nueva):**
+1. CUIT del estudio.
+2. Punto de venta habilitado específicamente para webservice de facturación
+   electrónica (no un talonario manual/preimpreso).
+3. Confirmar dónde está guardado hoy el certificado/clave (para saber cómo
+   migrarlo al lugar seguro sin que pase por el chat ni por git).
+
+**Implicancias de diseño para cuando se arranque (anotado para no perderlo):**
+- El modelo `Client` de esta app hoy es liviano (solo autocompletado, ver
+  CLAUDE.md sección 4 punto 3 — los clientes "de verdad" viven en Copernico).
+  Para elegir automáticamente Factura A vs. B hace falta CUIT + condición
+  frente al IVA por cliente, que hoy no existen en `Client` — hay que decidir
+  si se agregan campos nuevos acá o se resuelve de otra forma al momento de
+  facturar.
+- Conviene probar primero en el ambiente de **Homologación** de AFIP (necesita
+  su propio certificado de prueba, distinto al de producción) antes de emitir
+  algo real.
+- AFIP devuelve el número de comprobante y el CAE al emitir (WSFE maneja la
+  numeración), así que no hace falta que esta app lleve un contador propio.
+
+No se tocó código en esta ronda para este ítem — es puramente de alcance/
+planificación, a la espera de que Gonzalo junte los 3 datos de arriba.
