@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 15/09/2026 (sección 29).
+la contradiga más arriba**. Última actualización: 15/09/2026 (sección 30).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2180,3 +2180,130 @@ Quedan del informe: 🟡 Medio #8 (color inconsistente Kanban vs. resto), #9
 (affordance de scroll mobile), #10 (`aria-label` sueltos), #11 (`EditableCode`
 duplicado), y todo lo 🟢 Bajo. 🟠 Alto #6 (teclado en Kanban) sigue bajado de
 prioridad, sin cambios.
+
+Este mismo registro (este punto 5) se actualizó en un commit aparte, `c1a308f`,
+también pusheado a `origin/main`.
+
+---
+
+## 30. Actualización 15/09 (cont.) — consolidar campos de texto libre, "minuta técnica" en la ficha, Kanban compacto
+
+Ronda de feedback de uso real (no de la auditoría) — Gonzalo probó la app y volvió
+con 6 pedidos concretos. **Nota importante:** el resto de los ítems de
+`AUDITORIA_UXUI_2026-09-15.md` (🟡 Medio #8/#9/#10/#11 y los 🟢 Bajo) ya estaban
+resueltos al momento de esta ronda, pese a que el punto 5 de arriba (§29) todavía
+los liste como pendientes — ese punto quedó congelado en el momento en que se
+escribió; ver los commits `588990a` → `a2b622a` → `01390b8` → `3a657b7` para el
+detalle de esas rondas intermedias, todas ya pusheadas antes de esta.
+
+### 1-2. Campos de texto libre repetidos + "se pierden" en la ficha — resueltos
+
+**Diagnóstico:** existían 4 campos de texto libre superpuestos y mal repartidos:
+`Job.description` ("qué hay que producir"), `Job.observations` (en Carga rápida,
+debajo de Productos — literalmente lo mismo que `description` sin ninguna
+distinción de uso real), `Job.specialRequirements` ("Requisitos especiales" —
+**nunca tuvo campo en Carga rápida**, solo se podía cargar después desde la
+ficha) y `Product.notes` (por producto, con su propia razón de ser documentada en
+`types/index.ts`). El dato **no se perdía realmente** — `description`/
+`observations` se mostraban en la pestaña General y `products[].notes`/
+`specialRequirements` en la pestaña Detalle — pero estaba repartido entre 2 tabs
+sin ningún resumen visible al entrar a la ficha (que abre en General por
+default), y `observations` no aportaba nada que `description` no dijera ya.
+
+**Fix 1 — se sacó `observations` como campo separado** (Gonzalo lo propuso como
+la opción simple, y se tomó esa por sobre fusionar todo en un campo único): marcado
+`@deprecated` en `types/index.ts` (mismo criterio que `technique`/`finish`/
+`color`/etc. — no se dropea la columna de Supabase, por si hay datos viejos,
+simplemente ya no se lee ni se escribe desde ningún formulario). Se sacó el
+textarea "Observaciones" de Carga rápida (`QuickJobPage.tsx`), el `Field`
+correspondiente en la pestaña General de la ficha (`JobDetailPage.tsx`), la
+sección "Observaciones" de la hoja de exportación al cliente
+(`JobExportPage.tsx`), y el campo del payload de `createJob`
+(`NewJobInput`/`useStore.ts`). `specialRequirements` **no se tocó** — sigue
+siendo un campo distinto (a diferencia de `observations`, si Gonzalo confirma que
+también es redundante con `description`, es un cambio aparte a pedir
+explícitamente, no algo que se haya decidido acá).
+
+**Fix 2 — "minuta técnica" en la pestaña General** (soluciona la sensación de
+"se pierde"): debajo de "Descripción", si el trabajo tiene productos o requisitos
+especiales cargados, aparece un bloque nuevo "Detalle técnico" con
+`<ProductsView products={job.products} />` (mismo componente de solo lectura que
+ya usa la pestaña Detalle — no es un campo nuevo ni una copia editable, es un
+preview de la misma fuente de datos) + el texto de `specialRequirements` si lo
+hay, y un link "Editar en la pestaña Detalle →" que cambia de tab. Efecto: al
+entrar a cualquier ficha (General es la tab por default) ya se ve todo — cliente,
+fechas, descripción, y ahora también qué productos/materiales/medidas/notas
+tiene cargados y cualquier requisito especial — sin tener que ir a buscarlo a
+otra pestaña. Editar sigue siendo solo desde Detalle (no se duplicó la
+superficie de edición, solo la de lectura).
+
+**Hallazgo de las skills corridas sobre este cambio** (`design-critique` +
+`accessibility-review`, ver punto 4 de abajo): el preview de solo lectura
+reusaba `ProductsView` tal cual, que renderiza un checkbox real
+`disabled` para "procesado" cuando no se pasa `onToggle` — un checkbox
+deshabilitado se ve casi idéntico a uno clickeable (confunde a simple vista) y,
+más grave, revertir ese `disabled` a un `<span>` decorativo sin más lo dejaba
+sin nombre accesible (un lector de pantalla lo saltea en silencio, cuando el
+checkbox original sí anunciaba su estado). Se resolvió en
+`Common/ProductsEditor.tsx`: sin `onToggle`, `ProductsView` ahora renderiza un
+ícono estático (`Check` de lucide-react, fondo verde si está tildado) con
+`role="img" aria-label="Procesado"/"Sin procesar"` — visualmente distinto de un
+control interactivo y accesible por lectores de pantalla. Con `onToggle` (la
+pestaña Detalle) sigue siendo el checkbox real de siempre, sin cambios.
+
+### 3. Buscador de Carga rápida — aclaración, sin cambio de código
+
+Gonzalo preguntó para qué sirve el buscador que aparece arriba en Carga rápida.
+**No es un campo de la propia página** — es el buscador global del Header
+(`Layout/Header.tsx`, "Buscar trabajo, cliente, material...") que aparece en
+TODAS las pantallas de la app (vía `AppLayout`), no algo puesto a propósito en
+el formulario de alta. Se le explicó así, sin tocar código — si en algún momento
+pide sacarlo específicamente de esa pantalla (podría verse como ruido en medio
+de un formulario), es un cambio a evaluar aparte, no se hizo acá.
+
+### 4. Skills corridas + hallazgo de contraste
+
+`design-critique` y `accessibility-review` sobre los cambios de este punto 1-2 y
+del punto 5 de abajo. Contraste del `CountdownBadge` compacto verificado contra
+los 5 tonos que reusa (`crit` 7.77:1, `urg` 6.21:1, `norm` 5.78:1, `plan` 6.35:1,
+`wait` 6.59:1) — todos de sobra por encima de AA (4.5:1); bajar el tamaño de
+fuente a 10px no cambia el ratio de contraste (depende solo del color, no del
+tamaño). El hallazgo real de accesibilidad fue el del ícono de "procesado" ya
+descripto arriba.
+
+### 5. Countdown del Kanban, demasiado grande — resuelto
+
+`CountdownBadge` (`Common/Badges.tsx`) suma una prop `compact` — sin emoji,
+`text-[10px] px-1.5 py-0.5` en vez de `text-xs px-2 py-1` con emoji, mismo peso
+visual que el chip de N° de Copernico que ya vive al lado en la tarjeta del
+Kanban. Se usa solo en `KanbanPage.tsx` (`CardBody`); el resto de la app
+(Tabla, Dashboard, ficha) sigue con la versión normal. La fila que contiene
+ambos chips (código + countdown) pasó a `flex-wrap`: en columnas angostas (el
+caso normal del Kanban — ver AUDITORIA_UXUI_2026-09-15.md ítem #5) un código
+largo tipo `TRB-2026-XXXXX` más el countdown no entran siempre en una sola
+línea; antes el countdown se cortaba a mitad de palabra ("Fal/tan/0h/0m" en 3
+líneas, lo que Gonzalo describió como "rarísimo, mucho espacio mal usado")
+— ahora, si no entran juntos, el countdown baja entero a su propia línea.
+
+### 6. Nota técnica: el navegador integrado no pudo leer contenido de `bonta-app.vercel.app`
+
+Al pedir confirmar el deploy en Vercel, `navigate` a `https://bonta-app.vercel.app`
+funcionó (la pestaña carga la URL) pero **todas** las herramientas de lectura de
+contenido (`computer{screenshot}`, `get_page_text`, `read_page`,
+`javascript_tool`) fallaron repetidamente con `"Policy check temporarily
+unavailable; retry"` — probado en la pestaña existente y en una pestaña nueva,
+varias veces, en dos rondas de la misma sesión. **En `localhost:5173` estas
+mismas herramientas funcionaron sin problema en la misma sesión**, así que no es
+una falla genérica del navegador — parece específico del origen
+`bonta-app.vercel.app`. No se pudo determinar la causa (¿permiso pendiente de
+aprobar del lado de Gonzalo? ¿bloqueo temporal de la herramienta?). Si una
+sesión futura necesita mirar el sitio deployado y se encuentra con el mismo
+error, no vale la pena reintentar en loop — probar una vez, y si persiste,
+pedirle a Gonzalo que confirme visualmente él mismo o que revise si hay algún
+permiso pendiente de aprobar en el panel del navegador integrado.
+
+### 7. Estado de git
+
+Todo lo de esta ronda (puntos 1, 2 y 5; el punto 3 no tocó código) va en un solo
+commit. Verificar en el historial de `git log` si ya se pusheó a `origin/main`
+antes de asumir que estos cambios están en producción.

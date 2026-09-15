@@ -150,13 +150,29 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
 // Etiqueta de "cuánto falta / cuánto se atrasó" hasta la fecha de entrega. Una
 // vez que el trabajo está listo para entregar, entregado o cancelado deja de
 // tener sentido contar días — directamente no se muestra nada (Gonzalo, 08/09).
-export function CountdownBadge({ iso, status }: { iso: string; status?: JobStatus }) {
+// `compact` (Gonzalo, 15/09: la versión normal "rarísima, mucho espacio mal
+// usado" en la tarjeta angosta del Kanban) saca el emoji y baja tamaño/padding
+// al mismo nivel que el resto de los chips chicos de esa tarjeta (el N° de
+// Copernico, `text-[10px] px-1.5 py-0.5`) — el color ya comunica la urgencia,
+// no hace falta el ícono para leerlo de un vistazo en un espacio tan chico.
+export function CountdownBadge({ iso, status, compact }: { iso: string; status?: JobStatus; compact?: boolean }) {
   if (status && isClosedStatus(status)) return null;
   const c = countdown(iso);
   const tone = c.tone === 'ok' ? 'plan' : c.tone;
   // Cuando faltan pocos días (tono crit/urg) suma un borde del mismo color —
   // el fondo pastel solo no llamaba suficiente la atención.
   const urgent = tone === 'crit' || tone === 'urg';
+  if (compact) {
+    return (
+      <span className={clsx(
+        'inline-flex items-center rounded text-[10px] font-semibold px-1.5 py-0.5 tabular whitespace-nowrap shrink-0',
+        TONE_CLASSES[tone],
+        urgent && 'border border-current/30'
+      )}>
+        {c.label}
+      </span>
+    );
+  }
   return (
     <span className={clsx(
       'inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1 tabular',

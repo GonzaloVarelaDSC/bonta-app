@@ -77,7 +77,6 @@ export function JobExportPage() {
         ))}
 
         {job.specialRequirements && <Section title="Requisitos especiales">{job.specialRequirements}</Section>}
-        {job.observations && <Section title="Observaciones">{job.observations}</Section>}
 
         <Section title="Fecha de entrega comprometida">{fmtDate(job.committedDate)}</Section>
 

@@ -211,36 +211,59 @@ export function JobDetailPage() {
 
         <div className="p-6" role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
           {tab === 'General' && (
-            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm max-w-3xl">
-              <Field label="Cliente" value={client?.name} />
-              <Field label="Contacto" value={job.contactPhone ? `${job.contactName} · ${job.contactPhone}` : job.contactName} />
-              <Field label="Generado por" value={creator?.name ?? '—'} />
-              <Field label="Responsable interno" value={responsible?.name} />
-              <Field label="Asignados" value={[...job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean), ...job.assignedNames].join(', ') || '—'} />
-              <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
-              <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
-              {canChangePriority(user.role) ? (
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Fecha comprometida</div>
-                  <input
-                    type="date" value={job.committedDate.slice(0, 10)}
-                    onChange={async (e) => {
-                      if (!e.target.value) return;
-                      try { await updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id); }
-                      catch (err) { alert(friendlyError(err)); }
-                    }}
-                    className="text-ink-800 bg-transparent border border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-1.5 -ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
+            <>
+              <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm max-w-3xl">
+                <Field label="Cliente" value={client?.name} />
+                <Field label="Contacto" value={job.contactPhone ? `${job.contactName} · ${job.contactPhone}` : job.contactName} />
+                <Field label="Generado por" value={creator?.name ?? '—'} />
+                <Field label="Responsable interno" value={responsible?.name} />
+                <Field label="Asignados" value={[...job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean), ...job.assignedNames].join(', ') || '—'} />
+                <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
+                <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
+                {canChangePriority(user.role) ? (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Fecha comprometida</div>
+                    <input
+                      type="date" value={job.committedDate.slice(0, 10)}
+                      onChange={async (e) => {
+                        if (!e.target.value) return;
+                        try { await updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id); }
+                        catch (err) { alert(friendlyError(err)); }
+                      }}
+                      className="text-ink-800 bg-transparent border border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-1.5 -ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                ) : (
+                  <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
+                )}
+                <Field label="Tipo de trabajo" value={jobTypes.find((t) => t.id === job.jobTypeId)?.label} />
+                <div className="sm:col-span-2">
+                  <Field label="Descripción" value={job.description} block />
                 </div>
-              ) : (
-                <Field label="Fecha comprometida" value={fmtDate(job.committedDate)} />
-              )}
-              <Field label="Tipo de trabajo" value={jobTypes.find((t) => t.id === job.jobTypeId)?.label} />
-              <div className="sm:col-span-2">
-                <Field label="Descripción" value={job.description} block />
               </div>
-              {job.observations && <div className="sm:col-span-2"><Field label="Observaciones" value={job.observations} block /></div>}
-            </div>
+
+              {/* Minuta técnica visible apenas se entra a la ficha (pestaña General,
+                  la que abre por defecto) — antes había que ir a la pestaña Detalle
+                  para ver qué material/medidas/notas tiene cada producto, y Gonzalo
+                  lo describió como que esa info "se pierde" (15/09). Es un preview de
+                  solo lectura de los mismos `job.products`/`job.specialRequirements`
+                  que se editan en la pestaña Detalle — no es un campo nuevo ni una
+                  copia editable, así que no reintroduce la duplicación del punto 1. */}
+              {(job.products.length > 0 || job.specialRequirements) && (
+                <div className="max-w-3xl mt-6 pt-5 border-t border-ink-100">
+                  <div className="text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5">
+                    Detalle técnico
+                  </div>
+                  <ProductsView products={job.products} />
+                  {job.specialRequirements && (
+                    <p className="text-sm text-ink-800 mt-3 leading-relaxed">{job.specialRequirements}</p>
+                  )}
+                  <button onClick={() => setTab('Detalle')} className="text-xs font-medium text-brand-600 hover:underline mt-3">
+                    Editar en la pestaña Detalle →
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {tab === 'Detalle' && (

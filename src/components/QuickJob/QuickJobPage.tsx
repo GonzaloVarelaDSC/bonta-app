@@ -81,7 +81,6 @@ export function QuickJobPage() {
   const [priorityTouched, setPriorityTouched] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([emptyProduct()]);
-  const [observations, setObservations] = useState('');
 
   const [requiresInstallation, setRequiresInstallation] = useState(false);
   const [installAddress, setInstallAddress] = useState('');
@@ -170,7 +169,7 @@ export function QuickJobPage() {
         products: products
           .map((p) => ({ ...p, sizeItems: p.sizeItems.filter((it) => it.quantity || it.width || it.height) }))
           .filter((p) => p.label.trim() || p.materialIds.length > 0 || p.sizeItems.length > 0 || p.notes.trim()),
-        observations, specialRequirements: '', activeStageKeys: jobType.defaultStages,
+        specialRequirements: '', activeStageKeys: jobType.defaultStages,
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId, responsibleUserId, assignedUserIds: [], assignedNames,
       });
@@ -252,8 +251,6 @@ export function QuickJobPage() {
 
         <Section title="Productos" hint="Un trabajo puede tener más de un producto (ej. Corpóreo 3D + Corpóreo en acrílico) — cada uno con su propio material y medidas.">
           <ProductsEditor products={products} onChange={setProducts} jobTypeId={jobTypeId} />
-          <div><label htmlFor="qj-obs" className={labelCls}>Observaciones</label>
-            <textarea id="qj-obs" className={inputCls} rows={2} value={observations} onChange={(e) => setObservations(e.target.value)} /></div>
         </Section>
 
         <Section title="Instalación">

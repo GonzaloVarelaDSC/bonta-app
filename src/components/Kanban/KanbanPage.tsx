@@ -53,14 +53,14 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
   const resp = users.find((u) => u.id === job.responsibleUserId);
   return (
     <>
-      <div className="flex items-center justify-between gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
         <span className={clsx(
           'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
           job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
         )}>
           {job.code ?? 'Sin N°'}
         </span>
-        <CountdownBadge iso={job.committedDate} status={job.status} />
+        <CountdownBadge iso={job.committedDate} status={job.status} compact />
       </div>
       <div className="mt-1.5 flex items-start gap-1.5 min-w-0">
         <span className="text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>

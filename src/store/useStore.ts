@@ -95,7 +95,7 @@ export interface NewJobInput {
   name: string; clientId: string; contactName: string; contactPhone: string;
   jobTypeId: Job['jobTypeId']; description: string;
   committedDate: string; priorityManual: Priority; clientImportant: boolean;
-  products: Job['products']; observations: string; specialRequirements: string;
+  products: Job['products']; specialRequirements: string;
   activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
@@ -285,7 +285,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       responsible_user_id: input.responsibleUserId, requested_date: input.committedDate, committed_date: input.committedDate,
       job_type_id: input.jobTypeId, description: input.description, products: input.products,
       assigned_names: input.assignedNames,
-      observations: input.observations, special_requirements: input.specialRequirements,
+      special_requirements: input.specialRequirements,
       status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,
     }).select().single();

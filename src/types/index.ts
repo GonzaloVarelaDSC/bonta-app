@@ -236,6 +236,7 @@ export interface Job {
   finish: string;
   /** @deprecated ídem. */
   color: string;
+  /** @deprecated redundante con `description` (mismo texto libre a nivel trabajo, sin distinción real de uso) — Gonzalo pidió sacarlo (15/09). Queda en el esquema por datos viejos, ya no se carga ni se muestra desde ningún formulario. */
   observations: string;
   specialRequirements: string;
 

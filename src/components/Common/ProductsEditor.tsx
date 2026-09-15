@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lightbulb, Plus, X, Truck } from 'lucide-react';
+import { Lightbulb, Plus, X, Truck, Check } from 'lucide-react';
 import { SizeItemsEditor, SizeItemsView } from './SizeItemsEditor';
 import { useStore } from '../../store/useStore';
 import type { JobTypeId, MaterialId, Product } from '../../types';
@@ -149,11 +149,27 @@ export function ProductsView({ products, onToggle }: { products: Product[]; onTo
     <div className="space-y-2">
       {products.map((p) => (
         <div key={p.id} className={`bg-white border rounded-lg px-3 py-2.5 ${p.outsourced ? 'border-site/40' : 'border-ink-100'}`}>
-          <label className="flex items-start gap-2.5 cursor-pointer">
-            <input
-              type="checkbox" checked={p.checked} onChange={() => onToggle?.(p.id)}
-              className="rounded mt-0.5" disabled={!onToggle}
-            />
+          <label className={`flex items-start gap-2.5 ${onToggle ? 'cursor-pointer' : ''}`}>
+            {onToggle ? (
+              <input
+                type="checkbox" checked={p.checked} onChange={() => onToggle(p.id)}
+                className="rounded mt-0.5"
+              />
+            ) : (
+              // Sin `onToggle` este es un preview de solo lectura (ej. la "minuta"
+              // de la pestaña General) — un checkbox real deshabilitado se ve casi
+              // igual a uno clickeable y puede parecer roto; acá un ícono estático
+              // deja claro que tildar "procesado" se hace desde la pestaña Detalle.
+              // `role="img"` + `aria-label` explícito porque, a diferencia del
+              // checkbox que reemplaza, un <span> decorativo no anuncia ningún
+              // estado solo — sin esto un lector de pantalla lo saltea en silencio.
+              <span
+                role="img" aria-label={p.checked ? 'Procesado' : 'Sin procesar'}
+                className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${p.checked ? 'bg-plan border-plan' : 'border-ink-300'}`}
+              >
+                {p.checked && <Check size={10} className="text-white" strokeWidth={3} aria-hidden />}
+              </span>
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-sm font-semibold ${p.checked ? 'text-ink-700 line-through decoration-ink-300' : 'text-ink-900'}`}>
