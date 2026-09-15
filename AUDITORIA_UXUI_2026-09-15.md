@@ -171,6 +171,15 @@ hoy solo se chequea `authReady`.
 
 ### 5. El Kanban no entra completo en una notebook común, ni siquiera hasta "Listo para entregar"
 
+**Estado: resuelto.** `min-w-[1400px]` bajó a `min-w-[1150px]`
+(`src/components/Kanban/KanbanPage.tsx`) — recupera las 7 columnas sin scroll en
+1440-1536px y mejora 1366px de ~5 a ~6 y media, sin reintroducir el truncamiento
+de texto (el fix de `line-clamp-2` en `CardBody` es independiente del ancho). Se
+evaluó la alternativa de agregar solo una señal visual de scroll (sombra/degradé)
+en vez de tocar el ancho, pero esa opción no resuelve este ítem — el problema acá
+es que las columnas no entran *sin* scrollear, no que falte avisar que hay que
+scrollear (eso es un problema distinto, ya trackeado aparte en el ítem #9).
+
 **Dónde:** `src/components/Kanban/KanbanPage.tsx` — grilla de 7 columnas,
 `min-w-[1400px]` (línea ~320), dentro de un layout con sidebar `w-60` (240px,
 `src/components/Layout/Sidebar.tsx:23`) + `p-6` de padding de página (48px).

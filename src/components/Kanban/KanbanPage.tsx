@@ -316,13 +316,16 @@ export function KanbanPage() {
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>
           {/* 7 columnas fijas dejan poco margen por columna incluso en un monitor
               normal (a 1440px de ancho de pantalla ya se veía "Bensimon" cortado a
-              "Bens…" — ver CLAUDE.md §25, hallazgo 3). Antes el mínimo de 1120px
-              coincidía casi exacto con el ancho disponible real, así que nunca
-              scrolleaba y las columnas quedaban en ~155px. Con 1400px de piso
-              (200px/columna) se scrollea antes pero cada columna tiene aire real;
-              el nombre de cliente además ahora envuelve en 2 líneas en vez de
-              truncar (ver CardBody) para no perder información igual. */}
-          <div className="grid grid-cols-7 gap-3 h-full min-w-[1400px]">
+              "Bens…" — ver CLAUDE.md §25, hallazgo 3). El nombre de cliente envuelve
+              en 2 líneas en vez de truncar (ver CardBody, line-clamp-2) — ese fix es
+              independiente del ancho de la grilla, así que angostarla no reintroduce
+              el corte de texto. `min-w-[1400px]` (200px/columna) resolvía el corte
+              pero de paso rompió la visibilidad: en 1366-1536px (notebooks comunes)
+              ya no entraban las 7 columnas ni haciendo zoom al 100% (AUDITORIA_UXUI_2026-09-15.md,
+              ítem #5). 1150px (~154px/columna) recupera las 7 sin scroll en
+              1440-1536px, y mejora 1366px de ~5 a ~6 y media, sin volver al ancho
+              original (1120px) que causaba el truncamiento. */}
+          <div className="grid grid-cols-7 gap-3 h-full min-w-[1150px]">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumnView
                 key={col.key} colKey={col.key} label={col.label} tone={col.tone}
