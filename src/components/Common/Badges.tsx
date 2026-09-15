@@ -43,16 +43,30 @@ export function RiskBadge({ risk }: { risk: RiskLevel }) {
   );
 }
 
-type StatusTone = 'crit' | 'urg' | 'info' | 'wait' | 'plan';
+type StatusTone = 'crit' | 'urg' | 'info' | 'norm' | 'review' | 'wait' | 'plan' | 'site' | 'done';
 
-// Un color por macro-etapa (no por estado individual) para que se lea de un
-// vistazo, como en Linear/GitHub/Trello: gris = no arrancado, azul = en curso,
-// naranja = necesita atención, verde = listo/terminado, rojo = bloqueado.
+// Mismas 7 macro-etapas y mismo color que el Kanban (KANBAN_COLUMNS en
+// data/catalog.ts) — antes esta tabla solo tenía 5 tonos y agrupaba Producción/
+// Control de calidad/Instalación en el mismo azul "info", así que alguien que
+// aprendía "dorado = en producción" mirando el Kanban veía ese mismo trabajo en
+// azul en la Tabla/Dashboard/ficha (AUDITORIA_UXUI_2026-09-15.md, ítem #8).
+// `FALTA_INFORMACION` es la única excepción a propósito: el Kanban no tiene
+// columna propia para ese estado (se mezcla dentro de "Pendiente", tono `wait`,
+// porque ahí no hace falta resaltarlo — se ve por separado en otro lado), pero
+// fuera del Kanban sí importa que salte a la vista (naranja `urg`) porque no
+// tiene ninguna columna/sección propia donde ya esté agrupado. Iguales de un
+// vistazo, como en Linear/GitHub/Trello: gris = no arrancado, azul = diseño,
+// dorado = producción, violeta = control de calidad, verde = listo, verde
+// azulado = instalación, gris oscuro = entregado, rojo = bloqueado.
 const STATUS_TONE: Record<JobStatus, StatusTone> = {
   PENDIENTE: 'wait', NUEVO: 'wait', APROBADO: 'wait',
   FALTA_INFORMACION: 'urg',
-  EN_DISENO: 'info', DISENO_LISTO: 'info', EN_PRODUCCION: 'info', EN_CONTROL_CALIDAD: 'info', EN_INSTALACION: 'info',
-  LISTO_PARA_ENTREGA: 'plan', LISTO_PARA_INSTALACION: 'plan', TERMINADO: 'plan',
+  EN_DISENO: 'info', DISENO_LISTO: 'info',
+  EN_PRODUCCION: 'norm',
+  EN_CONTROL_CALIDAD: 'review',
+  EN_INSTALACION: 'site',
+  LISTO_PARA_ENTREGA: 'plan', LISTO_PARA_INSTALACION: 'plan',
+  TERMINADO: 'done',
   BLOQUEADO: 'crit',
   CANCELADO: 'wait',
 };
@@ -65,12 +79,19 @@ const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
   crit: 'border-crit/30 bg-crit-bg text-crit-text',
   urg: 'border-urg/30 bg-urg-bg text-urg-text',
   info: 'border-info/30 bg-info-bg text-info-text',
+  norm: 'border-norm/30 bg-norm-bg text-norm-text',
+  review: 'border-review/30 bg-review-bg text-review-text',
   wait: 'border-wait/30 bg-wait-bg text-wait-text',
   plan: 'border-plan/30 bg-plan-bg text-plan-text',
+  site: 'border-site/30 bg-site-bg text-site-text',
+  // Sin token nuevo — "Entregado" ya se ve gris neutro en el Kanban (COLUMN_TONE_CLASSES.done
+  // en KanbanPage.tsx), acá se arma con las mismas clases `ink-*` que usa el resto de la app.
+  done: 'border-ink-300 bg-ink-100 text-ink-700',
 };
 
 const STATUS_DOT_CLASSES: Record<StatusTone, string> = {
-  crit: 'bg-crit', urg: 'bg-urg', info: 'bg-info', wait: 'bg-wait', plan: 'bg-plan',
+  crit: 'bg-crit', urg: 'bg-urg', info: 'bg-info', norm: 'bg-norm', review: 'bg-review',
+  wait: 'bg-wait', plan: 'bg-plan', site: 'bg-site', done: 'bg-ink-500',
 };
 
 export function StatusBadge({ status }: { status: JobStatus }) {

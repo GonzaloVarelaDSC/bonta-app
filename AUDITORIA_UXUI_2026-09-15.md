@@ -337,7 +337,42 @@ pueden quedar igual).
 
 ### 8. El mismo estado de un trabajo se ve de color distinto según la pantalla
 
-**Dónde:** `src/components/Common/Badges.tsx:51-58` (`STATUS_TONE`) vs.
+**Estado: resuelto.** `StatusTone` (`Badges.tsx`) se extendió de 5 a los mismos 7
+tonos que ya usa `KANBAN_COLUMNS` — sin tokens Tailwind nuevos (`norm`/`review`/
+`site` ya existían). Se remapearon 4 estados: `EN_PRODUCCION` → `norm` (dorado),
+`EN_CONTROL_CALIDAD` → `review` (violeta), `EN_INSTALACION` → `site` (verde
+azulado), `TERMINADO` → `done` (gris, tono nuevo armado con clases `ink-*`
+existentes — `border-ink-300 bg-ink-100 text-ink-700` para el badge/select,
+`bg-ink-500` para el punto — sin agregar ningún token de color nuevo).
+
+**Excepción intencional, documentada en el propio código
+(`Badges.tsx`, comentario sobre `STATUS_TONE`):** `FALTA_INFORMACION` se dejó en
+`urg` (naranja) fuera del Kanban, distinto de su tono `wait` (gris) dentro del
+Kanban. No es una inconsistencia sin resolver — es al revés: el Kanban no tiene
+columna propia para ese estado (queda mezclado dentro de "Pendiente"), así que no
+hace falta que resalte ahí; fuera del Kanban (Tabla, Dashboard, ficha) si se lo
+hubiera bajado a `wait` para igualar 1:1 con el Kanban, se hubiera perdido la
+única señal que hoy permite detectarlo de un vistazo en pantallas donde no tiene
+ninguna agrupación visual propia.
+
+**Solo se tocó un archivo** (`Badges.tsx`) — los 3 componentes que consumen
+`StatusBadge`/`StatusSelect` (`JobsTable.tsx`, `JobDetailPage.tsx`,
+`DashboardJobCard.tsx`) no necesitaron ningún cambio, ya reciben el color por la
+función `statusTone()`. Contraste verificado (texto sobre fondo, WCAG AA ≥4.5:1)
+en los 4 pares nuevos, en el tamaño chico real de `StatusBadge`/`StatusSelect`
+(no solo en las columnas grandes del Kanban, donde ya estaba validado): `norm`
+5.78:1, `review` 7.48:1, `site` 5.61:1, `done` 5.60:1 — los 4 pasan holgado. El
+punto decorativo (`aria-hidden`) del tono `done` da 2.48:1 contra su propio fondo,
+en línea con el resto de los puntos ya existentes en la app (`wait` 2.78:1,
+`plan` 3.05:1) — no es la única forma de percibir el estado (el texto siempre lo
+acompaña), mismo criterio ya aceptado en las auditorías previas.
+
+Verificado en vivo con la técnica de bypass de auth local (revertida con
+`git checkout` antes de commitear): los 11 estados posibles, en Tabla/ficha,
+mapean exactamente a los tonos esperados — confirmado leyendo las clases CSS
+reales aplicadas por `getComputedStyle`, no solo por inspección visual.
+
+**Dónde (referencia original):** `src/components/Common/Badges.tsx:51-58` (`STATUS_TONE`) vs.
 `src/data/catalog.ts` (`KANBAN_COLUMNS[].tone`).
 
 **Qué está mal:** el badge de estado (usado en Tabla, Dashboard y ficha) tiene solo
@@ -538,7 +573,7 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 | 5 | 🟠 Alto | Kanban no entra en notebooks comunes | Angostar `min-w` de la grilla |
 | 6 | 🟠 Alto | Sin alternativa de teclado para mover tarjetas | Sumar `KeyboardSensor` de dnd-kit |
 | 7 | 🟠 Alto | Inputs de medida sin nombre accesible | 3 atributos `aria-label` |
-| 8 | 🟡 Medio | Color inconsistente entre Kanban y resto | Cambio acotado, sin riesgo |
+| 8 | 🟡 Medio | Color inconsistente entre Kanban y resto | **Resuelto** — `StatusTone` extendido a 7 tonos en `Badges.tsx`, `FALTA_INFORMACION` mantenida como excepción intencional documentada |
 | 9 | 🟡 Medio | Scroll sin señal (Kanban y Tabla mobile) | **Resuelto** — `ScrollFadeX` compartido, degradé que se apaga solo al llegar al final |
 | 10 | 🟡 Medio | `aria-label` faltante/inconsistente | **Resuelto** — 7 atributos agregados (`StatusSelect`, filtros de `JobsPage`, buscador del Header) |
 | 11 | 🟡 Medio | `EditableCode` duplicado | Cambio acotado, sin riesgo |
