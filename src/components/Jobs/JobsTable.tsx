@@ -11,48 +11,8 @@ import { isSilent } from '../../lib/risk';
 import { statusOptionsFor, tryChangeJobStatus, isClosedStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { ScrollFadeX } from '../Common/ScrollFade';
-
-function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void> }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(job.code ?? '');
-
-  if (!editable) return <span className="font-mono text-xs text-ink-700">{job.code ?? '—'}</span>;
-
-  if (editing) {
-    const save = async () => {
-      setEditing(false);
-      if (!draft.trim() || draft.trim() === job.code) return;
-      try {
-        await onSave(draft);
-      } catch (err: any) {
-        alert(friendlyError(err));
-      }
-    };
-    return (
-      <input
-        autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
-        onClick={(e) => e.stopPropagation()} onBlur={save} placeholder="N° de Copernico"
-        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-        className="font-mono text-xs w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); setDraft(job.code ?? ''); setEditing(true); }}
-      title="Cargar número de trabajo / orden de Copernico"
-      className={
-        job.code
-          ? 'font-mono text-xs text-ink-700 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300'
-          : 'text-xs text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300'
-      }
-    >
-      {job.code ?? 'Cargar N°'}
-    </button>
-  );
-}
+import { EditableCode } from '../Common/EditableCode';
+import { ConfirmDialog } from '../Common/Modal';
 
 export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean }) {
   const navigate = useNavigate();
@@ -64,9 +24,9 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
   const deleteJob = useStore((s) => s.deleteJob);
   const canEditCode = !!currentUser && canEditAnyJob(currentUser.role);
   const canDelete = !!currentUser && canDeleteJob(currentUser.role);
+  const [confirmDelete, setConfirmDelete] = useState<Job | null>(null);
 
-  async function handleDelete(j: Job) {
-    if (!confirm(`¿Eliminar "${j.name}"${j.code ? ` (${j.code})` : ''}? Esta acción no se puede deshacer.`)) return;
+  async function doDelete(j: Job) {
     try {
       await deleteJob(j.id);
     } catch (err: any) {
@@ -79,8 +39,9 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
   }
 
   return (
-    <ScrollFadeX className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <>
+      <ScrollFadeX className="overflow-x-auto">
+        <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-ink-700 border-b border-ink-100">
             <th className="px-4 py-2.5 font-medium">Prioridad</th>
@@ -111,7 +72,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
               >
                 <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /></td>
                 <td className="px-2 py-2.5 whitespace-nowrap">
-                  <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} />
+                  <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
                 </td>
                 <td className="px-2 py-2.5 text-ink-700 whitespace-nowrap">{client?.name}</td>
                 <td className="px-2 py-2.5 text-ink-900 font-medium max-w-[260px] truncate">
@@ -144,7 +105,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                     </button>
                     {canDelete && (
                       <button
-                        type="button" onClick={() => handleDelete(j)}
+                        type="button" onClick={() => setConfirmDelete(j)}
                         aria-label={`Eliminar ${j.name}`}
                         className="text-crit hover:text-crit-text focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
                       >
@@ -159,5 +120,15 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
         </tbody>
       </table>
     </ScrollFadeX>
+    {confirmDelete && (
+      <ConfirmDialog
+        title="Eliminar trabajo"
+        message={<>¿Eliminar <strong>"{confirmDelete.name}"</strong>{confirmDelete.code ? ` (${confirmDelete.code})` : ''}? Esta acción no se puede deshacer.</>}
+        confirmLabel="Eliminar" tone="danger"
+        onConfirm={() => { const j = confirmDelete; setConfirmDelete(null); doDelete(j); }}
+        onClose={() => setConfirmDelete(null)}
+      />
+    )}
+    </>
   );
 }

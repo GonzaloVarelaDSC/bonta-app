@@ -85,10 +85,18 @@ export function DashboardPage() {
       </div>
       <p className="text-sm text-ink-700 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
-        {cards.map((c) => (
+      {/* 9 tarjetas: `xl:grid-cols-9` (divisor exacto de 9, nunca sobra un hueco)
+          reemplaza el `xl:grid-cols-7` original, que dejaba una fila de 2 sueltas
+          con un vacío grande al lado (AUDITORIA_UXUI_2026-09-15.md, 🟢 Bajo,
+          "grilla de KPI asimétrica"). En los dos tiers más chicos (2 y 4
+          columnas) sigue sobrando 1 tarjeta — la última se estira a todo el
+          ancho (`col-span-full`) en vez de quedar sola con un hueco al lado, y
+          vuelve a ocupar una sola columna en `xl` donde ya no sobra nada. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-9 gap-3 mb-4">
+        {cards.map((c, i) => (
           <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
-            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
+            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
+            className={i === cards.length - 1 ? 'col-span-full xl:col-span-1' : undefined} />
         ))}
       </div>
 

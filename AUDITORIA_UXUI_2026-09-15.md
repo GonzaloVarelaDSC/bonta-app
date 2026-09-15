@@ -159,8 +159,9 @@ asumir a futuro que las 7 se comportan igual.
 
 **Deuda que queda (fuera de este alcance, ya señalada en el ítem original):** el
 `alert()` nativo sigue siendo un patrón temporal — pendiente reemplazarlo por
-algo consistente con el resto de la UI, junto con los 2 `confirm()` nativos que
-ya estaban señalados como corte de alcance deliberado (ver 🟢 Bajo).
+algo consistente con el resto de la UI. Los 2 `confirm()` nativos que en su
+momento quedaron como corte de alcance deliberado **ya se resolvieron** en una
+ronda posterior (ver 🟢 Bajo, "`confirm()` nativo en 2 lugares").
 
 **Dónde (call sites originales, referencia):** `src/components/JobDetail/JobDetailPage.tsx` —
 - Bloquear/desbloquear: `blockJob` (línea 308, dentro del `onConfirm` del modal —
@@ -484,7 +485,19 @@ atributos en total, ningún cambio de layout.
 
 ### 11. `EditableCode` duplicado entre Tabla y Dashboard, ya con una diferencia real entre copias
 
-**Dónde:** `src/components/Jobs/JobsTable.tsx:14-54` y
+**Estado: resuelto.** Se movió a `src/components/Common/EditableCode.tsx`, con
+las dos diferencias reales entre las copias preservadas como props explícitas en
+vez de perderse al unificar: `size` (`'sm'` = Tabla, texto chico sin negrita;
+`'md'` = Dashboard, texto más grande y en negrita) reemplaza los 4 juegos de
+clases que ya divergían por tamaño/peso, y `stopClickPropagation` (default
+`false`, `true` en `JobsTable`) reproduce el `stopPropagation()` que solo tenía
+la copia de la Tabla en el input y el botón — se mantuvo tal cual estaba en cada
+lado en vez de decidir cuál de las dos versiones es "la correcta" (esa decisión
+no estaba pedida en este alcance). `JobsTable.tsx` y `DashboardJobCard.tsx`
+ahora importan el componente compartido; ninguno de los dos mantiene su propia
+copia.
+
+**Dónde (referencia original):** `src/components/Jobs/JobsTable.tsx:14-54` y
 `src/components/Dashboard/DashboardJobCard.tsx:15-55`.
 
 **Qué está mal:** es el mismo componente (input inline para cargar el N° de
@@ -512,10 +525,13 @@ archivos lo importen de ahí en vez de mantener cada uno su copia.
 Hallazgos de pulido visual o de higiene de código, sin impacto funcional — no
 bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 
-- **Grilla de KPI del Dashboard asimétrica.** 9 tarjetas en filas de 7 (o de 2 en
-  mobile) dejan la última fila con 1-2 tarjetas sueltas y un vacío grande al lado.
-  *Fix:* ajustar a un número de columnas que sea divisor de 9, o agrupar las
-  últimas 2 en su propia fila de ancho completo.
+- **Grilla de KPI del Dashboard asimétrica — resuelto.** `xl:grid-cols-7`
+  (`DashboardPage.tsx`) pasó a `xl:grid-cols-9` — divisor exacto de las 9
+  tarjetas, esa fila nunca vuelve a sobrar. En los dos tiers más chicos
+  (`grid-cols-2`/`sm:grid-cols-4`, que siguen igual que antes) sigue sobrando 1
+  tarjeta — ahí la última (`KpiCard` ahora acepta `className`) se estira con
+  `col-span-full` en vez de quedar sola con un vacío al lado, y vuelve a ocupar
+  una sola columna en `xl` donde ya no hace falta.
 - **Densidad alta por fila en el Dashboard** (`src/components/Dashboard/DashboardJobCard.tsx`) —
   8-10 datos por ficha, funcional pero exigente para un primer vistazo.
 - **Copy de Carga rápida** ("Todo en una sola pantalla") no coincide con el largo
@@ -545,20 +561,26 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
   - `Avatar` (`src/components/Common/Badges.tsx:174`) mete `width`/`height`/
     `fontSize` en `style` inline en vez de clases — solo el color de fondo está
     genuinamente justificado ahí por ser dato por usuario.
-- **Tres componentes `Section` reimplementados por separado** —
-  `src/components/QuickJob/QuickJobPage.tsx:56-66`,
-  `src/components/Common/ConfigPage.tsx:43-52` y
-  `src/components/JobDetail/JobExportPage.tsx:12-19` — mismo wrapper (tarjeta +
-  título), tres implementaciones. *Fix:* unificar en `Common/`.
+- **Tres componentes `Section` reimplementados por separado — resuelto.** Se
+  creó `src/components/Common/Section.tsx` con `variant="card"` (tarjeta blanca
+  + sombra, usada por Carga rápida y Configuración — antes eran dos
+  implementaciones ligeramente distintas, `p-5`/`p-4` y `ink-900`/`ink-800`, ahora
+  convergen en una sola) y `variant="plain"` (bloque sin tarjeta, para la hoja de
+  impresión de `JobExportPage`, donde una tarjeta con sombra no tiene sentido).
+  `ConfigPage.tsx` de paso eliminó una duplicación propia que tenía puertas
+  adentro: `Section` (chips de solo lectura) y `EditableSection` (chips
+  editables) repetían el mismo `<div>` de tarjeta cada una — las dos ahora usan
+  el `Section` compartido para el wrapper.
 - **Kanban arma su propio pill de "muestra"** (`src/components/Kanban/KanbanPage.tsx:65-69`)
   en vez de reusar `SampleReviewBadge` (`Common/Badges.tsx:151-167`, que ya tiene
   una variante `size="sm"` pensada para este caso).
-- **`confirm()` nativo todavía en 2 lugares** — borrar trabajo
-  (`src/components/Jobs/JobsTable.tsx:68`) y borrar versión de archivo
-  (`src/components/JobDetail/JobDetailPage.tsx:395`) — en vez del `ConfirmDialog`
-  ya construido en `Common/Modal.tsx:27-51` y usado en Carga rápida. Ya señalado
-  como corte de alcance deliberado en una ronda anterior — sigue abierto, no es
-  un olvido nuevo.
+- **`confirm()` nativo en 2 lugares — resuelto.** Borrar trabajo (`JobsTable.tsx`)
+  y borrar versión de archivo (`JobDetailPage.tsx`, dentro de `FilesTab`) ahora
+  usan el `ConfirmDialog` ya construido en `Common/Modal.tsx`, mismo patrón que
+  ya usaba Carga rápida: estado local con el ítem pendiente de confirmar (el
+  trabajo completo en `JobsTable`, `{fileId, versionId, fileName}` en
+  `FilesTab`), un solo diálogo condicional (no uno por fila), `tone="danger"` y
+  el nombre del ítem interpolado en el mensaje.
 
 ---
 
@@ -576,7 +598,10 @@ bloquean ninguna tarea real del equipo, pero vale la pena tenerlos anotados.
 | 8 | 🟡 Medio | Color inconsistente entre Kanban y resto | **Resuelto** — `StatusTone` extendido a 7 tonos en `Badges.tsx`, `FALTA_INFORMACION` mantenida como excepción intencional documentada |
 | 9 | 🟡 Medio | Scroll sin señal (Kanban y Tabla mobile) | **Resuelto** — `ScrollFadeX` compartido, degradé que se apaga solo al llegar al final |
 | 10 | 🟡 Medio | `aria-label` faltante/inconsistente | **Resuelto** — 7 atributos agregados (`StatusSelect`, filtros de `JobsPage`, buscador del Header) |
-| 11 | 🟡 Medio | `EditableCode` duplicado | Cambio acotado, sin riesgo |
+| 11 | 🟡 Medio | `EditableCode` duplicado | **Resuelto** — unificado en `Common/EditableCode.tsx`, diferencias reales entre copias preservadas como props (`size`, `stopClickPropagation`) |
+| — | 🟢 Bajo | Grilla de KPI asimétrica | **Resuelto** — `xl:grid-cols-9` (divisor exacto) + última tarjeta a ancho completo en los tiers chicos |
+| — | 🟢 Bajo | 3 componentes `Section` triplicados | **Resuelto** — unificado en `Common/Section.tsx` (`variant="card"`/`"plain"`) |
+| — | 🟢 Bajo | `confirm()` nativo en 2 lugares | **Resuelto** — reemplazado por `ConfirmDialog` en `JobsTable.tsx` y `JobDetailPage.tsx` |
 | resto | 🟢 Bajo | Pulido visual y limpieza de código | Sin apuro, sin impacto de uso real |
 
 Los ítems 1-7 (crítico + alto) son los que recomendaría atacar primero — todos

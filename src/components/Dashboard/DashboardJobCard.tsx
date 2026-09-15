@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { ArrowRight, Phone } from 'lucide-react';
@@ -11,48 +10,7 @@ import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
-
-function EditableCode({ job, editable, onSave }: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void> }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(job.code ?? '');
-
-  if (!editable) return <span className="font-mono text-sm font-semibold text-ink-900">{job.code ?? '—'}</span>;
-
-  if (editing) {
-    const save = async () => {
-      setEditing(false);
-      if (!draft.trim() || draft.trim() === job.code) return;
-      try {
-        await onSave(draft);
-      } catch (err: any) {
-        alert(friendlyError(err));
-      }
-    };
-    return (
-      <input
-        autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
-        onBlur={save} placeholder="N° de Copernico"
-        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-        className="font-mono text-sm w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => { setDraft(job.code ?? ''); setEditing(true); }}
-      title="Cargar número de trabajo / orden de Copernico"
-      className={
-        job.code
-          ? 'font-mono text-sm font-semibold text-ink-900 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
-          : 'text-sm text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap'
-      }
-    >
-      {job.code ?? 'Cargar N°'}
-    </button>
-  );
-}
+import { EditableCode } from '../Common/EditableCode';
 
 // Cada ficha se marca con un borde de color a la izquierda según su prioridad —
 // mismo lenguaje que ya usan las tarjetas de KPI del Dashboard — para que se lea
@@ -112,7 +70,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
           status={job.status} options={statusOptionsFor(job, currentUser?.role)}
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
-        <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />
+        <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} size="md" />
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
         <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
 

@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import { visibleJobTypes, BLOCK_REASON_LABELS } from '../../data/catalog';
 import { canManageCatalog } from '../../lib/permissions';
 import { friendlyError } from '../../lib/errors';
+import { Section } from './Section';
 
 export function ConfigPage() {
   const user = useStore((s) => s.currentUser)!;
@@ -35,19 +36,18 @@ export function ConfigPage() {
         onAdd={addMaterial} onRename={renameMaterial}
         addPlaceholder="Ej: Policarbonato"
       />
-      <Section title="Motivos de bloqueo" items={Object.values(BLOCK_REASON_LABELS)} />
+      <ChipsSection title="Motivos de bloqueo" items={Object.values(BLOCK_REASON_LABELS)} />
     </div>
   );
 }
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function ChipsSection({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4">
-      <div className="text-sm font-semibold text-ink-800 mb-2">{title}</div>
+    <Section title={title}>
       <div className="flex flex-wrap gap-1.5">
         {items.map((i) => <span key={i} className="text-xs bg-ink-50 text-ink-700 rounded-full px-2.5 py-1">{i}</span>)}
       </div>
-    </div>
+    </Section>
   );
 }
 
@@ -152,14 +152,13 @@ function EditableSection({ title, items, editable, onAdd, onRename, addPlacehold
   onAdd: (label: string) => Promise<void>; onRename: (id: string, label: string) => Promise<void>;
   addPlaceholder?: string;
 }) {
-  if (!editable) return <Section title={title} items={items.map((i) => i.label)} />;
+  if (!editable) return <ChipsSection title={title} items={items.map((i) => i.label)} />;
   return (
-    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4">
-      <div className="text-sm font-semibold text-ink-800 mb-2">{title}</div>
+    <Section title={title}>
       <div className="flex flex-wrap gap-1.5">
         {items.map((i) => <EditableChip key={i.id} id={i.id} label={i.label} onRename={onRename} />)}
         <AddChip placeholder={addPlaceholder} onAdd={onAdd} />
       </div>
-    </div>
+    </Section>
   );
 }

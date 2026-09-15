@@ -8,6 +8,7 @@ interface Props {
   tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'neutral';
   active?: boolean;
   onClick?: () => void;
+  className?: string;
 }
 
 // Borde perimetral con el color del estado, siempre visible (no solo al pasar el
@@ -32,7 +33,7 @@ const TONE_ICON_BG: Record<string, string> = {
   plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', info: 'bg-info-bg text-info-text', neutral: 'bg-ink-100 text-ink-700',
 };
 
-export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Props) {
+export function KpiCard({ label, value, icon: Icon, tone, active, onClick, className }: Props) {
   return (
     <button
       onClick={onClick}
@@ -40,7 +41,8 @@ export function KpiCard({ label, value, icon: Icon, tone, active, onClick }: Pro
       className={clsx(
         'text-left bg-white rounded-xl border-2 shadow-card px-4 py-3.5 transition-all',
         TONE_BORDER[tone],
-        active && 'ring-2 ring-offset-1 ring-brand-500'
+        active && 'ring-2 ring-offset-1 ring-brand-500',
+        className
       )}
     >
       <div className="flex items-center gap-2.5">

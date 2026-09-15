@@ -3,19 +3,18 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { fmtDate } from '../../lib/dates';
 import { SizeItemsView } from '../Common/SizeItemsEditor';
+import { Section as SharedSection } from '../Common/Section';
 import type { Material } from '../../types';
 
 function materialLabels(materialIds: string[], materials: Material[]): string {
   return materialIds.map((m) => materials.find((mm) => mm.id === m)?.label).filter(Boolean).join(', ');
 }
 
+// Hoja de impresión: siempre en `variant="plain"` (sin tarjeta/sombra, no
+// tiene sentido en una hoja pensada para imprimir) — wrapper chico para no
+// repetir la prop en cada uno de los usos de más abajo.
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-5 break-inside-avoid">
-      <div className="text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-1.5">{title}</div>
-      <div className="text-sm text-ink-900 leading-relaxed">{children}</div>
-    </div>
-  );
+  return <SharedSection title={title} variant="plain">{children}</SharedSection>;
 }
 
 // Hoja de referencia para el cliente — a propósito NO muestra nada interno del

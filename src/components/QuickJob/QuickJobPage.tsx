@@ -8,6 +8,7 @@ import { friendlyError } from '../../lib/errors';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
 import { ConfirmDialog } from '../Common/Modal';
+import { Section } from '../Common/Section';
 import type { JobTypeId, Priority, Product } from '../../types';
 
 // Case/tilde/espacios de más son la variación más común al tipear un cliente
@@ -51,18 +52,6 @@ function suggestPriority(dateStr: string): Priority {
   if (daysDiff <= 3) return 'URGENTE';
   if (daysDiff <= 7) return 'NORMAL';
   return 'PLANIFICADO';
-}
-
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-ink-900">{title}</h2>
-        {hint && <p className="text-xs text-ink-700 mt-0.5">{hint}</p>}
-      </div>
-      {children}
-    </div>
-  );
 }
 
 // Carga de un solo tramo (sin pasos) para cargar un trabajo mientras el

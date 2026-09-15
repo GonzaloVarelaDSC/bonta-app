@@ -16,7 +16,7 @@ import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
 import { ClientMessageModal } from './ClientMessageModal';
-import { PromptDialog } from '../Common/Modal';
+import { PromptDialog, ConfirmDialog } from '../Common/Modal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Detalle', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
@@ -361,6 +361,7 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
   const nameOf = (userId: string) => users.find((u) => u.id === userId)?.name ?? userId;
   const [dragOver, setDragOver] = useState(false);
   const [versionTarget, setVersionTarget] = useState<string | undefined>(undefined);
+  const [confirmDelete, setConfirmDelete] = useState<{ fileId: string; versionId: string; fileName: string } | null>(null);
   const dropInputRef = useRef<HTMLInputElement>(null);
   const versionInputRef = useRef<HTMLInputElement>(null);
 
@@ -410,7 +411,7 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
                     <button onClick={() => onApprove(f.id, v.id)} className="text-xs font-medium text-brand-600 hover:underline">Marcar aprobado</button>
                   )}
                   <button
-                    onClick={() => { if (confirm(`¿Eliminar "${v.fileName}"?`)) onDelete(f.id, v.id); }}
+                    onClick={() => setConfirmDelete({ fileId: f.id, versionId: v.id, fileName: v.fileName })}
                     className="text-ink-700 hover:text-crit-text" title="Eliminar archivo" aria-label={`Eliminar ${v.fileName}`}
                   >
                     <Trash2 size={14} />
@@ -421,6 +422,15 @@ function FilesTab({ job, onUpload, onApprove, onDelete }: {
           </div>
         </div>
       ))}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminar archivo"
+          message={<>¿Eliminar <strong>"{confirmDelete.fileName}"</strong>?</>}
+          confirmLabel="Eliminar" tone="danger"
+          onConfirm={() => { const c = confirmDelete; setConfirmDelete(null); onDelete(c.fileId, c.versionId); }}
+          onClose={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }
