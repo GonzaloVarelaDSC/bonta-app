@@ -19,9 +19,18 @@ import { Avatar } from '../Common/Badges';
  * esta app, eso sugiere falsamente "lleno"); una fila de puntos + el número
  * aparte dejaba mucho espacio vacío raro entre ambos. Herramientas como
  * Linear resuelven exactamente este caso (comparar carga sin un número de
- * capacidad real) así: agrupar y mostrar el conteo, nada más. El número va en
- * el mismo chip redondeado que ya usan los contadores de columna del Kanban
- * (`KanbanPage.tsx`, `toneCls.count`) — mismo lenguaje visual, no uno nuevo.
+ * capacidad real) así: agrupar y mostrar el conteo, nada más.
+ *
+ * **Chips compactos, no filas `justify-between`** (3ra vuelta, Gonzalo:
+ * "MUY espaciado los nombres a los números"): una fila `justify-between` en
+ * una tarjeta tan ancha como esta (mismo ancho que la grilla de KPI, hasta
+ * 1800px) empuja el nombre a un extremo y el número al otro, con un hueco
+ * enorme en el medio. Nombre y número ahora viven **dentro del mismo chip**
+ * (fondo `ink-50`, como un pill de asignación), uno al lado del otro sin
+ * espacio artificial — varios productores se leen como una fila de chips
+ * cortos, no como una lista de renglones anchos. El número reusa el mismo
+ * estilo de los contadores de columna del Kanban (`KanbanPage.tsx`,
+ * `toneCls.count`), fusionado adentro del chip en vez de flotar aparte.
  */
 export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }) {
   const producers = users.filter((u) => u.active && u.isProducer);
@@ -44,31 +53,28 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
       <p className="text-xs text-ink-700 mb-3">Para decidir a quién asignar el próximo trabajo sin sobrecargar a nadie.</p>
-      <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
         {counts.map(({ user, count }) => {
           const isLeast = !allTied && count === minCount;
           return (
             <div
-              key={user.id} role="group" className="flex items-center justify-between gap-3"
+              key={user.id} role="group"
               aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño${isLeast ? ', el que menos tiene' : ''}`}
+              className="inline-flex items-center gap-2 bg-ink-50 border border-ink-100 rounded-full pl-1.5 pr-2.5 py-1.5"
             >
-              <div className="flex items-center gap-2" aria-hidden>
-                <Avatar name={user.name} color={user.avatarColor} size={22} />
-                <span className="text-sm font-medium text-ink-800">{user.name.split(' ')[0]}</span>
-              </div>
-              <div className="flex items-center gap-2" aria-hidden>
-                {isLeast && (
-                  <span className="text-[11px] font-semibold text-plan-text bg-plan-bg rounded-full px-2 py-0.5 whitespace-nowrap">
-                    Menos cargado
-                  </span>
-                )}
-                <span className={clsx(
-                  'inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-sm font-bold tabular border',
-                  'bg-info-bg text-info-text border-info/30'
-                )}>
-                  {count}
+              <Avatar name={user.name} color={user.avatarColor} size={22} aria-hidden />
+              <span className="text-sm font-medium text-ink-800" aria-hidden>{user.name.split(' ')[0]}</span>
+              <span className={clsx(
+                'inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold tabular border',
+                'bg-info-bg text-info-text border-info/30'
+              )} aria-hidden>
+                {count}
+              </span>
+              {isLeast && (
+                <span className="text-[11px] font-semibold text-plan-text whitespace-nowrap" aria-hidden>
+                  · menos cargado
                 </span>
-              </div>
+              )}
             </div>
           );
         })}

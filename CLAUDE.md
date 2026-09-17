@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 34).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 35).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2581,3 +2581,41 @@ nombre pegado al avatar de un lado y el número pegado al tag del otro.
 **Lección para no repetir:** cuando el propio análisis (referentes, skills)
 ya apunta a la respuesta más simple, aplicarla — no quedarse en una versión
 intermedia que todavía carga la complejidad que se identificó como innecesaria.
+
+---
+
+## 35. Actualización 16/09 (cont.) — "Carga de diseño": chips compactos en vez de filas `justify-between` (4ta y última vuelta)
+
+Gonzalo: "ahora quedo sin barra ni puntos y MUY espaciado los nombres a los
+números, hacelo mejor aun. Super profesional". Tenía razón otra vez — la causa
+concreta: la tarjeta de este widget es tan ancha como la grilla de KPI de
+arriba (hasta 1800px), y cada fila usaba `justify-between`, así que el nombre
+quedaba pegado al borde izquierdo y el número al derecho, con un hueco enorme
+en el medio de una tarjeta que en los hechos solo tiene 2 renglones de
+contenido real.
+
+**Fix final** (`Dashboard/DesignLoadWidget.tsx`): en vez de una lista de filas
+que ocupan el ancho completo de la tarjeta, cada productor es ahora **un chip
+compacto** (`inline-flex`, fondo `ink-50`, `rounded-full`) que contiene avatar +
+nombre + número + (si aplica) "· menos cargado", todo pegado adentro del mismo
+contenedor — nombre y número quedan uno al lado del otro sin espacio
+artificial. Los chips de los distintos productores se acomodan en una fila
+(`flex flex-wrap gap-2`) uno al lado del otro, no apilados en renglones anchos.
+El número sigue reusando el mismo estilo de los contadores de columna del
+Kanban, ahora fusionado adentro del chip.
+
+Verificado en vivo (mismo bypass de auth local, revertido antes de commitear):
+"Gastón [1] · menos cargado" y "Gonzalo [3]" quedan como dos chips cortos uno
+junto al otro, sin ningún hueco — se ve compacto y prolijo, no una lista de
+renglones anchos casi vacíos. `npm run build`/`npm run lint` limpios.
+
+**Resumen de las 4 vueltas de este widget** (§31.5 → §33 → §34 → §35), para no
+repetir el camino largo la próxima vez que se pida algo parecido: barra
+relativa al máximo (implica "lleno" falsamente) → puntos por trabajo (deja
+hueco raro entre puntos y número) → filas `justify-between` con solo el
+conteo (mismo hueco, ahora entre nombre y número) → **chips compactos con
+nombre+número juntos, la versión que se quedó**. La lección de fondo es la
+misma que ya se anotó en §34: en un widget angosto de contenido (2-3 líneas),
+no uses un layout que asuma que el contenido tiene que llenar el ancho de una
+tarjeta pensada para otra cosa (la grilla de KPI) — agrupar el contenido en
+unidades compactas propias es casi siempre mejor que estirarlo.
