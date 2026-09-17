@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 33).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 34).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2551,3 +2551,33 @@ leen y comparan de un vistazo sin implicar que nadie está "lleno".
 
 `npm run build`/`npm run lint` limpios. Sin cambios de código fuera de este
 archivo.
+
+---
+
+## 34. Actualización 16/09 (cont.) — "Carga de diseño": de puntos a solo el conteo (3ra vuelta, la que quedó)
+
+Gonzalo probó los puntos de §33 y dio feedback preciso: "no me gusta de esta
+manera... hay mucha distancia entre las barras y los números a la derecha, está
+raro" — y, sobre la propia explicación de la sección anterior ("Linear
+directamente no usa barras... solo conteos agrupados"): **"¿y por qué no hacés
+esto?"**. Tenía razón — la sección 33 ya había identificado la respuesta
+correcta (conteo simple, sin visualización) pero no la aplicó, se quedó a mitad
+de camino con los puntos.
+
+**Versión final** (`Dashboard/DesignLoadWidget.tsx`): se sacó la fila de puntos
+por completo. Cada renglón ahora es `justify-between` — avatar + nombre a la
+izquierda, tag "Menos cargado" (si aplica) + el número a la derecha, sin ningún
+elemento intermedio que estire la fila y deje espacio vacío. El número va en el
+mismo chip redondeado que ya usan los contadores de columna del Kanban
+(`KanbanPage.tsx`, `toneCls.count`: `bg-info-bg text-info-text border-info/30`)
+— ni un patrón nuevo ni un color nuevo, el mismo lenguaje que ya existía en la
+app para "cuántos hay acá".
+
+Verificado en vivo (mismo bypass de auth local, revertido antes de commitear):
+sin el espacio raro que señaló Gonzalo — cada fila queda compacta, con el
+nombre pegado al avatar de un lado y el número pegado al tag del otro.
+`npm run build`/`npm run lint` limpios.
+
+**Lección para no repetir:** cuando el propio análisis (referentes, skills)
+ya apunta a la respuesta más simple, aplicarla — no quedarse en una versión
+intermedia que todavía carga la complejidad que se identificó como innecesaria.

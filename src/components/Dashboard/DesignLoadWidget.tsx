@@ -1,11 +1,7 @@
 import { PenTool } from 'lucide-react';
+import clsx from 'clsx';
 import type { Job, User } from '../../types';
 import { Avatar } from '../Common/Badges';
-
-// Tope de puntos visibles por fila — más allá de esto se resume en "+N" en vez
-// de dejar la fila crecer sin límite (un productor con 20 trabajos en diseño
-// no debería alargar la tarjeta 20 puntos).
-const MAX_DOTS = 10;
 
 /**
  * Comparación de carga de diseño entre productores — para decidir a quién
@@ -17,14 +13,15 @@ const MAX_DOTS = 10;
  * que ya usa toda la app para "en diseño" (StatusTone, KPI "En diseño") — no
  * se inventa un color nuevo para esta comparación.
  *
- * Un punto por trabajo (no una barra continua) — la primera versión escalaba
- * el ancho de una barra contra el máximo del grupo, así que quien tuviera más
- * trabajos quedaba siempre al 100% de ancho sin importar si eran 3 o 30
- * (Gonzalo, 16/09: "¿hace falta que vayan hasta el fondo?"). Sin ningún
- * concepto de "capacidad" en esta app, esa barra sugería falsamente "lleno".
- * Un punto = un trabajo real es honesto en cualquier escala, y reusa el mismo
- * lenguaje de chip/pill que ya tiene el resto de la UI en vez de importar un
- * control de bar-chart genérico.
+ * Solo el conteo, sin barra ni puntos — dos vueltas atrás (Gonzalo, 16/09):
+ * una barra relativa al máximo del grupo queda siempre al 100% para quien
+ * tenga más, sin importar si son 3 o 30 (sin un concepto de "capacidad" en
+ * esta app, eso sugiere falsamente "lleno"); una fila de puntos + el número
+ * aparte dejaba mucho espacio vacío raro entre ambos. Herramientas como
+ * Linear resuelven exactamente este caso (comparar carga sin un número de
+ * capacidad real) así: agrupar y mostrar el conteo, nada más. El número va en
+ * el mismo chip redondeado que ya usan los contadores de columna del Kanban
+ * (`KanbanPage.tsx`, `toneCls.count`) — mismo lenguaje visual, no uno nuevo.
  */
 export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }) {
   const producers = users.filter((u) => u.active && u.isProducer);
@@ -47,38 +44,31 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
       <p className="text-xs text-ink-700 mb-3">Para decidir a quién asignar el próximo trabajo sin sobrecargar a nadie.</p>
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {counts.map(({ user, count }) => {
           const isLeast = !allTied && count === minCount;
-          const visibleDots = Math.min(count, MAX_DOTS);
-          const overflow = count - visibleDots;
           return (
             <div
-              key={user.id} role="group" className="flex items-center gap-3"
+              key={user.id} role="group" className="flex items-center justify-between gap-3"
               aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño${isLeast ? ', el que menos tiene' : ''}`}
             >
-              <div className="flex items-center gap-2 w-32 shrink-0" aria-hidden>
+              <div className="flex items-center gap-2" aria-hidden>
                 <Avatar name={user.name} color={user.avatarColor} size={22} />
-                <span className="text-sm font-medium text-ink-800 truncate">{user.name.split(' ')[0]}</span>
+                <span className="text-sm font-medium text-ink-800">{user.name.split(' ')[0]}</span>
               </div>
-              <div className="flex items-center gap-1 flex-wrap flex-1 min-h-[14px]" aria-hidden>
-                {count === 0 ? (
-                  <span className="text-xs text-ink-700 italic">Sin trabajos en diseño</span>
-                ) : (
-                  <>
-                    {Array.from({ length: visibleDots }).map((_, i) => (
-                      <span key={i} className="w-3.5 h-3.5 rounded-full bg-info shrink-0" />
-                    ))}
-                    {overflow > 0 && <span className="text-xs font-semibold text-info-text">+{overflow}</span>}
-                  </>
+              <div className="flex items-center gap-2" aria-hidden>
+                {isLeast && (
+                  <span className="text-[11px] font-semibold text-plan-text bg-plan-bg rounded-full px-2 py-0.5 whitespace-nowrap">
+                    Menos cargado
+                  </span>
                 )}
-              </div>
-              <span className="text-sm font-semibold text-ink-900 tabular w-5 text-right" aria-hidden>{count}</span>
-              {isLeast && (
-                <span className="text-[11px] font-semibold text-plan-text bg-plan-bg rounded-full px-2 py-0.5 shrink-0 whitespace-nowrap" aria-hidden>
-                  Menos cargado
+                <span className={clsx(
+                  'inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-sm font-bold tabular border',
+                  'bg-info-bg text-info-text border-info/30'
+                )}>
+                  {count}
                 </span>
-              )}
+              </div>
             </div>
           );
         })}
