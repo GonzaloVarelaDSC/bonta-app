@@ -8,6 +8,7 @@ import {
 } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
+import { isArchivedJob } from '../../lib/selectors';
 import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
 import { Avatar, CountdownBadge } from '../Common/Badges';
 import { ScrollFadeX } from '../Common/ScrollFade';
@@ -168,15 +169,16 @@ function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label
 // Botón "Filtros" con un desplegable de prioridad + responsable — antes el
 // Kanban no tenía forma de acotar la vista más que mirando columna por columna.
 function FiltersButton({
-  priorityFilter, setPriorityFilter, respFilter, setRespFilter, users,
+  priorityFilter, setPriorityFilter, respFilter, setRespFilter, users, showArchived, setShowArchived,
 }: {
   priorityFilter: Priority | 'all'; setPriorityFilter: (p: Priority | 'all') => void;
   respFilter: string | 'all'; setRespFilter: (r: string) => void;
   users: { id: string; name: string; active: boolean; isProducer: boolean }[];
+  showArchived: boolean; setShowArchived: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const activeCount = (priorityFilter !== 'all' ? 1 : 0) + (respFilter !== 'all' ? 1 : 0);
+  const activeCount = (priorityFilter !== 'all' ? 1 : 0) + (respFilter !== 'all' ? 1 : 0) + (showArchived ? 1 : 0);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -222,9 +224,16 @@ function FiltersButton({
               {users.filter((u) => u.active && u.isProducer).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
+          <label
+            className="flex items-center gap-1.5 text-xs text-ink-700 pt-1 border-t border-ink-100"
+            title="Entregados hace 3 días o más — se ocultan por default para no acumular en el board"
+          >
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" />
+            Ver archivados (Entregado)
+          </label>
           {activeCount > 0 && (
             <button
-              type="button" onClick={() => { setPriorityFilter('all'); setRespFilter('all'); }}
+              type="button" onClick={() => { setPriorityFilter('all'); setRespFilter('all'); setShowArchived(false); }}
               className="w-full inline-flex items-center justify-center gap-1 text-xs font-medium text-ink-700 hover:text-crit-text py-1"
             >
               <X size={12} /> Limpiar filtros
@@ -244,12 +253,14 @@ export function KanbanPage() {
   const setStatus = useStore((s) => s.setStatus);
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [respFilter, setRespFilter] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
   const jobs = useMemo(() => {
     return visibleJobs(user, allJobs)
       .filter((j) => j.status !== 'CANCELADO')
+      .filter((j) => showArchived || !isArchivedJob(j))
       .filter((j) => priorityFilter === 'all' || effectivePriority(j) === priorityFilter)
       .filter((j) => respFilter === 'all' || j.responsibleUserId === respFilter);
-  }, [user, allJobs, priorityFilter, respFilter]);
+  }, [user, allJobs, priorityFilter, respFilter, showArchived]);
   // "Trabajos activos" no cuenta los Terminados — quedan en el board (columna
   // Terminado) pero no son trabajo pendiente, así que no tienen que sumar acá.
   const activeCount = useMemo(() => jobs.filter((j) => j.status !== 'TERMINADO').length, [jobs]);
@@ -309,6 +320,7 @@ export function KanbanPage() {
           <FiltersButton
             priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
             respFilter={respFilter} setRespFilter={setRespFilter} users={users}
+            showArchived={showArchived} setShowArchived={setShowArchived}
           />
         </div>
         <span className="text-xs text-ink-700 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>

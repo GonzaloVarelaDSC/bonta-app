@@ -1,7 +1,22 @@
+import { differenceInCalendarDays } from 'date-fns';
 import type { Job } from '../types';
 import { effectivePriority } from './priority';
 import { minutesRemaining } from './dates';
 import { isSilent } from './risk';
+
+// Gonzalo, 16/09: los trabajos Entregados se acumulaban sin límite en el Kanban
+// y en Trabajos, ensuciando la vista del día a día. Pasados estos días desde
+// `finishedAt`, un trabajo Entregado se considera "archivado" — desaparece de
+// la vista por default de esas dos pantallas, cada una con un toggle "Ver
+// archivados" para volver a encontrarlo (no se borra ni pierde acceso). 3 días
+// (Gonzalo pidió elegir entre 2 o 3) da margen para volver sobre algo recién
+// entregado sin tener que ir a buscarlo aparte.
+export const ARCHIVE_AFTER_DAYS = 3;
+
+export function isArchivedJob(job: Job): boolean {
+  if (job.status !== 'TERMINADO' || !job.finishedAt) return false;
+  return differenceInCalendarDays(new Date(), new Date(job.finishedAt)) >= ARCHIVE_AFTER_DAYS;
+}
 
 export function isOverdue(job: Job): boolean {
   return minutesRemaining(job.committedDate) < 0 && job.status !== 'TERMINADO' && job.status !== 'CANCELADO';

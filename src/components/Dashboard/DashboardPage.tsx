@@ -7,14 +7,18 @@ import { computeCounts, isOverdue, isDueToday, isMissingInfo, sortByPriority } f
 import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
+import { DesignLoadWidget } from './DesignLoadWidget';
 
 type FilterKey = 'pending' | 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
 
 // A mí = soy responsable o estoy asignado. Por mí = yo asigné el trabajo (lo
 // cargué). Todos = todo lo que puedo ver. El default se acomoda al perfil:
-// quien produce (Gastón, Gonzalo) arranca en "A mí" (su cola de trabajo); quien
-// coordina/dirige y no produce (Pancho, Martín, Alejandra...) arranca en "Por
-// mí" (lo que metió en la máquina). Cada uno lo puede cambiar y queda guardado.
+// un admin (Pancho, Martín, Gonzalo) arranca en "Todos" — pidieron
+// explícitamente poder ver TODA la app apenas entran, no solo lo que ellos
+// cargaron (Gonzalo, 16/09). Quien produce y no es admin (Gastón) arranca en
+// "A mí" (su cola de trabajo); quien coordina/dirige sin producir y no es admin
+// (Alejandra, Richard, Nancy) arranca en "Por mí" (lo que metió en la máquina).
+// Cada uno lo puede cambiar y queda guardado en su propio navegador.
 type ScopeMode = 'mine' | 'byMe' | 'all';
 const SCOPE_LABELS: Record<ScopeMode, string> = { mine: 'A mí', byMe: 'Por mí', all: 'Todos' };
 const SCOPE_KEY = 'bonta-dash-scope';
@@ -22,11 +26,13 @@ const SCOPE_KEY = 'bonta-dash-scope';
 export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
   const allJobs = useStore((s) => s.jobs);
+  const users = useStore((s) => s.users);
   const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
   const [filter, setFilter] = useState<FilterKey>(null);
   const [scope, setScope] = useState<ScopeMode>(() => {
     const saved = localStorage.getItem(SCOPE_KEY);
     if (saved === 'mine' || saved === 'byMe' || saved === 'all') return saved;
+    if (user.role === 'admin') return 'all';
     return user.isProducer ? 'mine' : 'byMe';
   });
   function changeScope(next: ScopeMode) {
@@ -99,6 +105,8 @@ export function DashboardPage() {
             className={i === cards.length - 1 ? 'col-span-full xl:col-span-1' : undefined} />
         ))}
       </div>
+
+      <DesignLoadWidget jobs={jobs} users={users} />
 
       {counts.silent > 0 && (
         <button

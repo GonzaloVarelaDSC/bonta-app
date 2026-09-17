@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 15/09/2026 (sección 30).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 31).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2307,3 +2307,145 @@ permiso pendiente de aprobar en el panel del navegador integrado.
 Todo lo de esta ronda (puntos 1, 2 y 5; el punto 3 no tocó código) va en un solo
 commit. Verificar en el historial de `git log` si ya se pusheó a `origin/main`
 antes de asumir que estos cambios están en producción.
+
+---
+
+## 31. Actualización 16/09 — roles (confirmación + 1 fix real), carga de diseño por persona, auto-archivado de Entregados
+
+Ronda de 6 pedidos sobre roles/permisos, una visualización nueva y housekeeping
+del Kanban/Trabajos. **Importante:** de los 4 pedidos de roles (1-4), 3 ya
+estaban correctos en el código — se verificó explícitamente en vez de asumir, y
+solo se tocó código donde de verdad hacía falta (punto 1). No confundir "ya
+andaba bien" con "no hacía falta pedirlo": sin la verificación no se sabía.
+
+### 1. Admin ve TODA la app — 1 fix real (default de scope del Dashboard)
+
+**Verificado en `lib/permissions.ts`:** `canCreateJobs`, `canEditAnyJob`,
+`canChangePriority`, `canAssign`, `canApproveFiles`, `canSeeStats`,
+`canDeleteJob` ya devuelven `true` para `role === 'admin'` (además de
+`coordinador`), y `canViewJob` ya deja a un admin ver cualquier trabajo sin
+importar quién es responsable/asignado. **Esto ya cubría "editar, eliminar y
+demás" para Pancho/Martín/Gonzalo — no hizo falta tocar nada ahí.**
+
+**El fix real:** el Dashboard (`DashboardPage.tsx`) por default mostraba
+"Por mí" a cualquiera que no fuera productor (`user.isProducer` — Pancho y
+Martín son `admin` pero `is_producer=false`, ver §13), aunque a nivel de
+permisos ya pudieran ver todo. Un admin recién entrado veía solo lo que él
+mismo cargó y podía interpretarlo como "no veo el resto de la app" sin saber
+que el toggle "Todos" ya estaba ahí. Se cambió el default: **cualquier
+`role === 'admin'` arranca en "Todos"**, sin importar `isProducer`. Gastón
+(coordinador, no admin) sigue arrancando en "A mí"; Alejandra/Richard/Nancy
+(coordinador, no admin, no productor) siguen en "Por mí" — sin cambios para
+ellos. Cada quien lo puede cambiar y queda guardado en su propio navegador
+(`localStorage`), como ya funcionaba.
+
+### 2-3. Gastón/Gonzalo (diseño, asignados + cargan) y Nancy/Richard/Alejandra (creación + Carga rápida) — ya correcto, sin cambios
+
+**Verificado, no se tocó nada:** Gastón es `role='coordinador'` +
+`is_producer=true` (§17.2, §21) → puede cargar trabajos (`canCreateJobs`) Y le
+asignan trabajos como responsable (aparece en "Responsable interno"). Gonzalo
+es `admin` + `is_producer=true` → mismo doble rol. Richard y Alejandra son
+`role='coordinador'` (§18/§21) → `canCreateJobs` = true → deberían ver "Carga
+rápida" en el sidebar. **Nancy sigue sin cuenta creada** (falta su email real,
+tintero desde §16) — hasta que se cree con `role='coordinador'`, no va a
+aparecer en ningún lado, es esperable, no es un bug.
+
+### 4. Richard no ve "Carga rápida" — no es un bug de código, es de datos/sesión
+
+`Sidebar.tsx` gatea el link únicamente por `canCreateJobs(user.role)` — código
+puro, sin ningún caso especial por persona, y ya se aplica igual para
+Alejandra. Si Richard no lo ve, las dos causas más probables (ninguna
+corregible desde acá sin acceso a la base real):
+
+1. **El SQL de alta de Richard (§18, bloque "(b) Alta de Richard") nunca se
+   corrió de verdad**, o se corrió con el rol equivocado — mismo patrón de
+   incidente que ya pasó varias veces en este proyecto (migraciones/SQL que se
+   asumían corridas y no lo estaban). Verificar con:
+   ```sql
+   select name, email, role, is_producer from profiles where email = 'richard@estudiobonta.com.ar';
+   ```
+   Tiene que devolver `role = 'coordinador'`. Si da otra cosa (o ningún
+   resultado, o el email no es ese), ahí está el problema — correr de nuevo el
+   UPDATE de §18(b) con el email correcto.
+2. **Sesión vieja:** si Richard inició sesión antes de que se corriera el
+   UPDATE, su perfil en memoria puede haber quedado con el rol viejo hasta que
+   cierre sesión y vuelva a entrar (o recargue fuerte la página). Pedirle que
+   cierre sesión y entre de nuevo antes de asumir que el dato en la base está
+   mal.
+
+No se tocó código para este punto — no hay nada en el código que explique un
+comportamiento distinto para Richard específicamente.
+
+### 5. Widget "Carga de diseño" — nuevo, en el Dashboard
+
+Pedido: poder ver de un vistazo cuántos trabajos "en diseño" tiene cada
+productor (Gastón/Gonzalo hoy, cualquier productor activo a futuro) para no
+sobrecargar a uno solo al asignar un trabajo nuevo. Se consultó la skill
+`frontend-design` antes de construirlo (patrón recomendado: barra horizontal
+comparativa, no una lista de números sueltos — la longitud relativa comunica
+"quién tiene más" de un vistazo mejor que comparar dígitos).
+
+- **`src/components/Dashboard/DesignLoadWidget.tsx`** (nuevo) — tarjeta blanca
+  entre la grilla de KPI y el banner de "trabajos silenciosos". Por cada
+  productor activo (`isProducer && active`), una fila: avatar + nombre, barra
+  horizontal (tono `info` — el mismo color que ya usa toda la app para "en
+  diseño", no un color nuevo) con ancho proporcional a
+  `EN_DISENO + DISENO_LISTO` asignados como responsable, el número, y un tag
+  verde "Menos cargado" para quien tiene menos (si no están todos empatados).
+  **Se calcula sobre todos los trabajos visibles, no respeta el toggle A mí/
+  Por mí/Todos** — el panorama de carga del equipo tiene que ser el mismo sin
+  importar qué esté mirando en ese momento quien lo consulta.
+  Si hay menos de 2 productores activos, el widget no se muestra (no hay nada
+  que comparar).
+- **Hallazgo de accesibilidad** (`design-critique` + `accessibility-review`
+  corridas sobre el widget): un `<div>` con `aria-label` pero sin `role`, con
+  todos sus hijos `aria-hidden`, puede no exponerse en el árbol de
+  accesibilidad de algunos lectores de pantalla (queda "vacío"). Se agregó
+  `role="group"` a cada fila para garantizar que el `aria-label` (ej. "Gonzalo
+  Varela: 3 trabajos en diseño") se anuncie.
+
+### 6. Auto-archivado de trabajos Entregados (3 días)
+
+Kanban y Trabajos se llenaban de trabajos ya Entregados sin límite. Gonzalo
+pidió elegir entre 2 o 3 días de margen — se eligió **3**.
+
+- **`lib/selectors.ts`**: `ARCHIVE_AFTER_DAYS = 3` + `isArchivedJob(job)` —
+  `true` solo si `status === 'TERMINADO'` y pasaron 3+ días desde
+  `job.finishedAt` (`differenceInCalendarDays`, ya se usa `date-fns` en el
+  proyecto). **No se toca ningún otro estado** (Cancelado no se pidió, y ya
+  estaba excluido del Kanban de por sí).
+- **`KanbanPage.tsx`**: la columna "Entregado" oculta por default los
+  archivados — se suma un checkbox "Ver archivados (Entregado)" al popover
+  "Filtros" ya existente (mismo lugar que prioridad/responsable), y cuenta
+  para el badge numérico de filtros activos. El resto de las columnas no
+  cambia (un trabajo archivado siempre es Entregado, nunca puede estar en otra
+  columna).
+- **`JobsPage.tsx`**: mismo criterio — un checkbox "Ver archivados (N)" al
+  lado de los filtros existentes de Trabajos, con el conteo de cuántos están
+  ocultos para que no parezca que "desaparecieron".
+- **No se borra nada** — es puramente un filtro de vista por default en las
+  dos pantallas que se llenaban. El Dashboard no necesitó cambios: ya excluía
+  Terminado/Cancelado de su lista por default desde antes (§15.4).
+- **El Dashboard SÍ sigue contando estos trabajos** en sus KPIs si en algún
+  momento se los busca por otro filtro — el archivado es solo un default de
+  Kanban/Trabajos, no un estado nuevo del trabajo ni algo que cambie qué es
+  "correcto" contar en ningún otro lado.
+
+### 7. Verificación
+
+`npm run build` (tsc + vite) y `npm run lint` limpios en cada paso. Probado en
+vivo con el bypass de auth local (2 productores + trabajos en distintos
+estados y antigüedades, revertido con `git checkout` antes de commitear):
+scope "Todos" activo por default para el admin simulado, widget de carga
+mostrando la barra corta + tag "Menos cargado" en el productor con menos
+trabajos, checkbox de archivados funcionando en Trabajos (5→6 al tildarlo) y
+en Kanban (columna Entregado 1→2 al tildarlo, badge de Filtros mostrando "1").
+
+### 8. Tintero — sin cambios
+
+Sigue todo lo de rondas anteriores: base de conocimiento de materiales,
+estados que sobran (`NUEVO`/`APROBADO`), Manual de uso, cuenta de Nancy, fix
+de `handle_new_user()`, subida real de archivos a Storage, confirmar la Etapa
+3 del wizard, mobile (relevado parcialmente, ver §27), `credits_as_assigner`
+(columna muerta), AFIP (proyecto aparte, §28), y confirmar el SQL de Richard
+del punto 4 de esta sección.

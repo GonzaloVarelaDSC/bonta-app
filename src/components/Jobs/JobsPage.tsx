@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobs, canCreateJobs } from '../../lib/permissions';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
+import { isArchivedJob } from '../../lib/selectors';
 import { JobsTable } from './JobsTable';
 import { STATUS_LABELS } from '../../data/catalog';
 import type { JobStatus, Priority } from '../../types';
@@ -20,11 +21,14 @@ export function JobsPage() {
   const [statusFilter, setStatusFilter] = useState<JobStatus | 'all'>('all');
   const [clientFilter, setClientFilter] = useState('all');
   const [respFilter, setRespFilter] = useState('all');
+  const [showArchived, setShowArchived] = useState(false);
 
   const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
+  const archivedCount = useMemo(() => jobs.filter(isArchivedJob).length, [jobs]);
 
   const filtered = useMemo(() => {
     return jobs.filter((j) => {
+      if (!showArchived && isArchivedJob(j)) return false;
       if (priorityFilter !== 'all' && effectivePriority(j) !== priorityFilter) return false;
       if (statusFilter !== 'all' && j.status !== statusFilter) return false;
       if (clientFilter !== 'all' && j.clientId !== clientFilter) return false;
@@ -36,7 +40,7 @@ export function JobsPage() {
       }
       return true;
     });
-  }, [jobs, priorityFilter, statusFilter, clientFilter, respFilter, search, clients]);
+  }, [jobs, priorityFilter, statusFilter, clientFilter, respFilter, search, clients, showArchived]);
 
   const selectCls = 'text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
 
@@ -72,6 +76,13 @@ export function JobsPage() {
           <option value="all">Todo responsable</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
+        <label
+          className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1"
+          title="Entregados hace 3 días o más — se ocultan por default para no acumular"
+        >
+          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" />
+          Ver archivados{!showArchived && archivedCount > 0 ? ` (${archivedCount})` : ''}
+        </label>
         <span className="ml-auto text-xs text-ink-700 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
