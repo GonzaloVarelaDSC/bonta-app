@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 31).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 32).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2449,3 +2449,56 @@ de `handle_new_user()`, subida real de archivos a Storage, confirmar la Etapa
 3 del wizard, mobile (relevado parcialmente, ver §27), `credits_as_assigner`
 (columna muerta), AFIP (proyecto aparte, §28), y confirmar el SQL de Richard
 del punto 4 de esta sección.
+
+---
+
+## 32. Actualización 16/09 (cont.) — Nancy YA tiene cuenta (dato nuevo), pero mal cargada: sale como productora y con el email como nombre
+
+**Corrección importante para sesiones futuras:** todas las menciones anteriores
+en este archivo de "Nancy sin cuenta / falta su email" (§16.3, tintero de §18,
+§21, §25, §26, §27, §31) están **desactualizadas** — Gonzalo confirmó que Nancy
+ya tiene cuenta creada, con email **`nancy@ploteosbonta.com.ar`**. Nadie había
+corrido el UPDATE de `profiles` que este proyecto siempre necesita después de
+crear un usuario nuevo (mismo paso que ya hizo falta para Gastón/Pancho/Martín/
+Alejandra/Richard) — por eso quedó con los valores por default del trigger
+`handle_new_user()`.
+
+**Los 2 síntomas que reportó Gonzalo, mismo origen (datos, no código):**
+1. **Nancy aparecía en el widget "Carga de diseño" del Dashboard** (§31.5) —
+   ese widget filtra productores con `isProducer && active`, exactamente el
+   mismo criterio que ya usa el resto de la app (selector "Responsable",
+   filtro de responsable del Kanban, etc. — ver §13.1, §19.3). Nancy no debería
+   contar como productora (es coordinadora, como Alejandra/Richard) —
+   `is_producer` en su fila de `profiles` quedó en `true`, el default de la
+   columna, porque nadie lo puso en `false` a mano. **No se tocó código** — no
+   corresponde que el widget tenga un criterio de "quién es productor" distinto
+   al resto de la app, sería inconsistente. El fix es el UPDATE de abajo, igual
+   que ya se hizo para Pancho/Martín en su momento.
+2. **"Nancy" aparece como su email en vez de su nombre** — mismo trigger,
+   mismo motivo: nadie corrió el `update profiles set name = 'Nancy'...`.
+
+### SQL a correr en Supabase (SQL Editor → New query → Run)
+
+```sql
+update profiles
+set name = 'Nancy', role = 'coordinador', sector = 'Coordinación', is_producer = false
+where email = 'nancy@ploteosbonta.com.ar';
+```
+
+Verificación:
+```sql
+select name, email, role, is_producer, sector from profiles where email = 'nancy@ploteosbonta.com.ar';
+```
+Esperado: `name = 'Nancy'`, `role = 'coordinador'`, `is_producer = false`,
+`sector = 'Coordinación'` — mismo perfil que Alejandra/Richard (§18/§20).
+
+**Pendiente de confirmar que Gonzalo lo corrió** — no asumir que ya está
+aplicado en ninguna sesión futura, verificar con el `select` de arriba antes de
+dar el tema por cerrado. Hasta que se corra, Nancy va a seguir apareciendo en
+el widget de carga de diseño y con el email como nombre en toda la app (Header,
+"Generado por"/"Asigna → Responsable" de cualquier ficha que ella cargue,
+`UsersPage`, etc. — no es solo el widget nuevo, es cualquier lugar que muestre
+`user.name`).
+
+No hubo cambios de código en esta ronda — es puramente un dato a corregir en la
+base real.
