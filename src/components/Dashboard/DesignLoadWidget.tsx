@@ -3,6 +3,13 @@ import clsx from 'clsx';
 import type { Job, User } from '../../types';
 import { Avatar } from '../Common/Badges';
 
+// Piso de la escala de la barra: sin esto, con 2-4 trabajos totales (el caso
+// normal de este equipo chico) cualquiera con el número más alto queda con la
+// barra al 100%, lo mismo que si tuviera 30 — sugiere falsamente "lleno" (ver
+// comentario largo más abajo). Con un piso de 5, 1-4 trabajos se ven cortos de
+// verdad; recién si alguien llega a 5+ la barra empieza a acercarse al final.
+const SCALE_FLOOR = 5;
+
 /**
  * Comparación de carga de diseño entre productores — para decidir a quién
  * conviene asignar el próximo trabajo sin sobrecargar a una sola persona
@@ -13,24 +20,23 @@ import { Avatar } from '../Common/Badges';
  * que ya usa toda la app para "en diseño" (StatusTone, KPI "En diseño") — no
  * se inventa un color nuevo para esta comparación.
  *
- * Solo el conteo, sin barra ni puntos — dos vueltas atrás (Gonzalo, 16/09):
- * una barra relativa al máximo del grupo queda siempre al 100% para quien
- * tenga más, sin importar si son 3 o 30 (sin un concepto de "capacidad" en
- * esta app, eso sugiere falsamente "lleno"); una fila de puntos + el número
- * aparte dejaba mucho espacio vacío raro entre ambos. Herramientas como
- * Linear resuelven exactamente este caso (comparar carga sin un número de
- * capacidad real) así: agrupar y mostrar el conteo, nada más.
- *
- * **Chips compactos, no filas `justify-between`** (3ra vuelta, Gonzalo:
- * "MUY espaciado los nombres a los números"): una fila `justify-between` en
- * una tarjeta tan ancha como esta (mismo ancho que la grilla de KPI, hasta
- * 1800px) empuja el nombre a un extremo y el número al otro, con un hueco
- * enorme en el medio. Nombre y número ahora viven **dentro del mismo chip**
- * (fondo `ink-50`, como un pill de asignación), uno al lado del otro sin
- * espacio artificial — varios productores se leen como una fila de chips
- * cortos, no como una lista de renglones anchos. El número reusa el mismo
- * estilo de los contadores de columna del Kanban (`KanbanPage.tsx`,
- * `toneCls.count`), fusionado adentro del chip en vez de flotar aparte.
+ * **Historial de este widget (4 vueltas, Gonzalo probando cada una en vivo):**
+ * barra relativa al máximo del grupo → siempre 100% para quien tenga más,
+ * aunque sean 3 o 30 (sugiere "lleno" sin que haya noción de capacidad en esta
+ * app) → puntos por trabajo → hueco raro entre los puntos y el número → filas
+ * con solo el número (`justify-between`) → mismo hueco, ahora entre nombre y
+ * número, porque la tarjeta es tan ancha como la grilla de KPI (hasta 1800px)
+ * y una fila que reparte sus dos extremos ahí dentro queda con muchísimo aire
+ * → chips compactos → "difícil de leer, no es clara la situación de cada uno"
+ * (perder la barra le sacó la comparación visual instantánea que SÍ servía).
+ * **Versión final:** se vuelve a la barra (Gonzalo: "la barra estaba ok, hay
+ * que pulirla"), resolviendo los dos problemas reales identificados en el
+ * camino — (a) el 100% falso: la barra ahora escala contra
+ * `max(SCALE_FLOOR, conteo real)`, no contra el máximo del grupo, así que 1-4
+ * trabajos se ven proporcionalmente cortos en vez de siempre llenos; (b) el
+ * aire: la tarjeta entera pasa a `max-w-sm` en vez de ocupar el ancho completo
+ * del dashboard — con 2 líneas de contenido real, no tiene sentido que el
+ * contenedor sea tan ancho como la grilla de KPI de arriba.
  */
 export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }) {
   const producers = users.filter((u) => u.active && u.isProducer);
@@ -41,44 +47,47 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
       user: u,
       count: jobs.filter((j) => j.responsibleUserId === u.id && (j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO')).length,
     }))
-    .sort((a, b) => a.count - b.count);
+    .sort((a, b) => b.count - a.count);
 
-  const minCount = counts[0].count;
+  const scaleMax = Math.max(SCALE_FLOOR, ...counts.map((c) => c.count));
+  const minCount = Math.min(...counts.map((c) => c.count));
   const allTied = counts.every((c) => c.count === minCount);
 
   return (
-    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4 mb-5">
+    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4 mb-5 max-w-sm">
       <div className="flex items-center gap-2 mb-0.5">
         <PenTool size={14} className="text-info-text" aria-hidden />
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
       <p className="text-xs text-ink-700 mb-3">Para decidir a quién asignar el próximo trabajo sin sobrecargar a nadie.</p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="space-y-2">
         {counts.map(({ user, count }) => {
           const isLeast = !allTied && count === minCount;
           return (
             <div
-              key={user.id} role="group"
+              key={user.id} role="group" className="flex items-center gap-2"
               aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño${isLeast ? ', el que menos tiene' : ''}`}
-              className="inline-flex items-center gap-2 bg-ink-50 border border-ink-100 rounded-full pl-1.5 pr-2.5 py-1.5"
             >
-              <Avatar name={user.name} color={user.avatarColor} size={22} aria-hidden />
-              <span className="text-sm font-medium text-ink-800" aria-hidden>{user.name.split(' ')[0]}</span>
-              <span className={clsx(
-                'inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold tabular border',
-                'bg-info-bg text-info-text border-info/30'
-              )} aria-hidden>
-                {count}
-              </span>
-              {isLeast && (
-                <span className="text-[11px] font-semibold text-plan-text whitespace-nowrap" aria-hidden>
-                  · menos cargado
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 w-[84px] shrink-0" aria-hidden>
+                <Avatar name={user.name} color={user.avatarColor} size={20} />
+                <span className="text-xs font-medium text-ink-800 truncate">{user.name.split(' ')[0]}</span>
+              </div>
+              <div className="flex-1 h-2 rounded-full bg-ink-100 overflow-hidden" aria-hidden>
+                <div
+                  className={clsx('h-full rounded-full transition-all', isLeast && !allTied ? 'bg-plan' : 'bg-info')}
+                  style={{ width: count === 0 ? '0%' : `${Math.max(6, (count / scaleMax) * 100)}%` }}
+                />
+              </div>
+              <span className="text-sm font-semibold text-ink-900 tabular w-4 text-right" aria-hidden>{count}</span>
             </div>
           );
         })}
       </div>
+      {!allTied && (
+        <p className="text-[11px] text-ink-700 mt-2.5">
+          <span className="font-semibold text-plan-text">{counts.find((c) => c.count === minCount)?.user.name.split(' ')[0]}</span> tiene menos carga.
+        </p>
+      )}
     </div>
   );
 }

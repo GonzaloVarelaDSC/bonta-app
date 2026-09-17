@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 35).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 36).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2619,3 +2619,55 @@ misma que ya se anotó en §34: en un widget angosto de contenido (2-3 líneas),
 no uses un layout que asuma que el contenido tiene que llenar el ancho de una
 tarjeta pensada para otra cosa (la grilla de KPI) — agrupar el contenido en
 unidades compactas propias es casi siempre mejor que estirarlo.
+
+---
+
+## 36. Actualización 16/09 (cont.) — "Carga de diseño": vuelve la barra, pulida (5ta y — ahora sí — última vuelta)
+
+Gonzalo, viendo los chips de §35: "no, no quedo bueno. Mucho aire por todos
+lados, es difícil de leer, no es claro, **la barra estaba ok pero hay que
+pulirla** para que quede bien, que sea rápido de ver, de visualizar y entender
+la situación de cada uno." Sacar la barra en §33 fue un sobre-corrección — el
+problema nunca fue "barra sí o no", eran dos cosas puntuales de la barra
+original de §31.5, y ya estaban identificadas desde el principio: (a) escalaba
+al 100% para quien tuviera más sin importar si eran 3 o 30, y (b) el resto de
+las vueltas intermedias (puntos, chips) perdieron el "aire" en otro lado en vez
+de arreglarlo donde estaba.
+
+**Versión final** (`Dashboard/DesignLoadWidget.tsx`):
+1. **La tarjeta pasa a `max-w-sm`** en vez de ocupar el ancho completo del
+   Dashboard (hasta 1800px, igual que la grilla de KPI). Esta es la causa real
+   del "mucho aire" en las 3 vueltas anteriores (§33/§34/§35) — con 2 líneas de
+   contenido real, no tiene sentido un contenedor tan ancho; cualquier layout
+   adentro de un contenedor así iba a tener huecos.
+2. **La barra vuelve, con un piso de escala** (`SCALE_FLOOR = 5`): el ancho de
+   cada barra ahora es `count / max(5, count_real)`, no `count / max_del_grupo`
+   — con 1-4 trabajos (el rango normal de este equipo de 2 personas) las barras
+   se ven proporcionalmente cortas de verdad, no siempre al 100%. Recién si
+   alguien llega a 5+ trabajos en diseño la barra empieza a acercarse al final
+   — ahí sí "está cargado" es una lectura honesta.
+3. **Fila compacta y alineada**: columna de nombre de ancho fijo (84px) +
+   barra `flex-1` (corta, porque ahora vive adentro de una tarjeta angosta) +
+   número pegado al final — sin espacio artificial entre ninguno de los tres.
+4. **"Menos cargado" se sacó del renglón** (dejaba de leerse bien ahí) y pasa a
+   una sola frase abajo de las barras: "**Nombre** tiene menos carga." — no
+   hace falta repetirlo por persona si solo hay uno con el mínimo.
+5. La barra de quien tiene menos carga se pinta en `plan` (verde) en vez de
+   `info` (azul) — refuerza visualmente la misma idea que ya dice la frase de
+   abajo, sin agregar un elemento nuevo.
+
+Verificado en vivo (mismo bypass de auth local, revertido antes de commitear):
+Gonzalo (3 trabajos) con una barra al 60% de una escala de 5, Gastón (1
+trabajo) al 20%, "Gastón tiene menos carga." debajo — se compara de un
+vistazo, sin lucir "lleno" y sin aire de sobra. `npm run build`/`npm run lint`
+limpios.
+
+**Resumen final de las 5 vueltas de este widget** (§31.5 → §33 → §34 → §35 →
+§36): barra sin piso de escala → puntos → solo conteo en filas anchas → chips
+compactos → **barra con piso de escala + tarjeta angosta**. Los dos problemas
+reales identificados desde la primera ronda (escala engañosa + tarjeta
+demasiado ancha para su contenido) eran independientes entre sí — sacar la
+barra nunca iba a arreglar el segundo, y de hecho lo empeoró al perder la
+comparación visual instantánea que la barra sí daba. **Lección para no
+repetir:** frente a un problema de diseño con 2 causas reales, arreglar las
+2 causas — no descartar el elemento entero por una sola de ellas.
