@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 36).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 37).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2671,3 +2671,40 @@ barra nunca iba a arreglar el segundo, y de hecho lo empeoró al perder la
 comparación visual instantánea que la barra sí daba. **Lección para no
 repetir:** frente a un problema de diseño con 2 causas reales, arreglar las
 2 causas — no descartar el elemento entero por una sola de ellas.
+
+---
+
+## 37. Actualización 17/09 — "Carga de diseño": filas en paralelo, no apiladas (6ta vuelta)
+
+Gonzalo, con la barra ya pulida de §36: "está bien ahora, pero ponenos en
+paralelo, no uno abajo de otro, así es más fino que alto y no ocupamos visión
+de trabajos" — el widget apilaba una fila por productor (`space-y-2`), lo que
+lo hacía más alto de lo necesario y empujaba hacia abajo la lista de "Trabajos
+activos" que es lo que de verdad importa ver sin scrollear de más.
+
+**Fix** (`Dashboard/DesignLoadWidget.tsx`): el contenedor pasa de `space-y-2`
+(una fila por renglón) a `flex flex-wrap items-center gap-x-5 gap-y-2` (los
+productores uno al lado del otro, en la misma línea). Cada productor se achica
+a una unidad compacta propia (avatar 18px + nombre + barra fija de 64px +
+número, `gap-1.5` interno) en vez de una fila que reparte columna de nombre +
+`flex-1` de barra — con varios productores en paralelo, ya no tiene sentido que
+la barra de cada uno "estire" hasta ocupar el resto de una fila propia. La
+tarjeta pasa de `max-w-sm` a `max-w-md` para darle margen a 2+ productores lado
+a lado sin apretarlos; si hay más productores de los que entran en una línea,
+`flex-wrap` los baja a una segunda fila en vez de desbordar. La frase "Nombre
+tiene menos carga" se mantiene debajo, sin cambios.
+
+Resultado: con 2 productores el widget pasa de ~4 líneas de alto (título +
+descripción + 2 filas + frase) a ~3 (título + descripción + 1 fila con los 2
+lado a lado + frase) — más fino, como pidió Gonzalo. Verificado en vivo (mismo
+bypass de auth local, revertido antes de commitear): Gonzalo (barra al 60%) y
+Gastón (barra al 20%) en la misma línea, `aria-label` de cada uno intacto.
+`npm run build`/`npm run lint` limpios.
+
+**Nota para no repetir el patrón de las 6 vueltas de este widget** (§31.5 →
+§33 → §34 → §35 → §36 → §37): cada ronda fue un ajuste real y puntual sobre
+feedback específico de uso, no cambios de gusto porque sí — layout apilado vs.
+en paralelo, ancho de tarjeta, escala de la barra, y contenido de cada fila son
+4 ejes de diseño independientes entre sí. Si en el futuro se pide "ajustar" este
+widget de nuevo, identificar primero CUÁL de esos ejes es el problema real
+antes de tocar el resto.
