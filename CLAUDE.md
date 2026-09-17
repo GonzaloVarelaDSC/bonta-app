@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 16/09/2026 (sección 32).
+la contradiga más arriba**. Última actualización: 16/09/2026 (sección 33).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2502,3 +2502,52 @@ el widget de carga de diseño y con el email como nombre en toda la app (Header,
 
 No hubo cambios de código en esta ronda — es puramente un dato a corregir en la
 base real.
+
+---
+
+## 33. Actualización 16/09 (cont.) — "Carga de diseño": de barra continua a puntos por trabajo
+
+Gonzalo probó el widget de §31.5 y preguntó algo puntual y acertado: "¿las
+barras hacen falta que vayan a lo largo hasta el fondo? ¿no se podría plantear
+de otra manera más lógica?" — y pidió mirar referentes reales antes de tocar
+nada.
+
+**El problema real que señaló:** la barra original escalaba su ancho contra el
+**máximo del grupo visible**, no contra ninguna magnitud absoluta — así que
+quien tuviera más trabajos en diseño quedaba *siempre* con la barra al 100% de
+ancho, sin importar si eran 3 o 30. Esta app no tiene ningún concepto de
+"capacidad" (no hay un número de referencia de "cuánto es mucho"), así que esa
+barra al tope sugería falsamente "está lleno/saturado" cuando en realidad podía
+ser una carga perfectamente normal.
+
+**Referentes consultados (vía skill `frontend-design`):** las vistas de
+"workload" de herramientas reales que sí usan barras continuas (Asana, monday.com,
+ClickUp) lo hacen contra una **capacidad definida y real** (horas/día, puntos de
+historia) — sin eso, una barra relativa al grupo es un patrón sin la información
+que necesita para tener sentido. Linear ni siquiera usa barras para esto:
+agrupa por asignado y muestra un conteo simple. Conclusión: sin un número de
+capacidad real en esta app (y no había ningún pedido de sumar uno), el patrón
+correcto es representar la cantidad real, no un porcentaje inventado.
+
+**Rediseño aplicado** (`Dashboard/DesignLoadWidget.tsx`): la barra continua se
+reemplazó por **un punto circular (14px, tono `info`) por cada trabajo en
+diseño**, tope de 10 puntos visibles + "+N" en texto si hay más, seguido del
+número exacto. Un punto = un trabajo real es honesto en cualquier escala (1
+punto para 1 trabajo, 3 puntos para 3, nunca se "infla" a lo ancho) y reusa el
+mismo lenguaje de chip/pill que ya usa el resto de la app (`PriorityBadge`,
+chips de material en `ProductsEditor`) en vez de importar un control de
+bar-chart genérico ajeno al resto de la UI. Con 0 trabajos, en vez de una fila
+vacía que podría leerse como "roto", el texto "Sin trabajos en diseño".
+
+**Skill `design-critique`** corrida sobre el rediseño antes de aplicarlo — sin
+hallazgos nuevos (la jerarquía puntos→número→tag "Menos cargado" quedó clara,
+mismo `role="group"` + `aria-label` de §31 sin cambios, contraste del punto
+`info` sobre fondo blanco verificado en 5.02:1, sobre el mínimo de 3:1 para
+elementos gráficos no textuales).
+
+Verificado en vivo con el bypass de auth local (2 productores, 1 y 3 trabajos
+en diseño — revertido con `git checkout` antes de commitear): los puntos se
+leen y comparan de un vistazo sin implicar que nadie está "lleno".
+
+`npm run build`/`npm run lint` limpios. Sin cambios de código fuera de este
+archivo.
