@@ -83,7 +83,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-juan', assignedUserIds: ['u-maria', 'u-nahuel'], jobTypeId: 'vidrieras',
     description: 'Vinilado de vidriera con nueva campaña de temporada.', quantity: '1 vidriera', measurements: '4.20 x 2.60 m',
     materialIds: ['vinilo'], technique: 'Plotter + corte', finish: 'Vinilo autoadhesivo', color: 'Full color',
-    observations: 'Instalación fuera de horario comercial.', createdDaysAgo: 1, committedInHours: 3, status: 'BLOQUEADO',
+    observations: 'Instalación fuera de horario comercial.', createdDaysAgo: 1, committedInHours: 3, status: 'EN_PRODUCCION',
     requiresInstallation: true, installAddress: 'Av. Santa Fe 3253, CABA',
     blocked: { reason: 'falta_aprobacion', description: 'Cliente todavía no aprobó el arte final de la vidriera.', hoursAgo: 5 },
     clientImportant: true, lastActivityHoursAgo: 5 },

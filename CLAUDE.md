@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 40).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 41).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2984,3 +2984,107 @@ puesto en Fase 2. Quedan Fase 3 (unificar estados — separar macro-etapa de
 sub-estado en `JobStatus`), Fase 4 (soft-delete + tacho en Kanban + Histórico
 admin-only + subir umbral de archivado a 5 días), Fase 5 (fricción de uso diario)
 y Fase 6 (manual) — a la espera de que Gonzalo pida seguir con la que corresponda.
+
+---
+
+## 41. Actualización 17/09 (cont.) — Fase 3: `BLOQUEADO` deja de ser un estado, pasa a ser un flag ortogonal (bug de fondo corregido)
+
+Gonzalo pidió seguir con Fase 3 ("unificar estados"). Investigando a fondo antes
+de tocar nada apareció un **bug de correctitud real, no solo cosmético**, que
+terminó siendo el corazón de esta fase.
+
+### El bug encontrado
+
+`blockJob` pisaba `jobs.status = 'BLOQUEADO'` al bloquear un trabajo, y
+`unblockJob` lo devolvía **siempre** a `'EN_PRODUCCION'` al desbloquear, sin
+importar en qué etapa real estuviera el trabajo. Un trabajo bloqueado estando en
+Control de calidad (o en Instalación, o donde sea) **perdía esa etapa real** al
+desbloquearse — volvía a aparecer como si recién hubiera entrado a producción,
+aunque en verdad ya estuviera mucho más adelante en el flujo. Además, como
+`BLOQUEADO` no estaba en ninguna columna de `KANBAN_COLUMNS`, el Kanban lo
+mandaba a la columna "Pendiente" por el fallback de `columnOf()` — un trabajo
+bloqueado a mitad de producción "saltaba" visualmente al principio del tablero.
+
+Esto es exactamente el tipo de problema que el punto 10 de tu pedido original
+sospechaba ("si existen estados que en realidad deberían ser sub-estados/flags,
+analizar si corresponde separarlos") — `BLOQUEADO` nunca fue una etapa de verdad,
+es una pausa que puede pasar en cualquier etapa. Tratarlo como si reemplazara la
+etapa fue lo que causaba la pérdida de datos.
+
+### La solución
+
+**`BLOQUEADO` se sacó de `JobStatus` por completo.** Bloquear/desbloquear un
+trabajo ya no toca `status` en absoluto — solo abre/cierra una fila en
+`block_records`, tal como ya hacía antes de tocar el status. "¿Está bloqueado?"
+sigue siendo `isBlocked(job)` (`lib/selectors.ts`, ya existía y ya era correcta:
+deriva de `blockRecords`, nunca leyó `status`) — lo que cambió es que ahora **es
+la única fuente de verdad**, status ya no compite con ella.
+
+**Código tocado:**
+- `types/index.ts`, `data/catalog.ts` (`STATUS_LABELS`), `Common/Badges.tsx`
+  (`STATUS_TONE`) — sacado `BLOQUEADO`.
+- `store/useStore.ts` — `blockJob`/`unblockJob` ya no escriben `status`, solo
+  tocan `last_activity_at` (mismo criterio que el resto de los "touch" del
+  store).
+- `data/seed.ts` — el único trabajo demo con `status: 'BLOQUEADO'` pasa a
+  `'EN_PRODUCCION'` (su bloqueo real se sigue viendo igual: ya tenía su propio
+  campo `blocked` que arma `blockRecords` aparte).
+- **Nuevo `BlockedBadge`** (`Common/Badges.tsx`) — pill rojo compacto
+  (🔒 Bloqueado, con el motivo en el `title`), mismo lenguaje que
+  `SampleReviewBadge`. Se agregó a las 4 vistas que antes se enteraban de un
+  bloqueo solo porque el status literal decía "Bloqueado":
+  - `JobsTable.tsx` — al lado del `StatusSelect`.
+  - `DashboardJobCard.tsx` — al lado del `StatusSelect`.
+  - `Kanban/KanbanPage.tsx` — tag "bloqueado" en la fila del cliente (mismo
+    patrón que el tag "muestra" que ya existía) **+ borde rojo de 2px en toda la
+    tarjeta** — este último es la compensación real por haber perdido el "salto
+    a Pendiente": antes esa reubicación errónea funcionaba, sin querer, como una
+    señal visual fortísima de "esto está mal"; ahora que el trabajo se queda en
+    su columna real (correcto), hacía falta algo igual de imposible de no ver.
+  - `JobDetailPage.tsx` — sumado a la tira de badges de la cabecera, además del
+    banner rojo completo que ya tenía (ese banner no se tocó, sigue con el
+    motivo completo y el botón "Desbloquear").
+- **`JobsPage.tsx`** — nuevo checkbox "🔒 Solo bloqueados (N)" en la barra de
+  filtros (mismo patrón que "Ver archivados") — compensa que elegir "Bloqueado"
+  en el filtro de Estado ya no es una opción posible.
+
+### Migración pendiente — `018_drop_bloqueado_status.sql`
+
+Si hay algún trabajo real en la base con `status = 'BLOQUEADO'` ahora mismo, no
+hay forma de recuperar en qué etapa estaba de verdad antes de bloquearse (ese
+dato ya se había perdido con el diseño viejo, el mismo bug de arriba). La
+migración lo pasa a `'EN_PRODUCCION'` como valor de referencia (mismo default
+que ya usaba `unblockJob`) — **el bloqueo en sí no se pierde**, sigue viéndose
+igual porque ahora se arma desde `block_records`, no desde `status`. Si algún
+trabajo puntual necesita otra etapa real, se corrige a mano después. SQL a
+correr en Supabase:
+```sql
+update jobs set status = 'EN_PRODUCCION' where status = 'BLOQUEADO';
+```
+**Pendiente de confirmar que Gonzalo la corrió** — mismo patrón de siempre, no
+asumir. Verificar con `select code, name, status from jobs where status =
+'BLOQUEADO';` (debería devolver 0 filas).
+
+### Lo que NO se tocó, a propósito
+
+`EN_DISENO`/`DISENO_LISTO` (mismo grupo del Kanban, dos valores distintos) y
+`LISTO_PARA_ENTREGA`/`LISTO_PARA_INSTALACION` (ídem) **no se colapsaron** —
+a diferencia de `BLOQUEADO`, son distinciones reales y con sentido (diseño
+terminado pero sin aprobar todavía; el destino final es distinto según si el
+trabajo va a instalación o no), no un flag mal modelado. Restructurar el enum
+completo en dos dimensiones (macro-etapa + sub-estado explícito) sería un cambio
+mucho más grande para un beneficio dudoso, y no correspondía sin pedirlo — se
+resolvió específicamente el caso que tenía un bug real detrás.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios, sin warnings nuevos. Grep final sobre
+`src/` confirma que `BLOQUEADO` solo queda en comentarios explicativos y en el
+texto literal del banner de la ficha (no en ninguna comparación de tipo). No se
+hizo una pasada visual autenticada completa esta ronda — mismo criterio que la
+Fase 2 (cambios de lógica/estado, verificados por build + revisión de código, no
+hay UI nueva compleja que justifique el bypass de auth local).
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.

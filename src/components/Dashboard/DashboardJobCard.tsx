@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { ArrowRight, Phone } from 'lucide-react';
-import type { Job, Priority } from '../../types';
+import type { Job, Priority, BlockReason } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
-import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
+import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge, BlockedBadge } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
+import { isBlocked } from '../../lib/selectors';
+import { BLOCK_REASON_LABELS } from '../../data/catalog';
 import { EditableCode } from '../Common/EditableCode';
 
 // Cada ficha se marca con un borde de color a la izquierda según su prioridad —
@@ -70,6 +72,9 @@ export function DashboardJobCard({ job }: { job: Job }) {
           status={job.status} options={statusOptionsFor(job, currentUser?.role)}
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
+        {isBlocked(job) && (
+          <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[job.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />
+        )}
         <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} size="md" />
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
         <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />

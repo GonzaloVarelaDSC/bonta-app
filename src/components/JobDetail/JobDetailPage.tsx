@@ -8,7 +8,7 @@ import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { friendlyError } from '../../lib/errors';
-import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge } from '../Common/Badges';
+import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge, BlockedBadge } from '../Common/Badges';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
 import { STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
@@ -113,6 +113,7 @@ export function JobDetailPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <PriorityBadge priority={effectivePriority(job)} />
               <StatusBadge status={job.status} />
+              {activeBlock && <BlockedBadge blocked reason={BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]} />}
               <CountdownBadge iso={job.committedDate} status={job.status} />
               <RiskBadge risk={calculateRisk(job)} />
               <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} />

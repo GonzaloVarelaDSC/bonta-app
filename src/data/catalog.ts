@@ -92,7 +92,6 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   LISTO_PARA_INSTALACION: 'Listo para instalación',
   EN_INSTALACION: 'En instalación',
   TERMINADO: 'Entregado',
-  BLOQUEADO: 'Bloqueado',
   CANCELADO: 'Cancelado',
 };
 

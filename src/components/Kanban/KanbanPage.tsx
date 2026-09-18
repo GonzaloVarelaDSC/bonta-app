@@ -8,11 +8,11 @@ import {
 } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
-import { isArchivedJob } from '../../lib/selectors';
-import { KANBAN_COLUMNS, type ColumnTone } from '../../data/catalog';
+import { isArchivedJob, isBlocked } from '../../lib/selectors';
+import { KANBAN_COLUMNS, BLOCK_REASON_LABELS, type ColumnTone } from '../../data/catalog';
 import { Avatar, CountdownBadge } from '../Common/Badges';
 import { ScrollFadeX } from '../Common/ScrollFade';
-import type { Client, Job, JobStatus, Priority } from '../../types';
+import type { BlockReason, Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
@@ -70,6 +70,14 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
             muestra
           </span>
         )}
+        {isBlocked(job) && (
+          <span
+            className="shrink-0 text-[10px] font-semibold bg-crit-bg text-crit-text rounded px-1.5 py-0.5"
+            title={`Bloqueado — ${BLOCK_REASON_LABELS[job.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]}`}
+          >
+            bloqueado
+          </span>
+        )}
       </div>
       {(creator || resp) && (
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-ink-700 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
@@ -120,8 +128,13 @@ function KanbanCard({ job }: { job: Job }) {
       }}
       aria-label={`Abrir ficha — ${client?.name ?? 'Sin cliente'}, ${job.name}`}
       className={clsx(
-        'bg-white rounded-lg border border-ink-100 shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
+        'bg-white rounded-lg shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
+        // Antes un trabajo bloqueado "saltaba" a la columna Pendiente (Fase 3,
+        // 17/09 — bloquear ya no pisa `status`, así que se queda en su columna
+        // real) — el borde rojo compensa esa señal visual que se perdió, para
+        // que siga siendo imposible no notarlo en el board.
+        isBlocked(job) ? 'border-2 border-crit' : 'border border-ink-100',
         isDragging && 'opacity-30'
       )}
     >

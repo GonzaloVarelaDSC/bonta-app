@@ -23,9 +23,11 @@ export const SELECTABLE_STATUSES: JobStatus[] = [
 // Lista completa para admin/coordinador (Gonzalo, 07/09: "poder hacer y deshacer
 // todo lo posible") — incluye estados que normalmente se alcanzan por su propio
 // flujo, para poder corregir a mano un trabajo mal cargado o revertir un
-// "Terminado"/"Cancelado" puesto por error. BLOQUEADO no está: se llega por el
-// botón "Bloquear trabajo" para que quede el motivo registrado. NUEVO y APROBADO
-// tampoco: son estados viejos que ningún flujo produce (ver CLAUDE.md §7.4).
+// "Terminado"/"Cancelado" puesto por error. `BLOQUEADO` ya no es un valor de
+// `JobStatus` (Fase 3, 17/09) — bloquear/desbloquear no toca más el estado real,
+// es un flag aparte derivado de `blockRecords` (ver `isBlocked()`,
+// `BlockedBadge`). NUEVO y APROBADO tampoco están: son estados viejos que ningún
+// flujo produce (ver CLAUDE.md §7.4).
 export const ADMIN_STATUSES: JobStatus[] = [
   'PENDIENTE', 'FALTA_INFORMACION', 'EN_DISENO', 'DISENO_LISTO', 'EN_PRODUCCION',
   'EN_CONTROL_CALIDAD', 'LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION',

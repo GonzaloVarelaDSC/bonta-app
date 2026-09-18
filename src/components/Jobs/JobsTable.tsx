@@ -5,9 +5,12 @@ import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canDeleteJob } from '../../lib/permissions';
-import { PriorityBadge, StatusSelect, CountdownBadge, Avatar } from '../Common/Badges';
+import { PriorityBadge, StatusSelect, CountdownBadge, Avatar, BlockedBadge } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
+import { isBlocked } from '../../lib/selectors';
+import { BLOCK_REASON_LABELS } from '../../data/catalog';
+import type { BlockReason } from '../../types';
 import { statusOptionsFor, tryChangeJobStatus, isClosedStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { ScrollFadeX } from '../Common/ScrollFade';
@@ -80,10 +83,15 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                   {silent && <span className="ml-1.5 text-wait-text" title="Más de 48h sin movimiento">💤</span>}
                 </td>
                 <td className="px-2 py-2.5">
-                  <StatusSelect
-                    status={j.status} options={statusOptionsFor(j, currentUser?.role)}
-                    onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
-                  />
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <StatusSelect
+                      status={j.status} options={statusOptionsFor(j, currentUser?.role)}
+                      onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
+                    />
+                    {isBlocked(j) && (
+                      <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[j.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-2 py-2.5">
                   {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} /><span className="text-xs text-ink-700">{resp.name.split(' ')[0]}</span></div>}

@@ -448,10 +448,18 @@ export const useStore = create<StoreState>()((set, get) => ({
     await refreshMyNotifications(set, get);
   },
 
+  // "Bloqueado" ya no pisa `status` (Fase 3, 17/09) — antes esta acción mandaba
+  // `status: 'BLOQUEADO'`, así que un trabajo bloqueado en, por ej., Control de
+  // calidad "perdía" esa etapa real: al desbloquear, `unblockJob` lo devolvía
+  // siempre a `EN_PRODUCCION` sin importar dónde estuviera de verdad. Ahora
+  // bloquear solo abre un `block_records` y toca `last_activity_at` — el estado
+  // real del trabajo queda intacto todo el tiempo que dure el bloqueo.
+  // `isBlocked()`/`BlockedBadge` son quienes derivan "está bloqueado" a partir de
+  // `blockRecords`, no de `status`.
   blockJob: async (jobId, reason, description, byUserId) => {
     const { error: blockError } = await supabase.from('block_records').insert({ job_id: jobId, reason, description, opened_by: byUserId });
     if (blockError) throw blockError;
-    const { error } = await supabase.from('jobs').update({ status: 'BLOQUEADO', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    const { error } = await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error;
     const job = await fetchJobById(jobId);
     await insertActivity(set, jobId, byUserId, 'bloqueo', `Bloqueó el trabajo — ${description}`);
@@ -467,7 +475,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       const { error: closeError } = await supabase.from('block_records').update({ closed_at: new Date().toISOString() }).eq('id', openBlock.id);
       if (closeError) throw closeError;
     }
-    const { error } = await supabase.from('jobs').update({ status: 'EN_PRODUCCION', last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    const { error } = await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'desbloqueo', 'Desbloqueó el trabajo.');
     await refreshJob(set, jobId);

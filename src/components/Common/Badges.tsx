@@ -57,7 +57,15 @@ type StatusTone = 'crit' | 'urg' | 'info' | 'norm' | 'review' | 'wait' | 'plan' 
 // tiene ninguna columna/sección propia donde ya esté agrupado. Iguales de un
 // vistazo, como en Linear/GitHub/Trello: gris = no arrancado, azul = diseño,
 // dorado = producción, violeta = control de calidad, verde = listo, verde
-// azulado = instalación, gris oscuro = entregado, rojo = bloqueado.
+// azulado = instalación, gris oscuro = entregado.
+// `BLOQUEADO` ya NO es un valor de `JobStatus` (Fase 3, 17/09) — bloquear un
+// trabajo ya no pisa su estado real (antes `blockJob` mandaba `status:
+// 'BLOQUEADO'` y `unblockJob` lo devolvía siempre a `EN_PRODUCCION` sin
+// importar en qué etapa estuviera en realidad — un trabajo bloqueado en
+// Control de calidad "perdía" su etapa real al desbloquearse). "Bloqueado" es
+// ahora un estado ortogonal, derivado de `blockRecords` (`isBlocked()` en
+// `lib/selectors.ts`) — se muestra como badge/indicador aparte (`BlockedBadge`
+// acá abajo), nunca reemplazando el estado real.
 const STATUS_TONE: Record<JobStatus, StatusTone> = {
   PENDIENTE: 'wait',
   FALTA_INFORMACION: 'urg',
@@ -67,7 +75,6 @@ const STATUS_TONE: Record<JobStatus, StatusTone> = {
   EN_INSTALACION: 'site',
   LISTO_PARA_ENTREGA: 'plan', LISTO_PARA_INSTALACION: 'plan',
   TERMINADO: 'done',
-  BLOQUEADO: 'crit',
   CANCELADO: 'wait',
 };
 
@@ -180,6 +187,27 @@ export function CountdownBadge({ iso, status, compact }: { iso: string; status?:
       urgent && 'border border-current/30'
     )}>
       {c.overdue ? '⚠️' : '⏱️'} {c.label}
+    </span>
+  );
+}
+
+// Bloqueado ya no es un valor de `status` (ver comentario en STATUS_TONE) —
+// este badge es el indicador visual, independiente del estado real, para las
+// vistas que antes se enteraban de un bloqueo solo porque el status literal
+// decía "Bloqueado" (Tabla, Dashboard, Kanban). La ficha además tiene su propio
+// banner con el motivo completo — esto es la versión compacta para listas.
+export function BlockedBadge({ blocked, reason, size = 'md' }: { blocked: boolean; reason?: string; size?: 'sm' | 'md' }) {
+  if (!blocked) return null;
+  return (
+    <span
+      title={reason ? `Bloqueado — ${reason}` : 'Bloqueado'}
+      className={clsx(
+        'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
+        TONE_CLASSES.crit,
+        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
+      )}
+    >
+      <span aria-hidden>🔒</span>Bloqueado
     </span>
   );
 }

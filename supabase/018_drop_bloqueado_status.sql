@@ -1,0 +1,16 @@
+-- Fase 3 (17/09/2026): "Bloqueado" deja de ser un valor de jobs.status.
+--
+-- Antes, bloquear un trabajo pisaba status='BLOQUEADO' y desbloquearlo lo devolvía
+-- siempre a 'EN_PRODUCCION' sin importar en qué etapa estuviera de verdad — un
+-- trabajo bloqueado en Control de calidad "perdía" esa etapa real al desbloquearse.
+-- Ahora bloquear/desbloquear ya no toca status en absoluto: "bloqueado" se deriva
+-- de block_records (fila abierta, closed_at is null), independiente del estado.
+--
+-- Si hay algún trabajo real con status='BLOQUEADO' hoy, no hay forma de recuperar
+-- en qué etapa estaba de verdad antes de bloquearse (ese dato ya se había perdido
+-- con el diseño viejo) — se lo pasa a 'EN_PRODUCCION' como valor de referencia
+-- (mismo default que ya usaba unblockJob). El bloqueo en sí NO se pierde: sigue
+-- viéndose igual, porque ahora se muestra a partir de block_records, no de status.
+-- Si algún trabajo puntual necesita otra etapa real, corregirlo a mano después de
+-- correr esto.
+update jobs set status = 'EN_PRODUCCION' where status = 'BLOQUEADO';
