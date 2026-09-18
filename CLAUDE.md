@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 42).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 43).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3220,3 +3220,91 @@ Fase 5 (fricción de uso diario) y Fase 6 (manual con capturas). Con esto se
 cierran las 4 fases "de código" del plan de la auditoría (sección 38-42) — las
 dos que faltan son de un carácter distinto (revisión de uso real / documentación
 visual), no refactors puntuales.
+
+---
+
+## 43. Actualización 17/09 (cont.) — Fase 5: recorrida de fricción de uso diario
+
+A diferencia de las Fases 2-4 (implementar algo puntual ya definido), la Fase 5
+es "buscar fricción" — así que en vez de partir de una lista de cambios, se
+recorrieron en vivo los flujos que pedía el brief original (crear, abrir,
+modificar, comentar, subir archivo, cambiar estado, finalizar) con el bypass de
+auth local, tipeando/clickeando de verdad en vez de solo leer código.
+
+### Recorrido y hallazgos
+
+- **Crear (Carga rápida)**: sin fricción — cliente, nombre, tipo, fecha (con
+  chips rápidos que autosugieren prioridad), descripción, producto con
+  material/medidas, y la barra inferior pasa de "Cargá al menos una medida..."
+  a "Listo para crear" en vivo. Confirma lo que ya decía la auditoría de Fase 1.
+- **Abrir / Modificar / Cambiar estado**: sin fricción nueva — tabs, selects de
+  estado/prioridad/muestra, todo responde bien. Ya se había probado a fondo en
+  Fase 3.
+- **Subir archivo / Finalizar**: dropzone de Archivos y el botón "Mensaje para
+  el cliente" (con "Abrir en WhatsApp"/"Copiar mensaje") probados en vivo, sin
+  fricción — el mensaje generado se lee natural y completo.
+- **Comentar — fricción real encontrada y corregida**: los chips
+  `@Coordinación`/`@Diseño`/`@Producción`/`@Instalación` del panel de
+  comentarios (ya sospechados en la auditoría de Fase 1 como "posiblemente
+  decorativos") **se confirmaron rotos en vivo**: clickear "@Diseño" inserta el
+  texto pero `submit()` solo generaba una mención real (y por lo tanto una
+  notificación — `addComment` llama a `insertNotifications(mentions, ...)`) si
+  el texto matcheaba el nombre de pila de un usuario real. Clickear cualquiera
+  de esos 4 chips **nunca avisaba a nadie**, aunque visualmente parecía una
+  mención funcional. Confirmado probando el clic real y viendo que `mentions`
+  quedaba vacío.
+
+### Fix aplicado — menciones por sector ahora son reales
+
+`CommentsPanel.tsx` — en vez de borrar los chips (opción más simple pero perdía
+una funcionalidad con valor real: avisar de una sola vez a todo un equipo), se
+los conectó a `role` en vez de a nombres de usuario individuales:
+`@Coordinación` → todos los usuarios `active` con `role: 'coordinador'`,
+`@Diseño` → `role: 'diseno'`, `@Producción` → `role: 'produccion'`,
+`@Instalación` → `role: 'instalacion'`. Se usó `role` (enum fijo) en vez de
+`sector` (texto libre editable por admin, ver sección 20) porque un match por
+substring contra texto libre es frágil — podía dar cero resultados según cómo
+esté escrito el sector de cada uno. `submit()` ahora combina menciones por
+nombre (ya existían) + menciones por rol (nuevas) en un solo array sin
+duplicados. Verificado en vivo con un segundo usuario de prueba (`role:
+'diseno'`): clickear "@Diseño" + enviar corrió `submit()` completo sin errores
+de lógica (el único error en consola fue el esperado por el ID falso del
+devpreview contra Supabase real, no un fallo del fix).
+
+### Hallazgo menor, no corregido
+
+El checkbox "procesado" de `ProductsView` (pestaña Detalle) apareció en el
+árbol de accesibilidad como `checkbox "on"` en vez de describir el producto —
+pero no se pudo confirmar si es un problema real (podría ser simplemente el
+`value="on"` por default de cualquier `<input type="checkbox">` sin `value`
+explícito, que algunos serializadores de accesibilidad muestran en vez del
+nombre accesible real derivado del `<label>` que lo envuelve). No se tocó por
+no tener certeza de que sea un bug — si en algún momento se confirma con un
+lector de pantalla real, agregar un `aria-label` explícito ahí es un fix de
+una línea.
+
+### Lo que NO se encontró (y por qué no se buscó más)
+
+El resto de los flujos (Kanban drag&drop, Trabajos, Histórico, Dashboard) ya se
+habían probado a fondo en las Fases 2-4 de esta misma sesión — no se repitió
+esa recorrida para no duplicar trabajo. La deuda ya conocida y documentada
+(subida real de archivos a Storage, checklist de control de calidad no
+adaptado por tipo de trabajo, Manual sin contenido) **no es fricción nueva**,
+son decisiones ya tomadas de alcance — no se tocaron acá.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios. Bypass de auth local revertido con una
+Edit puntual (deshaciendo solo el bloque agregado) en vez de `git checkout --`
+sobre todo el archivo — la lección de la Fase 4 (§42) sobre no perder cambios
+reales de la misma sesión al revertir se aplicó bien esta vez; `git diff
+src/App.tsx` dio vacío antes de commitear.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+### Lo que queda del plan original
+
+Solo Fase 6 (manual con capturas reales) — que además depende de que Gonzalo
+mire la app ya deployada primero, como se le sugirió al cerrar la Fase 4.

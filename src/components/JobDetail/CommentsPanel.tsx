@@ -3,13 +3,20 @@ import { Send } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
-import type { Job } from '../../types';
+import type { Job, RoleId } from '../../types';
 
-const MENTIONABLE = [
-  { id: 'u-juan', label: '@Coordinación' },
-  { id: 'sector-diseno', label: '@Diseño' },
-  { id: 'sector-produccion', label: '@Producción' },
-  { id: 'sector-instalacion', label: '@Instalación' },
+// Menciones por sector — antes eran decorativas: insertaban el texto "@Diseño"
+// etc. pero `submit()` solo generaba una mención (y por lo tanto notificación,
+// ver `insertNotifications` en `addComment`) si el texto matcheaba el nombre de
+// pila de un usuario real, así que clickear estos chips nunca avisaba a nadie
+// (hallazgo de la Fase 5, 17/09). Ahora mencionan a todos los usuarios activos de
+// ese `role` — más predecible que matchear contra `sector` (texto libre editable,
+// ver CLAUDE.md sección 20) porque `role` es un enum fijo.
+const MENTIONABLE: { role: RoleId; label: string }[] = [
+  { role: 'coordinador', label: '@Coordinación' },
+  { role: 'diseno', label: '@Diseño' },
+  { role: 'produccion', label: '@Producción' },
+  { role: 'instalacion', label: '@Instalación' },
 ];
 
 export function CommentsPanel({ job }: { job: Job }) {
@@ -21,7 +28,11 @@ export function CommentsPanel({ job }: { job: Job }) {
 
   function submit() {
     if (!text.trim()) return;
-    const mentions = users.filter((u) => text.includes(`@${u.name.split(' ')[0]}`)).map((u) => u.id);
+    const nameMentions = users.filter((u) => text.includes(`@${u.name.split(' ')[0]}`)).map((u) => u.id);
+    const roleMentions = MENTIONABLE
+      .filter((m) => text.includes(m.label))
+      .flatMap((m) => users.filter((u) => u.active && u.role === m.role).map((u) => u.id));
+    const mentions = [...new Set([...nameMentions, ...roleMentions])];
     addComment(job.id, user.id, text.trim(), mentions);
     setText('');
   }
@@ -53,7 +64,7 @@ export function CommentsPanel({ job }: { job: Job }) {
       <div className="p-3 border-t border-ink-100 shrink-0">
         <div className="flex flex-wrap gap-1 mb-2">
           {MENTIONABLE.map((m) => (
-            <button key={m.id} onClick={() => setText((t) => `${t}${t ? ' ' : ''}${m.label} `)} className="text-[11px] text-brand-600 bg-brand-100 rounded-full px-2 py-0.5 hover:bg-brand-200/70">
+            <button key={m.role} onClick={() => setText((t) => `${t}${t ? ' ' : ''}${m.label} `)} className="text-[11px] text-brand-600 bg-brand-100 rounded-full px-2 py-0.5 hover:bg-brand-200/70">
               {m.label}
             </button>
           ))}
