@@ -85,7 +85,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 <td className="px-2 py-2.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <StatusSelect
-                      status={j.status} options={statusOptionsFor(j, currentUser?.role)}
+                      status={j.status} options={statusOptionsFor(j)}
                       onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
                     />
                     {isBlocked(j) && (

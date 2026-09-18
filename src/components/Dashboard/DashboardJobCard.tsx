@@ -69,7 +69,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
           : <PriorityBadge priority={priority} size="sm" />}
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect
-          status={job.status} options={statusOptionsFor(job, currentUser?.role)}
+          status={job.status} options={statusOptionsFor(job)}
           onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
         />
         {isBlocked(job) && (

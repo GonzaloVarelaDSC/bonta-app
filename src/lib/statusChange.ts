@@ -1,5 +1,5 @@
-import type { Job, JobStatus, RoleId } from '../types';
-import { STATUS_LABELS } from '../data/catalog';
+import type { Job, JobStatus } from '../types';
+import { STATUS_LABELS, KANBAN_COLUMNS } from '../data/catalog';
 import { friendlyError } from './errors';
 // Excepción puntual a "lib/ no toca el store" — el toast global (AppLayout)
 // vive en el store y ya se usa como canal de avisos no bloqueantes en toda la
@@ -8,31 +8,29 @@ import { friendlyError } from './errors';
 // No hay ciclo de imports: useStore.ts no importa este archivo.
 import { useStore } from '../store/useStore';
 
-// Estados que se pueden elegir a mano desde el selector de Dashboard/Trabajos/
-// ficha. El 26/08 se habían dejado solo 4 (Falta información, En diseño, En
-// producción, Listo para entrega) porque el resto se alcanza por su propio
-// flujo — pero Gonzalo (02/09) pidió poder volver un trabajo a "Pendiente" a
-// mano (por ej. si lo pasó de estado por error), así que se vuelve a sumar acá.
-// Diseño listo/Control de calidad/Instalación/Terminado/Bloqueado/Cancelado
-// se siguen alcanzando solo por su propio flujo (Kanban, motivo de bloqueo,
-// instalación completada) y no compiten en este select.
-export const SELECTABLE_STATUSES: JobStatus[] = [
-  'PENDIENTE', 'FALTA_INFORMACION', 'EN_DISENO', 'EN_PRODUCCION', 'LISTO_PARA_ENTREGA',
-];
-
-// Lista completa para admin/coordinador (Gonzalo, 07/09: "poder hacer y deshacer
-// todo lo posible") — incluye estados que normalmente se alcanzan por su propio
-// flujo, para poder corregir a mano un trabajo mal cargado o revertir un
-// "Terminado"/"Cancelado" puesto por error. `BLOQUEADO` ya no es un valor de
-// `JobStatus` (Fase 3, 17/09) — bloquear/desbloquear no toca más el estado real,
-// es un flag aparte derivado de `blockRecords` (ver `isBlocked()`,
-// `BlockedBadge`). NUEVO y APROBADO tampoco están: son estados viejos que ningún
-// flujo produce (ver CLAUDE.md §7.4).
-export const ADMIN_STATUSES: JobStatus[] = [
-  'PENDIENTE', 'FALTA_INFORMACION', 'EN_DISENO', 'DISENO_LISTO', 'EN_PRODUCCION',
-  'EN_CONTROL_CALIDAD', 'LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION',
-  'TERMINADO', 'CANCELADO',
-];
+// Gonzalo, 17/09: el select de estado (Dashboard/Trabajos/ficha) mostraba hasta
+// 11 valores para admin/coordinador (PENDIENTE, FALTA_INFORMACION, EN_DISENO,
+// DISENO_LISTO, ...) mientras el Kanban solo tiene 7 columnas — "muchísimas
+// opciones" que no se correspondían una a una con lo que se ve en el tablero.
+// Se saca la distinción por rol (Kanban tampoco restringe quién puede arrastrar
+// una tarjeta a qué columna — cualquiera que vea el trabajo puede) y las
+// opciones pasan a ser **exactamente** el primer estado de cada columna del
+// Kanban (`KANBAN_COLUMNS[].statuses[0]`) — derivado de la misma fuente, así que
+// nunca puede desalinearse del tablero. Si Kanban cambia sus columnas, este
+// select cambia solo.
+//
+// Dos estados quedan deliberadamente fuera de esta lista, con su propio camino:
+// - `FALTA_INFORMACION` — se sigue alcanzando solo (creación con instalación sin
+//   dirección) y, si ya está puesto, aparece como opción extra del select vía el
+//   fallback de abajo (para poder sacarlo), pero ya no se ofrece para ponerlo a
+//   mano — es el mismo criterio que ya se aplicaba a Kanban, que tampoco tiene
+//   columna propia para este estado (se agrupaba dentro de "Pendiente").
+// - `CANCELADO` — pasa a tener su propio botón "Cancelar trabajo" en la ficha
+//   (mismo patrón que "Bloquear trabajo") en vez de compartir el select con los
+//    7 estados de flujo normal — cancelar es una decisión administrativa, no un
+//   paso más de la cadena de producción. Revertir un cancelado sigue andando
+//   igual: aparece como opción extra mientras el trabajo esté en ese estado.
+const PRIMARY_STATUS_OPTIONS: JobStatus[] = KANBAN_COLUMNS.map((c) => c.statuses[0]);
 
 // Estados en los que el trabajo ya salió del estudio o se cerró — el contador de
 // días hasta la entrega deja de correr acá (no tiene sentido mostrar "atrasado
@@ -46,15 +44,14 @@ export function isClosedStatus(status: JobStatus): boolean {
 }
 
 /**
- * Opciones a mostrar en el select de estado de un trabajo puntual. Admin y
- * coordinador ven la lista completa (`ADMIN_STATUSES`) para poder corregir o
- * revertir cualquier cosa; el resto de los roles ve solo las 5 elegibles del
- * flujo normal. En ambos casos se agrega el estado actual si no está en la lista
- * (por ej. un trabajo recién bloqueado) para que el select nunca quede en blanco.
+ * Opciones a mostrar en el select de estado de un trabajo puntual — las mismas
+ * para todos los roles (ver comentario arriba). Se agrega el estado actual como
+ * opción extra si no está entre las 7 (ej. un trabajo en "Falta información",
+ * "Procesado", "Listo para instalación" o "Cancelado") para que el select nunca
+ * quede en blanco y siempre se pueda sacar de ahí.
  */
-export function statusOptionsFor(job: Job, role?: RoleId): JobStatus[] {
-  const base = role === 'admin' || role === 'coordinador' ? ADMIN_STATUSES : SELECTABLE_STATUSES;
-  return base.includes(job.status) ? base : [job.status, ...base];
+export function statusOptionsFor(job: Job): JobStatus[] {
+  return PRIMARY_STATUS_OPTIONS.includes(job.status) ? PRIMARY_STATUS_OPTIONS : [job.status, ...PRIMARY_STATUS_OPTIONS];
 }
 
 /**
@@ -73,6 +70,13 @@ export function tryChangeJobStatus(
   setStatus: (jobId: string, status: JobStatus, byUserId: string) => Promise<void>,
   byUserId: string
 ): boolean {
+  // El select de estado ofrece un solo "Listo para entregar" (ver
+  // PRIMARY_STATUS_OPTIONS) — si el trabajo requiere instalación, el destino
+  // real es LISTO_PARA_INSTALACION, mismo criterio que ya aplica el drag&drop
+  // del Kanban al soltar en esa columna.
+  if (targetStatus === 'LISTO_PARA_ENTREGA' && job.requiresInstallation) {
+    targetStatus = 'LISTO_PARA_INSTALACION';
+  }
   if (targetStatus === 'LISTO_PARA_ENTREGA' || targetStatus === 'LISTO_PARA_INSTALACION') {
     const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
     const lines: string[] = [];

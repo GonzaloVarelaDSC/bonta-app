@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
-import { canViewJob, canChangePriority, canBlock, canDeleteJob } from '../../lib/permissions';
+import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
@@ -58,6 +58,7 @@ export function JobDetailPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('General');
   const [showBlock, setShowBlock] = useState(false);
   const [showClientMsg, setShowClientMsg] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -183,7 +184,7 @@ export function JobDetailPage() {
               onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
               className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
             >
-              {statusOptionsFor(job, user.role).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
             <label className="text-xs text-ink-700 inline-flex items-center gap-1.5">
               Muestra al cliente
@@ -200,6 +201,17 @@ export function JobDetailPage() {
             {!activeBlock && (
               <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
                 <Lock size={13} /> Bloquear trabajo
+              </button>
+            )}
+            {/* Cancelar es una decisión administrativa, no un paso más de la
+                cadena de producción — por eso tiene su propio botón en vez de
+                compartir el select de estado con los 7 pasos del flujo normal
+                (mismo criterio que "Bloquear trabajo", ver lib/statusChange.ts).
+                Revertir un cancelado sigue siendo por el select (aparece como
+                opción extra mientras el trabajo esté en ese estado). */}
+            {canEditAnyJob(user.role) && job.status !== 'CANCELADO' && job.status !== 'TERMINADO' && (
+              <button onClick={() => setShowCancelConfirm(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200">
+                <XCircle size={13} /> Cancelar trabajo
               </button>
             )}
             {CLIENT_MSG_STATUSES.includes(job.status) && (
@@ -375,6 +387,18 @@ export function JobDetailPage() {
       )}
       {showClientMsg && (
         <ClientMessageModal job={job} client={client} onClose={() => setShowClientMsg(false)} />
+      )}
+      {showCancelConfirm && (
+        <ConfirmDialog
+          title="Cancelar trabajo"
+          message={<>¿Cancelar <strong>"{job.name}"</strong>{job.code ? ` (${job.code})` : ''}? Se puede revertir después eligiendo otro estado desde el select.</>}
+          confirmLabel="Cancelar trabajo" cancelLabel="Volver" tone="danger"
+          onConfirm={async () => {
+            setShowCancelConfirm(false);
+            try { await setStatus(job.id, 'CANCELADO', user.id); } catch (err) { alert(friendlyError(err)); }
+          }}
+          onClose={() => setShowCancelConfirm(false)}
+        />
       )}
     </div>
   );

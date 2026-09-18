@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 43).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 44).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3308,3 +3308,91 @@ Commiteado y pusheado a `origin/main`.
 
 Solo Fase 6 (manual con capturas reales) — que además depende de que Gonzalo
 mire la app ya deployada primero, como se le sugirió al cerrar la Fase 4.
+
+---
+
+## 44. Actualización 17/09 (cont.) — el dropdown de estado pasa a tener exactamente las 7 opciones del Kanban
+
+Gonzalo volvió con algo concreto: "sigue estando mal, en dashboard cuando abro
+el dropdown de una ficha me figuran muchísimas opciones, quiero las mismas 7
+columnas que tengo en el kanban". Esto es justo lo que la Fase 3 (§41) había
+dejado señalado pero sin resolver del todo — en ese momento se explicó que el
+dropdown ya usaba la misma función en las 3 vistas (no había 3 listas
+distintas), pero para admin/coordinador esa única función seguía ofreciendo 11
+valores (`ADMIN_STATUSES`) contra las 7 columnas del Kanban. Ahora si se
+resolvió a fondo.
+
+### Qué cambió
+
+`lib/statusChange.ts` — se borraron `SELECTABLE_STATUSES` y `ADMIN_STATUSES`
+(las dos listas por rol) y se reemplazaron por una sola:
+```ts
+const PRIMARY_STATUS_OPTIONS: JobStatus[] = KANBAN_COLUMNS.map((c) => c.statuses[0]);
+```
+Es decir, el dropdown **deja de tener su propia lista hardcodeada** — toma el
+primer estado de cada columna directo de `KANBAN_COLUMNS` (`data/catalog.ts`),
+así que si el día de mañana cambian las columnas del Kanban, este select
+cambia solo, sin volver a desalinearse. Resultado: **7 opciones, siempre
+iguales, para todos los roles** — Pendiente, En diseño, En producción, En
+control de calidad, Listo para entregar, En instalación, Entregado. La
+distinción por rol se sacó del todo porque ya no hacía falta: el Kanban
+tampoco restringe por rol quién puede arrastrar una tarjeta a qué columna
+(cualquiera que vea el trabajo puede), así que no había motivo real para que
+el select sí discriminara.
+
+`statusOptionsFor(job)` ya no recibe `role` — se actualizaron los 3 call sites
+(`DashboardJobCard.tsx`, `JobsTable.tsx`, `JobDetailPage.tsx`).
+
+### Los 2 estados que quedaron afuera — con su propio camino, no perdidos
+
+1. **`FALTA_INFORMACION`** — ya no se puede poner a mano desde el select (mismo
+   criterio que el propio Kanban, que tampoco tiene columna propia para este
+   estado — lo agrupa dentro de "Pendiente"). Se sigue alcanzando solo al crear
+   un trabajo con instalación sin dirección. Si un trabajo YA está en ese
+   estado, sigue apareciendo como opción extra al principio del select (mismo
+   mecanismo de siempre) para poder sacarlo eligiendo cualquiera de las 7.
+   **Ojo:** antes cualquier rol (no solo admin) podía poner un trabajo en
+   "Falta información" a mano desde el select — con este cambio ya no. Si
+   Gonzalo lo necesita de vuelta como acción explícita (por ejemplo, un
+   diseñador se da cuenta que falta info del cliente y quiere marcarlo), avisar
+   y se le agrega un botón dedicado, mismo patrón que "Bloquear"/"Cancelar".
+2. **`CANCELADO`** — pasa a tener su propio botón **"Cancelar trabajo"** en la
+   cabecera de la ficha (al lado de "Bloquear trabajo"), visible solo para
+   admin/coordinador (`canEditAnyJob`) y solo si el trabajo no está ya
+   Cancelado/Entregado. Con `ConfirmDialog` mostrando el nombre y N° exactos
+   antes de confirmar (mismo patrón que eliminar). Revertir un cancelado sigue
+   siendo por el select normal (aparece como opción extra mientras dure).
+   **Nota de UX corregida en la propia verificación**: el `ConfirmDialog` por
+   default usa "Cancelar" como texto del botón de "volver atrás" — con
+   `confirmLabel="Cancelar trabajo"` al lado, quedaban dos botones que
+   arrancaban con la misma palabra ("Cancelar" / "Cancelar trabajo"), confuso.
+   Se le pasó `cancelLabel="Volver"` explícito para desambiguar.
+
+### `tryChangeJobStatus` — normalización de "Listo para entregar"
+
+Como el select ahora ofrece un solo "Listo para entregar" (ya no hay una
+opción separada para "Listo para instalación"), `tryChangeJobStatus`
+(`lib/statusChange.ts`) normaliza el destino real al principio: si
+`job.requiresInstallation` es `true`, el estado que se aplica de verdad es
+`LISTO_PARA_INSTALACION`, no `LISTO_PARA_ENTREGA` — mismo criterio que ya
+usaba el drag&drop del Kanban al soltar en esa columna
+(`job.requiresInstallation && targetCol.key === 'listo' ? ...`). Como esta
+normalización vive en el único punto de entrada que usan las 3 vistas, no hizo
+falta duplicarla en cada componente.
+
+### Verificación
+
+Probado en vivo con el bypass de auth local, 4 casos: un trabajo en
+`EN_INSTALACION` con `requiresInstallation=true` (dropdown mostró exactamente
+las 7 opciones, con "En instalación" ya seleccionado), uno en
+`FALTA_INFORMACION` (apareció como 8va opción extra al principio, se puede
+sacar eligiendo cualquiera de las 7), uno normal en `EN_DISENO` (7 opciones +
+botones "Bloquear trabajo" y "Cancelar trabajo" ambos visibles, confirmé el
+texto del diálogo de cancelar), y uno ya `CANCELADO` (apareció como opción
+extra para poder revertirlo, y el botón "Cancelar trabajo" correctamente NO
+se mostró). `npm run build`/`npm run lint` limpios. Bypass revertido con Edit
+puntual, `git diff src/App.tsx` vacío antes de commitear.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
