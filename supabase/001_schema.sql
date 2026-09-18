@@ -101,7 +101,7 @@ create table if not exists jobs (
   observations text not null default '',
   special_requirements text not null default '',
 
-  status text not null default 'NUEVO',
+  status text not null default 'PENDIENTE',
   priority_auto text not null default 'NORMAL',
   priority_manual text,
 

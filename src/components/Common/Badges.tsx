@@ -59,7 +59,7 @@ type StatusTone = 'crit' | 'urg' | 'info' | 'norm' | 'review' | 'wait' | 'plan' 
 // dorado = producción, violeta = control de calidad, verde = listo, verde
 // azulado = instalación, gris oscuro = entregado, rojo = bloqueado.
 const STATUS_TONE: Record<JobStatus, StatusTone> = {
-  PENDIENTE: 'wait', NUEVO: 'wait', APROBADO: 'wait',
+  PENDIENTE: 'wait',
   FALTA_INFORMACION: 'urg',
   EN_DISENO: 'info', DISENO_LISTO: 'info',
   EN_PRODUCCION: 'norm',

@@ -109,7 +109,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-juan', assignedUserIds: ['u-pedro'], jobTypeId: 'plotter_vinilo',
     description: 'Reposición mensual de cartelería de precios.', quantity: '80 unidades', measurements: '30x20 cm',
     materialIds: ['papel'], technique: 'Impresión digital', finish: 'Sin laminar', color: 'Full color',
-    observations: '', createdDaysAgo: 2, committedInHours: 96, status: 'APROBADO',
+    observations: '', createdDaysAgo: 2, committedInHours: 96, status: 'PENDIENTE',
     stagesDone: 0, lastActivityHoursAgo: 20 },
 
   { code: 'TRB-2026-00462', name: 'Letras corpóreas iluminadas fachada', clientId: 'c-farmaplus', contactName: 'Estela Núñez',
@@ -136,7 +136,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-maria', assignedUserIds: ['u-maria'], jobTypeId: 'impresion_3d',
     description: 'Prototipo de dispenser de mostrador para evaluación interna.', quantity: '2 unidades', measurements: '18x12x10 cm',
     materialIds: ['otros'], technique: 'Impresión 3D FDM', finish: 'Lijado', color: 'Blanco',
-    observations: 'Es exploratorio, sin fecha comprometida crítica.', createdDaysAgo: 1, committedInHours: 168, status: 'NUEVO',
+    observations: 'Es exploratorio, sin fecha comprometida crítica.', createdDaysAgo: 1, committedInHours: 168, status: 'PENDIENTE',
     stagesDone: 0, lastActivityHoursAgo: 20 },
 
   { code: 'TRB-2026-00466', name: 'Backlight cartel de local', clientId: 'c-farmaplus', contactName: 'Estela Núñez',
@@ -171,7 +171,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-juan', assignedUserIds: ['u-pedro'], jobTypeId: 'bajo_acrilico',
     description: 'Placa institucional para hall de sucursal central.', quantity: '1 unidad', measurements: '80x60 cm',
     materialIds: ['acrilico'], technique: 'Impresión bajo acrílico', finish: 'Marco premium', color: 'Full color + dorado',
-    observations: '', createdDaysAgo: 12, committedInHours: 300, status: 'APROBADO', stagesDone: 0,
+    observations: '', createdDaysAgo: 12, committedInHours: 300, status: 'PENDIENTE', stagesDone: 0,
     lastActivityHoursAgo: 60 },
 
   { code: 'TRB-2026-00471', name: 'Gráfica evento lanzamiento', clientId: 'c-subway', contactName: 'Ramiro Díaz',
@@ -186,7 +186,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-juan', assignedUserIds: ['u-diego'], jobTypeId: 'vidrieras',
     description: 'Reposición de vinilo de vidriera dañado por clima.', quantity: '1 pieza', measurements: '2x1.5 m',
     materialIds: ['vinilo'], technique: 'Plotter', finish: 'Laminado', color: 'Full color', observations: '',
-    createdDaysAgo: 0, committedInHours: 2, status: 'NUEVO', stagesDone: 0, requiresInstallation: true,
+    createdDaysAgo: 0, committedInHours: 2, status: 'PENDIENTE', stagesDone: 0, requiresInstallation: true,
     installAddress: 'Av. Rivadavia 8620, CABA', lastActivityHoursAgo: 0.5 },
 
   { code: 'TRB-2026-00473', name: 'Cartel MDF pintado local nuevo', clientId: 'c-farmaplus', contactName: 'Estela Núñez',
@@ -199,7 +199,7 @@ const S: Seed[] = [
     responsibleUserId: 'u-gonzalo', assignedUserIds: ['u-gonzalo', 'u-pedro'], jobTypeId: 'piezas_especiales',
     description: 'Piezas de exhibidor de mostrador cortadas en CNC/láser, ensamble a presión.', quantity: '8 sets', measurements: '40x30 cm por set',
     materialIds: ['mdf'], technique: 'Router CNC', finish: 'Pintura', color: 'Blanco', observations: 'Primer prototipo antes de serie.',
-    createdDaysAgo: 2, committedInHours: 130, status: 'APROBADO', stagesDone: 0, lastActivityHoursAgo: 40 },
+    createdDaysAgo: 2, committedInHours: 130, status: 'PENDIENTE', stagesDone: 0, lastActivityHoursAgo: 40 },
 
   { code: 'TRB-2026-00475', name: 'Cartel backlight cancelado por cliente', clientId: 'c-galicia', contactName: 'Valentina Ríos',
     responsibleUserId: 'u-juan', assignedUserIds: [], jobTypeId: 'backlight',

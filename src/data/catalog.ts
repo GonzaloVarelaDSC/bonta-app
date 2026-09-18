@@ -96,9 +96,7 @@ export const BLOCK_REASON_LABELS: Record<BlockReason, string> = {
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
   PENDIENTE: 'Pendiente',
-  NUEVO: 'Nuevo',
   FALTA_INFORMACION: 'Falta información',
-  APROBADO: 'Aprobado',
   EN_DISENO: 'En diseño',
   DISENO_LISTO: 'Procesado',
   EN_PRODUCCION: 'En producción',
@@ -122,7 +120,7 @@ export type ColumnTone = 'wait' | 'info' | 'norm' | 'review' | 'plan' | 'site' |
 // dorado = producción, violeta = control de calidad, verde = listo, verde
 // azulado = instalación, gris cálido = terminado/archivado.
 export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]; tone: ColumnTone }[] = [
-  { key: 'pendiente', label: 'Pendiente', statuses: ['PENDIENTE', 'NUEVO', 'FALTA_INFORMACION', 'APROBADO'], tone: 'wait' },
+  { key: 'pendiente', label: 'Pendiente', statuses: ['PENDIENTE', 'FALTA_INFORMACION'], tone: 'wait' },
   { key: 'diseno', label: 'Diseño', statuses: ['EN_DISENO', 'DISENO_LISTO'], tone: 'info' },
   { key: 'produccion', label: 'Producción', statuses: ['EN_PRODUCCION'], tone: 'norm' },
   { key: 'control_calidad', label: 'Control de calidad', statuses: ['EN_CONTROL_CALIDAD'], tone: 'review' },

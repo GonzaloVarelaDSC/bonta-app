@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 37).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 39).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2708,3 +2708,170 @@ en paralelo, ancho de tarjeta, escala de la barra, y contenido de cada fila son
 4 ejes de diseño independientes entre sí. Si en el futuro se pide "ajustar" este
 widget de nuevo, identificar primero CUÁL de esos ejes es el problema real
 antes de tocar el resto.
+
+---
+
+## 38. Actualización 17/09 (cont.) — SQL de Nancy/Richard: verificado con SELECT real, Nancy OK, Richard sigue mal
+
+Gonzalo pidió chequear si el SQL de la sección 32 (Nancy) y de la 31.4 (Richard)
+ya estaba corrido, "teóricamente lo hice". La sesión **no pudo consultarlo
+directamente** — la tabla `profiles` tiene RLS `to authenticated using (true)`
+(`002_policies.sql`), así que un request anónimo con la `anon key` devuelve `[]`
+en vez de un error (probado contra el REST de Supabase); sin loguearse con una
+cuenta real (nunca se hace, ni con credenciales de Gonzalo) no hay forma de leer
+la tabla desde acá. Se le pidió a Gonzalo que corra el SELECT y pase el
+resultado — lo hizo, screenshot con las dos filas:
+
+| name | email | role | is_producer | sector |
+|---|---|---|---|---|
+| Richard | richard@estudiobonta.com.ar | **`produccion`** | false | Coordinación |
+| Nancy | nancy@ploteosbonta.com.ar | `coordinador` | false | Coordinación |
+
+**Nancy: confirmado resuelto.** `role`/`is_producer`/`sector`/`name` quedaron
+exactamente como pedía el SQL de la sección 32 — no hace falta ningún SQL más
+para ella. Ya no sale como productora en "Carga de diseño" ni con el email como
+nombre.
+
+**Richard: el SQL de la sección 18(b) NUNCA se aplicó de verdad**, pese a que en
+algún momento se dio por confirmado — `role` quedó en `produccion` (el default
+del trigger `handle_new_user()`), no en `coordinador`. `is_producer`/`sector` sí
+están bien (corrieron en algún momento posterior, probablemente junto con el SQL
+de la sección 20 que solo tocaba `sector`). Esto **confirma la sospecha de la
+sección 31.4**: con `role='produccion'`, `canCreateJobs` da `false`, así que a
+Richard no le puede aparecer "Carga rápida" en el sidebar — no es un bug de
+código, es este dato mal cargado. SQL pendiente, a correr en Supabase → SQL
+Editor → Run:
+
+```sql
+update profiles set role = 'coordinador' where email = 'richard@estudiobonta.com.ar';
+```
+
+Verificar después con:
+```sql
+select name, email, role, is_producer, sector from profiles where email = 'richard@estudiobonta.com.ar';
+```
+Esperado: `role='coordinador'`. **No dar esto por cerrado en ninguna sesión
+futura sin ese SELECT** — ya pasó dos veces con Richard puntualmente (sección 18
+y ahora esta) que se asumió corrido sin estarlo.
+
+Sin cambios de código en esta ronda — es puramente verificación de datos. Memoria
+de proyecto (`project_team_roles`) actualizada con este resultado.
+
+**Actualización el mismo día, minutos después:** Gonzalo corrió el UPDATE de
+arriba y pasó un segundo screenshot del SELECT — confirma `role='coordinador'`
+para Richard. **Con esto, los 7 de 7 perfiles del equipo quedan verificados
+correctos, sin ningún SQL pendiente.** Richard ya debería ver "Carga rápida" en
+el sidebar (si no la ve, pedirle que cierre sesión y vuelva a entrar — el rol
+puede haber quedado cacheado en su sesión si ya estaba logueado, mismo caso ya
+señalado en la sección 31.4 punto 2). Memoria `project_team_roles` actualizada a
+este estado final.
+
+---
+
+## 39. Actualización 17/09 (cont.) — Auditoría Fase 1 (simplificación/UX) + primer cambio: se sacan los estados NUEVO/APROBADO
+
+Gonzalo pidió una auditoría completa (arquitectura, modelo de datos, Dashboard/
+Trabajos/Kanban, ficha, estados, permisos) antes de tocar código, con la meta de
+simplificar la app sin perder información — no una reconstrucción, una revisión
+crítica de lo que ya existe. Se hizo sin escribir código, leyendo a fondo
+`types/index.ts`, `catalog.ts`, `statusChange.ts`, `selectors.ts`,
+`permissions.ts`, las tres vistas (Dashboard/JobsTable/Kanban), `JobDetailPage.tsx`
+completo, `QuickJobPage.tsx`, `useStore.ts`, `Header.tsx`, `CommentsPanel.tsx` y el
+esquema SQL. El análisis completo (qué mantener/simplificar/eliminar/modificar/
+agregar + plan por fases) se le presentó en el chat, no quedó en un archivo aparte
+— si hace falta retomarlo, está en el historial de esa conversación.
+
+### Hallazgos que no estaban documentados en ninguna sección anterior de este archivo
+
+1. **`Job.stages` / `JobStage[]` — sistema de etapas sin ninguna UI.** `createJob`
+   sigue sembrando un renglón en `job_stages` por cada etapa del tipo de trabajo
+   (`jobType.defaultStages`), y existe una acción completa en el store
+   (`setStageStatus`, con log de actividad) para marcarlas — pero **ningún
+   componente la llama ni muestra `job.stages`** (confirmado por grep sobre todo
+   `src/components`). Es dato puro sin UI, un tercer sistema de "estado" además de
+   `job.status` y las columnas del Kanban. Su único efecto indirecto es que
+   `calculateRisk()` (`lib/risk.ts`) cuenta `job.stages.filter(s => s.active).length`
+   para el nivel de riesgo "Alto" — pero como `active` nunca se pone en `false` en
+   ningún lado, en la práctica es solo un proxy de "cuántas etapas tiene el tipo de
+   trabajo". **Pendiente de decisión de Gonzalo**: sacarlo del todo (mi
+   recomendación) o construirle una pantalla real. No se tocó nada de esto todavía.
+2. **Buscador global del Header no respeta `visibleJobs`.** Busca sobre
+   `useStore((s) => s.jobs)` directo, sin filtrar por rol — un usuario
+   `producción`/`instalación` (que en el resto de la app solo ve sus propios
+   trabajos vía `canViewJob`) puede ver en el dropdown de resultados trabajos
+   ajenos (nombre, cliente, responsable) aunque después la ficha se lo bloquee al
+   entrar. Además busca sobre `materialIds`, un campo `@deprecated` (reemplazado
+   por `products` desde el 02/09) — no encuentra nada cargado en meses. No
+   corregido todavía, queda para Fase 2.
+3. **`UsersPage` sin ningún guard de permiso**, a diferencia de `ConfigPage` (que sí
+   valida `canManageCatalog(user.role)` y degrada a solo lectura). Cualquier
+   persona logueada que navegue a `/usuarios` a mano ve la lista completa con el
+   checkbox de activar/desactivar cuentas — el guardado fallaría por RLS, pero la
+   UI se muestra igual. Es el prerequisito a resolver antes de construir el
+   Histórico admin-only que pidió Gonzalo (sección 15 de su brief) — hoy no existe
+   ningún patrón de guard de ruta reutilizable en el proyecto. No corregido todavía.
+4. **Botones de mención por sector en Comentarios son decorativos.**
+   `CommentsPanel.tsx`, constante `MENTIONABLE` (`@Coordinación`, `@Diseño`, etc.)
+   inserta texto literal en el textarea, pero `submit()` solo genera una mención
+   real (y por lo tanto notificación) si el texto matchea el nombre de pila de un
+   usuario real — nunca notifica a "todo Diseño". No corregido todavía.
+5. **`deleteJob` es un borrado físico total** (cascade real en la base, sin
+   registro de quién ni cuándo) — no existe ningún soft-delete hoy. Relevante para
+   el pedido de Gonzalo de poder eliminar trabajos desde el Kanban (arrastrar a un
+   tacho): antes de construir eso conviene pasar a borrado lógico, coherente con
+   su preferencia explícita de no perder información si se puede evitar.
+
+### Estados — aclaración importante (no es el bug que parecía)
+
+El dropdown "Estado de trabajo" **ya usa la misma función** (`statusOptionsFor` de
+`lib/statusChange.ts`) en Dashboard, Trabajos y ficha — no hay tres listas
+independientes por pantalla, eso ya se había resuelto en una ronda anterior. Lo que
+sí es real: para admin/coordinador ese dropdown ofrece 11 estados (`ADMIN_STATUSES`)
+mientras el Kanban solo tiene 7 columnas — porque `JobStatus` mezcla macro-etapa
+(lo que ve el Kanban) con sub-estado dentro de esa etapa (ej. `EN_DISENO` vs
+`DISENO_LISTO` son la misma columna pero valores distintos del enum). Separar esto
+conceptualmente queda para una fase futura (Fase 3 del plan); no se tocó en esta
+ronda, solo se sacaron los dos valores que ya estaban muertos (ver abajo).
+
+### Cambio aplicado esta ronda: se sacan los estados `NUEVO` y `APROBADO`
+
+Gonzalo confirmó explícitamente que sobran (ver también sección 7, punto 4, que ya
+lo sospechaba desde hace semanas — ningún flujo los produce desde que `createJob`
+inserta `PENDIENTE`/`FALTA_INFORMACION` directamente).
+
+**Código tocado:**
+- `types/index.ts` — sacados del union `JobStatus`.
+- `data/catalog.ts` — sacados de `STATUS_LABELS` y de la lista de estados de la
+  columna Kanban "Pendiente" (que ahora agrupa solo `PENDIENTE` y
+  `FALTA_INFORMACION`).
+- `Common/Badges.tsx` — sacados de `STATUS_TONE`.
+- `data/seed.ts` (código muerto en runtime, pero `tsc` lo sigue compilando — ver
+  sección 2) — los 4 trabajos demo que tenían `status: 'NUEVO'`/`'APROBADO'` pasan
+  a `'PENDIENTE'` para que el archivo siga tipando.
+- `supabase/001_schema.sql` — el default de la columna `status` pasa de `'NUEVO'`
+  a `'PENDIENTE'` (documentación de instalación limpia; en la práctica nunca se
+  usaba porque `createJob` siempre manda el status explícito).
+
+**Migración nueva `supabase/017_drop_legacy_statuses.sql`** — por las dudas de que
+haya algún trabajo real viejo con `status = 'NUEVO'` o `'APROBADO'` en la base (no
+se pudo verificar desde acá por RLS, ver sección 38 sobre esa limitación), migra
+cualquiera que exista a `PENDIENTE` antes de que el cambio de código deje esos
+valores sin `STATUS_LABELS` (lo que renderizaría un badge en blanco). **Hay que
+correrla en Supabase:**
+```sql
+update jobs set status = 'PENDIENTE' where status in ('NUEVO', 'APROBADO');
+alter table jobs alter column status set default 'PENDIENTE';
+```
+Verificado con `npm run build` (tsc + vite) y `npm run lint` limpios — sin cambios
+ni warnings nuevos. **Pendiente de confirmar que Gonzalo corrió esta migración** —
+no asumir que ya está aplicada en ninguna sesión futura sin el SQL de verificación:
+`select status, count(*) from jobs group by status;` no debería devolver ninguna
+fila con `NUEVO` o `APROBADO`.
+
+### Estado de git
+
+Sin commit todavía — Gonzalo no lo pidió en esta ronda. El resto de la auditoría
+(sistema de etapas, buscador global, guard de `UsersPage`, soft-delete, Histórico)
+sigue pendiente de que confirme cómo seguir antes de tocar más código — Fase 1 fue
+explícitamente "solo auditoría", este cambio de estados fue la única excepción
+porque Gonzalo lo confirmó de forma explícita y acotada.
