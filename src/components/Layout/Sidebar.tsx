@@ -1,10 +1,10 @@
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canManageUsers, canCreateJobs } from '../../lib/permissions';
+import { canManageUsers, canCreateJobs, canViewHistorico } from '../../lib/permissions';
 
 // "Clientes" se sacó del menú a pedido: los clientes no se administran acá, viven en
 // Copernico. La ruta /clientes y la tabla siguen existiendo (el wizard las usa para
@@ -51,21 +51,33 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {item.label}
           </NavLink>
         ))}
-        {user && canManageUsers(user.role) && (
+        {user && (canManageUsers(user.role) || canViewHistorico(user.role)) && (
           <>
             <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Administración</div>
-            <NavLink to="/usuarios" className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
-            )}>
-              <Users size={17} /> Usuarios
-            </NavLink>
-            <NavLink to="/configuracion" className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
-            )}>
-              <Settings size={17} /> Configuración
-            </NavLink>
+            {canManageUsers(user.role) && (
+              <NavLink to="/usuarios" className={({ isActive }) => clsx(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+              )}>
+                <Users size={17} /> Usuarios
+              </NavLink>
+            )}
+            {canManageUsers(user.role) && (
+              <NavLink to="/configuracion" className={({ isActive }) => clsx(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+              )}>
+                <Settings size={17} /> Configuración
+              </NavLink>
+            )}
+            {canViewHistorico(user.role) && (
+              <NavLink to="/historico" className={({ isActive }) => clsx(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+              )}>
+                <Archive size={17} /> Histórico
+              </NavLink>
+            )}
           </>
         )}
       </nav>

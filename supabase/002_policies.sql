@@ -34,6 +34,8 @@ begin
      or new.committed_date is distinct from old.committed_date
      or new.requires_installation is distinct from old.requires_installation
      or new.code is distinct from old.code
+     or new.deleted_at is distinct from old.deleted_at
+     or new.deleted_by is distinct from old.deleted_by
   then
     raise exception 'Tu rol no tiene permiso para modificar ese campo del trabajo.';
   end if;

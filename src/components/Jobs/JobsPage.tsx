@@ -27,7 +27,9 @@ export function JobsPage() {
   // pérdida sin resucitar el status falso.
   const [onlyBlocked, setOnlyBlocked] = useState(false);
 
-  const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
+  // Eliminados (Fase 4) nunca aparecen en Trabajos — Histórico es el único lugar
+  // para consultarlos/restaurarlos.
+  const jobs = useMemo(() => visibleJobs(user, allJobs).filter((j) => !j.deletedAt), [user, allJobs]);
   const archivedCount = useMemo(() => jobs.filter(isArchivedJob).length, [jobs]);
   const blockedCount = useMemo(() => jobs.filter(isBlocked).length, [jobs]);
 

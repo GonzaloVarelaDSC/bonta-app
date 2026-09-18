@@ -13,6 +13,12 @@ export function canSeeStats(role: RoleId) { return role === 'admin' || role === 
 export function canBlock() { return true; } // cualquier rol puede informar un bloqueo
 export function canCompleteInstallation(role: RoleId) { return role === 'admin' || role === 'coordinador' || role === 'instalacion'; }
 export function canDeleteJob(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
+// Histórico (Fase 4, 17/09): a diferencia del resto, Gonzalo pidió explícitamente
+// que sea SOLO admin (Pancho/Martín/Gonzalo hoy) — ni coordinador. Deliberadamente
+// distinto de canManageUsers aunque hoy coincidan en el mismo rol: si el día de
+// mañana alguien no-admin necesita ver Usuarios pero no Histórico (o viceversa),
+// no hace falta desenredar nada.
+export function canViewHistorico(role: RoleId) { return role === 'admin'; }
 
 /** ¿Puede este usuario ver este trabajo? Admin/coordinador ven todo; el resto solo lo suyo. */
 export function canViewJob(user: User, job: Job): boolean {

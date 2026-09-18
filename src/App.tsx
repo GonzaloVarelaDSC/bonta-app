@@ -13,10 +13,11 @@ import { UsersPage } from './components/Users/UsersPage';
 import { ConfigPage } from './components/Common/ConfigPage';
 import { ChequeoArchivosPage } from './components/Herramientas/ChequeoArchivosPage';
 import { ManualPage } from './components/Manual/ManualPage';
+import { HistoricoPage } from './components/Historico/HistoricoPage';
 import { RequireRole } from './components/Common/RequireRole';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
-import { canManageUsers } from './lib/permissions';
+import { canManageUsers, canViewHistorico } from './lib/permissions';
 
 export default function App() {
   const init = useStore((s) => s.init);
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/clientes" element={<ClientsPage />} />
           <Route path="/usuarios" element={<RequireRole allow={canManageUsers}><UsersPage /></RequireRole>} />
           <Route path="/configuracion" element={<ConfigPage />} />
+          <Route path="/historico" element={<RequireRole allow={canViewHistorico}><HistoricoPage /></RequireRole>} />
         </Route>
       </Routes>
     </BrowserRouter>

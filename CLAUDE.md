@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 41).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 42).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3088,3 +3088,135 @@ hay UI nueva compleja que justifique el bypass de auth local).
 ### Estado de git
 
 Commiteado y pusheado a `origin/main`.
+
+---
+
+## 42. Actualización 17/09 (cont.) — Fase 4: borrado lógico, tacho en el Kanban, sección Histórico (admin-only), 5 días de archivado
+
+Última fase del plan de la auditoría con trabajo concreto. Los 4 puntos que
+tenía pendientes, todos hechos:
+
+### 1. Borrado lógico — `deleteJob` deja de ser un DELETE físico
+
+Antes: `deleteJob` hacía `supabase.from('jobs').delete()` con cascade real —
+sin rastro, sin poder deshacer. Ahora marca `deleted_at`/`deleted_by` (UPDATE,
+no DELETE); el trabajo desaparece de Dashboard/Trabajos/Kanban/buscador global
+pero sigue entero (archivos, comentarios, historial) y es **restaurable**.
+
+- **Migración `019_job_soft_delete.sql`** — agrega `jobs.deleted_at`/
+  `jobs.deleted_by`, y actualiza la función `jobs_update_guard()` (trigger que
+  ya protegía `priority_manual`/`client_id`/`responsible_user_id`/
+  `committed_date`/`requires_installation`/`code` — ver `002_policies.sql`) para
+  que estos dos campos nuevos también exijan admin/coordinador, espejo exacto de
+  `canDeleteJob` en la UI. Sin esto, la policy `jobs_update` de base (bastante
+  permisiva: cualquiera con `can_view_job`) hubiera dejado "eliminar" un trabajo
+  a cualquier rol con acceso de lectura.
+- `types/index.ts` — `Job.deletedAt`/`Job.deletedBy`.
+- `store/useStore.ts` — `deleteJob` reescrito (UPDATE + `insertActivity`, acción
+  `'eliminar'`); nueva acción `restoreJob` (limpia los dos campos, acción
+  `'restaurar'`).
+- `lib/selectors.ts` — nueva `isDeletedJob(job)`.
+- Las 3 vistas operativas (`DashboardPage`, `JobsPage`, `KanbanPage`) y el
+  buscador global (`Header.tsx`) filtran `!job.deletedAt` — un trabajo eliminado
+  nunca vuelve a aparecer ahí por accidente.
+- `JobsTable.tsx` / `KanbanPage.tsx` — el texto de confirmación de "Eliminar"
+  se actualizó: ya no dice "esta acción no se puede deshacer" (era cierto con
+  el DELETE físico, ya no lo es) — ahora explica que se puede restaurar desde
+  Histórico.
+- `JobDetailPage.tsx` — si se abre la ficha de un trabajo eliminado (por
+  ejemplo desde el link "Ver ficha" de Histórico), banner rojo arriba de todo:
+  "🗑️ Este trabajo está eliminado desde el DD/MM (Nombre) — ... " + botón
+  "Restaurar" (gateado por `canDeleteJob`). El resto de la ficha sigue
+  funcionando normal (no se bloqueó edición) — no correspondía sumar esa
+  complejidad sin que Gonzalo lo pidiera.
+
+### 2. Eliminar desde el Kanban — arrastrar al tacho + confirmación
+
+Nuevo `TrashDropZone` (`KanbanPage.tsx`) — un tacho flotante abajo a la derecha
+que **solo se renderiza mientras hay una tarjeta en vuelo** (durante un drag),
+como en Trello: no ocupa espacio en el uso normal del board. Solo visible si
+`canDeleteJob(user.role)`. Soltar una tarjeta ahí **nunca elimina directo** —
+abre el mismo `ConfirmDialog` con el nombre y N° exactos del trabajo, y recién
+al confirmar llama a `deleteJob` (el borrado lógico de arriba). Probado en vivo
+con el bypass de auth local: arrastrar una tarjeta hasta el tacho abre
+correctamente "¿Eliminar 'Trabajo activo' (TRB-0001)?..." — funciona de punta a
+punta.
+
+### 3. Sección Histórico — nueva, admin-only
+
+Nueva ruta `/historico` (`components/Historico/HistoricoPage.tsx`), nuevo
+permiso **`canViewHistorico`** en `lib/permissions.ts` — deliberadamente
+**solo `admin`**, no `coordinador` (a diferencia de la mayoría de los permisos
+del proyecto), porque Gonzalo lo pidió así explícito en su brief original
+("solamente para los administradores"). Es una función separada de
+`canManageUsers` aunque hoy ambas den lo mismo (solo admin) — si el día de
+mañana alguien no-admin necesita ver Usuarios pero no Histórico, o viceversa,
+no hace falta desenredar nada.
+
+- **No es "otro Dashboard"**: sin KPIs, sin indicadores operativos — es
+  puramente buscar/consultar. Filtros: texto libre (N°/cliente/nombre),
+  responsable, tipo de trabajo (los 3 que pedía el brief original explícito
+  como mínimo — fecha se cubre por el orden, más recientemente archivado/
+  eliminado primero, en vez de un date-range picker aparte, para no
+  sobrecomplicar).
+- Muestra **dos categorías juntas**, cada una con su propio tag: trabajos
+  **archivados** (`isArchivedJob` — Entregados hace 5+ días) y trabajos
+  **eliminados** (`isDeletedJob`). Cada fila tiene "Ver ficha" siempre, y
+  "Restaurar" (gateado por `canDeleteJob`) solo si está eliminado — un
+  archivado no se "restaura", ya está accesible normal, solo viejo.
+- **Guard de ruta**: reusa `RequireRole` (creado en la Fase 2) —
+  `<RequireRole allow={canViewHistorico}>`. Link nuevo en el Sidebar, sección
+  "Administración", ícono `Archive` — el bloque completo de esa sección ahora
+  se muestra si `canManageUsers(role) || canViewHistorico(role)` es cierto,
+  con cada link (Usuarios/Configuración/Histórico) gateado individualmente
+  adentro, para que un futuro rol que tuviera uno sin el otro no vea un link
+  roto.
+- Verificado en vivo con el bypass de auth local: la tabla mostró
+  correctamente 1 fila "Eliminado" (con quién y cuándo) y 1 fila "Archivado"
+  (con la fecha de entrega), cada una con sus badges/acciones correctas.
+
+### 4. Umbral de archivado: 3 → 5 días
+
+`lib/selectors.ts`, `ARCHIVE_AFTER_DAYS` — cambiado de 3 a 5, a pedido
+explícito de Gonzalo (brief original, punto 13: "usar 5 días pero hacerlo
+configurable"). **Sigue calculado al vuelo**, sin cron ni columna
+`archived_at`/`archived_by` — Gonzalo confirmó en la sección 40 que no quería
+la versión con registro artificial. "Configurable" hoy significa "cambiar la
+constante en código", igual que ya era con 3 — si en algún momento se quiere
+un control real desde la UI (sin redeploy), es un `app_settings` chico a
+agregar aparte, no se hizo ahora por no sobrecomplicar sin pedido explícito.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios en cada paso. **Esta ronda sí se probó
+visualmente con el bypass de auth local** (a diferencia de Fase 2/3, que eran
+mayormente lógica/backend) — se sembraron 4 trabajos falsos (activo, bloqueado,
+archivado, eliminado) y se navegó Kanban (columna real + borde rojo del
+bloqueado, ausencia total del archivado/eliminado, drag-to-trash con
+`left_click_drag` hasta abrir el diálogo de confirmación), Trabajos (checkbox
+"Solo bloqueados" filtrando correctamente), ficha del trabajo eliminado
+(banner + botón Restaurar), e Histórico (las 2 filas con sus tags/fechas/
+acciones correctas). Sin errores de consola relevantes — los únicos que
+aparecieron (`invalid input syntax for type uuid: "j4"`) son esperables: la
+ficha intenta cargar comentarios/historial reales contra IDs falsos que no son
+UUID, mismo patrón ya documentado en rondas anteriores de bypass (§29). El
+cambio en `App.tsx` se revirtió con `git checkout -- src/App.tsx` — **ojo**:
+ese revert también se llevó puesta la ruta real de `/historico` que ya estaba
+en el archivo (no solo el bypass), así que hubo que reaplicarla a mano después;
+quedó confirmado con `git diff src/App.tsx` que el archivo final solo tiene el
+cambio de ruta esperado, nada del bypass. **Lección para la próxima vez**: si
+se edita un archivo con cambios reales Y se le suma un bypass temporal en la
+misma sesión, más seguro hacer el revert con una edición puntual (deshacer solo
+el bloque del bypass) en vez de `git checkout --` sobre el archivo entero,
+salvo que se sepa que no tiene ningún cambio real sin commitear todavía.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main` (Fase 4 completa).
+
+### Lo que queda del plan original
+
+Fase 5 (fricción de uso diario) y Fase 6 (manual con capturas). Con esto se
+cierran las 4 fases "de código" del plan de la auditoría (sección 38-42) — las
+dos que faltan son de un carácter distinto (revisión de uso real / documentación
+visual), no refactors puntuales.

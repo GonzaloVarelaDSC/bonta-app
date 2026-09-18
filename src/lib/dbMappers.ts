@@ -82,6 +82,8 @@ export function mapJob(row: any): Job {
     createdAt: row.created_at, requestedDate: row.requested_date ?? row.committed_date, committedDate: row.committed_date,
     finishedAt: row.finished_at ?? undefined,
     readyAt: row.ready_at ?? undefined,
+    deletedAt: row.deleted_at ?? undefined,
+    deletedBy: row.deleted_by ?? undefined,
     jobTypeId: row.job_type_id, description: row.description ?? '', quantity: row.quantity ?? '',
     measurements: row.measurements ?? '', sizeItems: (row.size_items ?? []) as SizeItem[],
     materialIds: (row.material_ids ?? []) as MaterialId[],

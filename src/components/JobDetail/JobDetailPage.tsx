@@ -3,7 +3,7 @@ import { useParams, Navigate, Link } from 'react-router-dom';
 import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
-import { canViewJob, canChangePriority, canBlock } from '../../lib/permissions';
+import { canViewJob, canChangePriority, canBlock, canDeleteJob } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
@@ -50,8 +50,10 @@ export function JobDetailPage() {
   const approveFileVersion = useStore((s) => s.approveFileVersion);
   const toggleQualityCheck = useStore((s) => s.toggleQualityCheck);
   const completeInstallation = useStore((s) => s.completeInstallation);
+  const restoreJob = useStore((s) => s.restoreJob);
   const loadJobComments = useStore((s) => s.loadJobComments);
   const loadJobActivity = useStore((s) => s.loadJobActivity);
+  const [restoring, setRestoring] = useState(false);
 
   const [tab, setTab] = useState<(typeof TABS)[number]>('General');
   const [showBlock, setShowBlock] = useState(false);
@@ -119,6 +121,28 @@ export function JobDetailPage() {
               <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} />
             </div>
           </div>
+
+          {job.deletedAt && (
+            <div className="mt-3 flex items-center justify-between gap-3 bg-crit-bg text-crit-text text-sm rounded-lg px-3 py-2.5">
+              <span>
+                🗑️ Este trabajo está <strong>eliminado</strong> desde el {fmtDate(job.deletedAt)}
+                {users.find((u) => u.id === job.deletedBy) ? ` (${users.find((u) => u.id === job.deletedBy)!.name})` : ''} —
+                no aparece en Trabajos/Kanban/Dashboard. También podés verlo desde <Link to="/historico" className="underline">Histórico</Link>.
+              </span>
+              {canDeleteJob(user.role) && (
+                <button
+                  disabled={restoring}
+                  onClick={async () => {
+                    setRestoring(true);
+                    try { await restoreJob(job.id); } catch (err) { alert(friendlyError(err)); } finally { setRestoring(false); }
+                  }}
+                  className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold bg-white/70 hover:bg-white rounded-md px-2.5 py-1.5 disabled:opacity-50"
+                >
+                  {restoring ? 'Restaurando...' : 'Restaurar'}
+                </button>
+              )}
+            </div>
+          )}
 
           {missing.length > 0 && job.status !== 'TERMINADO' && job.status !== 'CANCELADO' && (
             <div className="mt-3 flex items-start gap-2 bg-wait-bg text-wait-text text-xs rounded-lg px-3 py-2">

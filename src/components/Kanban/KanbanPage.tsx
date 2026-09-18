@@ -1,17 +1,18 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { SlidersHorizontal, Undo2, X, ArrowRight } from 'lucide-react';
+import { SlidersHorizontal, Undo2, X, ArrowRight, Trash2 } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors,
 } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
-import { visibleJobs } from '../../lib/permissions';
+import { visibleJobs, canDeleteJob } from '../../lib/permissions';
 import { isArchivedJob, isBlocked } from '../../lib/selectors';
 import { KANBAN_COLUMNS, BLOCK_REASON_LABELS, type ColumnTone } from '../../data/catalog';
 import { Avatar, CountdownBadge } from '../Common/Badges';
 import { ScrollFadeX } from '../Common/ScrollFade';
+import { ConfirmDialog } from '../Common/Modal';
 import type { BlockReason, Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
@@ -179,6 +180,27 @@ function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label
   );
 }
 
+// Tacho de basura — solo se renderiza mientras hay una tarjeta en vuelo (drag
+// activo), como en Trello/patrones equivalentes: no ocupa espacio en el uso
+// normal del board. Soltar acá abre un ConfirmDialog con el trabajo exacto antes
+// de eliminar (Gonzalo: "debe ser muy difícil eliminar un trabajo
+// accidentalmente") — nunca elimina directo al soltar.
+function TrashDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: 'trash' });
+  return (
+    <div
+      ref={setNodeRef}
+      className={clsx(
+        'fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full px-4 py-3 shadow-pop border-2 transition-colors',
+        isOver ? 'bg-crit text-white border-crit scale-110' : 'bg-white text-crit-text border-crit/40'
+      )}
+    >
+      <Trash2 size={18} aria-hidden />
+      <span className="text-sm font-semibold">{isOver ? 'Soltar para eliminar' : 'Arrastrá acá para eliminar'}</span>
+    </div>
+  );
+}
+
 // Botón "Filtros" con un desplegable de prioridad + responsable — antes el
 // Kanban no tenía forma de acotar la vista más que mirando columna por columna.
 function FiltersButton({
@@ -264,11 +286,14 @@ export function KanbanPage() {
   const clients = useStore((s) => s.clients);
   const users = useStore((s) => s.users);
   const setStatus = useStore((s) => s.setStatus);
+  const deleteJob = useStore((s) => s.deleteJob);
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [respFilter, setRespFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Job | null>(null);
   const jobs = useMemo(() => {
     return visibleJobs(user, allJobs)
+      .filter((j) => !j.deletedAt)
       .filter((j) => j.status !== 'CANCELADO')
       .filter((j) => showArchived || !isArchivedJob(j))
       .filter((j) => priorityFilter === 'all' || effectivePriority(j) === priorityFilter)
@@ -301,6 +326,10 @@ export function KanbanPage() {
     if (!over) return;
     const job = jobs.find((j) => j.id === active.id);
     if (!job) return;
+    if (over.id === 'trash') {
+      setPendingDelete(job);
+      return;
+    }
     const targetCol = KANBAN_COLUMNS.find((c) => c.key === over.id);
     if (!targetCol || targetCol.key === columnOf(job)) return;
     const targetStatus: JobStatus = targetCol.statuses[0];
@@ -362,8 +391,23 @@ export function KanbanPage() {
           <DragOverlay>
             {activeJob && <KanbanCardOverlay job={activeJob} client={clients.find((c) => c.id === activeJob.clientId)} />}
           </DragOverlay>
+          {activeJob && canDeleteJob(user.role) && <TrashDropZone />}
         </DndContext>
       </ScrollFadeX>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Eliminar trabajo"
+          message={<>¿Eliminar <strong>"{pendingDelete.name}"</strong>{pendingDelete.code ? ` (${pendingDelete.code})` : ''}? Deja de aparecer en Kanban/Trabajos/Dashboard — se puede restaurar después desde Histórico.</>}
+          confirmLabel="Eliminar" tone="danger"
+          onConfirm={async () => {
+            const j = pendingDelete;
+            setPendingDelete(null);
+            try { await deleteJob(j.id); } catch (err) { alert(friendlyError(err)); }
+          }}
+          onClose={() => setPendingDelete(null)}
+        />
+      )}
 
       {undoAction && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-ink-950 text-white text-sm rounded-lg shadow-pop px-4 py-2.5">

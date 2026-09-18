@@ -131,7 +131,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
     {confirmDelete && (
       <ConfirmDialog
         title="Eliminar trabajo"
-        message={<>¿Eliminar <strong>"{confirmDelete.name}"</strong>{confirmDelete.code ? ` (${confirmDelete.code})` : ''}? Esta acción no se puede deshacer.</>}
+        message={<>¿Eliminar <strong>"{confirmDelete.name}"</strong>{confirmDelete.code ? ` (${confirmDelete.code})` : ''}? Deja de aparecer en Trabajos/Kanban/Dashboard — se puede restaurar después desde Histórico.</>}
         confirmLabel="Eliminar" tone="danger"
         onConfirm={() => { const j = confirmDelete; setConfirmDelete(null); doDelete(j); }}
         onClose={() => setConfirmDelete(null)}

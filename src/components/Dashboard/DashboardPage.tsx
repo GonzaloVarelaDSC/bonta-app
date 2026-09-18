@@ -27,7 +27,9 @@ export function DashboardPage() {
   const user = useStore((s) => s.currentUser)!;
   const allJobs = useStore((s) => s.jobs);
   const users = useStore((s) => s.users);
-  const jobs = useMemo(() => visibleJobs(user, allJobs), [user, allJobs]);
+  // Eliminados (Fase 4) nunca aparecen en el Dashboard — Histórico es el único
+  // lugar para consultarlos/restaurarlos.
+  const jobs = useMemo(() => visibleJobs(user, allJobs).filter((j) => !j.deletedAt), [user, allJobs]);
   const [filter, setFilter] = useState<FilterKey>(null);
   const [scope, setScope] = useState<ScopeMode>(() => {
     const saved = localStorage.getItem(SCOPE_KEY);

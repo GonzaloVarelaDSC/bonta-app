@@ -41,7 +41,8 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
     // `jobs` sin filtrar dejaba ver nombre/cliente/responsable de trabajos ajenos
     // a roles produccion/instalacion en el dropdown de resultados, aunque después
     // la ficha se lo bloqueara al entrar (hallazgo de la auditoría del 17/09).
-    return visibleJobs(user, jobs).filter((j) => {
+    // Eliminados tampoco aparecen acá — Histórico es el lugar dedicado a buscarlos.
+    return visibleJobs(user, jobs).filter((j) => !j.deletedAt).filter((j) => {
       const client = clients.find((c) => c.id === j.clientId);
       const responsible = users.find((u) => u.id === j.responsibleUserId);
       return (

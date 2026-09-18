@@ -77,6 +77,7 @@ interface StoreState {
   markAllNotificationsRead: (userId: string) => Promise<void>;
   setUserActive: (userId: string, active: boolean) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
+  restoreJob: (jobId: string) => Promise<void>;
   resetDemoData: () => Promise<void>;
   // AUDITORIA_UXUI_2026-09-15.md ítem #4 — expone get_loadAll() para el botón
   // "Reintentar" del banner de error de AppLayout.tsx (antes era una función
@@ -576,16 +577,35 @@ export const useStore = create<StoreState>()((set, get) => ({
     set((s) => ({ users: s.users.map((u) => u.id === userId ? { ...u, active } : u) }));
   },
 
-  // Todos los hijos (comentarios, historial, archivos, etc.) tienen `on delete
-  // cascade` en el esquema, así que un solo delete de la fila alcanza.
+  // Borrado lógico (Fase 4, 17/09) — antes era un DELETE físico con cascade real
+  // (sin rastro ni forma de deshacer). "Eliminar" ahora solo marca deleted_at/
+  // deleted_by: el trabajo desaparece de Dashboard/Trabajos/Kanban pero sigue
+  // entero (archivos, comentarios, historial) y es consultable/restaurable desde
+  // Histórico. El trigger jobs_update_guard (002_policies.sql) exige admin/
+  // coordinador para tocar estos dos campos, espejo de canDeleteJob en la UI.
   deleteJob: async (jobId) => {
     const before = get().jobs.find((j) => j.id === jobId);
-    set((s) => ({ jobs: s.jobs.filter((j) => j.id !== jobId) }));
-    const { error } = await supabase.from('jobs').delete().eq('id', jobId);
+    const nowIso = new Date().toISOString();
+    const byUserId = get().currentUser?.id ?? null;
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, deletedAt: nowIso, deletedBy: byUserId } : j) }));
+    const { error } = await supabase.from('jobs').update({ deleted_at: nowIso, deleted_by: byUserId }).eq('id', jobId);
     if (error) {
-      if (before) set((s) => ({ jobs: [...s.jobs, before] }));
+      if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;
     }
+    if (byUserId) await insertActivity(set, jobId, byUserId, 'eliminar', 'Eliminó el trabajo.');
+  },
+
+  restoreJob: async (jobId) => {
+    const before = get().jobs.find((j) => j.id === jobId);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, deletedAt: undefined, deletedBy: undefined } : j) }));
+    const { error } = await supabase.from('jobs').update({ deleted_at: null, deleted_by: null }).eq('id', jobId);
+    if (error) {
+      if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
+      throw error;
+    }
+    const byUserId = get().currentUser?.id;
+    if (byUserId) await insertActivity(set, jobId, byUserId, 'restaurar', 'Restauró el trabajo eliminado.');
   },
 
   resetDemoData: async () => { await get_loadAll(set, get); },

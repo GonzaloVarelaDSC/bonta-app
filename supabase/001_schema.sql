@@ -87,6 +87,9 @@ create table if not exists jobs (
   committed_date timestamptz not null,
   finished_at timestamptz,
   ready_at timestamptz,
+  -- Borrado lógico (ver 019). "Eliminar" desde la UI hace un UPDATE, no un DELETE.
+  deleted_at timestamptz,
+  deleted_by uuid references profiles(id),
 
   job_type_id text not null references job_types(id),
   description text not null default '',

@@ -8,14 +8,25 @@ import { isSilent } from './risk';
 // y en Trabajos, ensuciando la vista del día a día. Pasados estos días desde
 // `finishedAt`, un trabajo Entregado se considera "archivado" — desaparece de
 // la vista por default de esas dos pantallas, cada una con un toggle "Ver
-// archivados" para volver a encontrarlo (no se borra ni pierde acceso). 3 días
-// (Gonzalo pidió elegir entre 2 o 3) da margen para volver sobre algo recién
-// entregado sin tener que ir a buscarlo aparte.
-export const ARCHIVE_AFTER_DAYS = 3;
+// archivados" para volver a encontrarlo (no se borra ni pierde acceso).
+// Subido de 3 a 5 días en la Fase 4 (17/09) a pedido explícito de Gonzalo — sigue
+// siendo puramente calculado al vuelo (sin cron ni columna `archived_at`/
+// `archived_by`, ver CLAUDE.md sección 39): "archivado" no es una acción que
+// alguien ejecuta, es una fecha vencida. Un archivado real y consultable (con
+// buscador propio) vive en la sección Histórico, admin-only.
+export const ARCHIVE_AFTER_DAYS = 5;
 
 export function isArchivedJob(job: Job): boolean {
   if (job.status !== 'TERMINADO' || !job.finishedAt) return false;
   return differenceInCalendarDays(new Date(), new Date(job.finishedAt)) >= ARCHIVE_AFTER_DAYS;
+}
+
+// Borrado lógico (Fase 4) — desaparece de las vistas operativas, consultable/
+// restaurable desde Histórico. Independiente de isArchivedJob (un trabajo puede
+// estar archivado sin estar eliminado, y viceversa: se puede eliminar un trabajo
+// activo, no solo uno ya entregado).
+export function isDeletedJob(job: Job): boolean {
+  return !!job.deletedAt;
 }
 
 export function isOverdue(job: Job): boolean {

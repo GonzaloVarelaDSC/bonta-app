@@ -203,6 +203,12 @@ export interface Job {
   committedDate: string; // fecha comprometida internamente (con hora)
   finishedAt?: string;
   readyAt?: string; // fecha en que quedó "Listo" por primera vez (se graba sola, no se pisa después)
+  // Borrado lógico (Fase 4, 17/09) — "Eliminar" ya no hace un DELETE real, marca
+  // estos dos campos. Un trabajo con deletedAt desaparece de Dashboard/Trabajos/
+  // Kanban pero sigue existiendo (archivos, comentarios, historial intactos) y es
+  // consultable/restaurable desde Histórico.
+  deletedAt?: string;
+  deletedBy?: string | null;
 
   jobTypeId: JobTypeId;
   description: string;
