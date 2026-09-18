@@ -157,7 +157,6 @@ export function QuickJobPage() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const jobType = jobTypes.find((t) => t.id === jobTypeId)!;
       const finalName = name.trim() || description.trim().slice(0, 60) || 'Trabajo sin nombre';
       const finalClientName = clientName.trim() || 'Cliente sin especificar';
       const finalDate = committedDate || addDaysLocal(7);
@@ -169,7 +168,7 @@ export function QuickJobPage() {
         products: products
           .map((p) => ({ ...p, sizeItems: p.sizeItems.filter((it) => it.quantity || it.width || it.height) }))
           .filter((p) => p.label.trim() || p.materialIds.length > 0 || p.sizeItems.length > 0 || p.notes.trim()),
-        specialRequirements: '', activeStageKeys: jobType.defaultStages,
+        specialRequirements: '',
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId, responsibleUserId, assignedUserIds: [], assignedNames,
       });

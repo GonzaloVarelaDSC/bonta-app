@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 39).
+la contradiga más arriba**. Última actualización: 17/09/2026 (sección 40).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -2875,3 +2875,112 @@ Sin commit todavía — Gonzalo no lo pidió en esta ronda. El resto de la audit
 sigue pendiente de que confirme cómo seguir antes de tocar más código — Fase 1 fue
 explícitamente "solo auditoría", este cambio de estados fue la única excepción
 porque Gonzalo lo confirmó de forma explícita y acotada.
+
+---
+
+## 40. Actualización 17/09 (cont.) — arranca Fase 2: se saca el sistema de etapas, se tapa la fuga del buscador global y el agujero de permisos de Usuarios
+
+Gonzalo confirmó los dos puntos que habían quedado abiertos de la sección 39: sacar
+el sistema de etapas (sí), y sobre el archivado — preguntado de nuevo, dijo "no sé
+de qué hablás, así que la respuesta es no" (no se acordaba del detalle de esa
+pregunta puntual de la auditoría). Se interpreta como un "no" a la opción más
+compleja (un registro artificial de "quién archivó"), lo que en los hechos
+confirma la recomendación original: el archivado sigue siendo calculado al vuelo
+(`isArchivedJob`, sin `archived_at`/`archived_by`) — no hay nada que implementar
+todavía, es Fase 4. **Si en algún momento Gonzalo pide precisión sobre esto, volver
+a explicar la pregunta desde cero** — no asumir que la recuerda de una sesión
+anterior. Dicho esto, pidió arrancar la Fase 2 completa del plan de la auditoría.
+Se hicieron los 3 ítems que esa fase tenía pendientes.
+
+### 1. Sistema de etapas — eliminado por completo
+
+Se sacó todo lo que sembraba/leía/exponía `job.stages` (ver sección 39, hallazgo 1,
+para el diagnóstico completo de por qué era dato sin dueño):
+- `types/index.ts` — se borraron `StageKey`, `StageStatus`, `JobStage`, y los
+  campos `Job.stages` y `JobType.defaultStages`.
+- `data/catalog.ts` — se borró `STAGE_LABELS` y el campo `defaultStages` de cada
+  entrada de `DEFAULT_JOB_TYPES`.
+- `lib/dbMappers.ts` — se borró `mapStage()` y el campo `stages` de `mapJob()`; ya
+  no se lee `row.job_stages` ni se mapea `job_types.default_stages`.
+- `lib/supabaseQueries.ts` — se sacó `job_stages(*)` del embed `JOB_SELECT`.
+- `store/useStore.ts` — se borró la acción `setStageStatus` completa (no la
+  llamaba ningún componente, confirmado), el campo `activeStageKeys` de
+  `NewJobInput`, y el insert a `job_stages` dentro de `createJob`. `addJobType`
+  ya no manda `default_stages` al crear un tipo nuevo (la columna tiene default
+  `'{}'` en la base, no hace falta mandarlo).
+- `components/QuickJob/QuickJobPage.tsx` — sacado `activeStageKeys: jobType.defaultStages` del payload de `createJob` (y la variable `jobType`, que ya no se usaba para nada más).
+- `data/seed.ts` (código muerto en runtime, pero compilado por `tsc`) — se sacaron
+  `makeStages`/`buildStages`, el campo `stages` del objeto `Job`, y
+  `stagesDone`/`stageInProgress` de la interfaz `Seed` y de las ~20 filas del
+  dataset demo (reemplazo mecánico con `sed`, verificado después con build).
+- **`lib/risk.ts`** — `calculateRisk()` usaba `job.stages.filter(s => s.active).length`
+  como proxy de "cuántas etapas tiene este tipo de trabajo" para el nivel de
+  riesgo "Alto". Al sacar `job.stages`, se simplificó esa condición a
+  `job.requiresInstallation && hours <= 96` (instalación + plazo ajustado ya
+  alcanza como señal de "más partes móviles, más riesgo") — se sacó el umbral de
+  "3+ etapas" en vez de reemplazarlo por una consulta a `jobTypes` para no sumar
+  una dependencia nueva a una función que hasta ahora era pura.
+
+**Lo que NO se tocó, a propósito:** la tabla `job_stages` y la columna
+`job_types.default_stages` siguen existiendo en la base — no se dropearon ni se
+migró nada a nivel de esquema. Son datos huérfanos ahora (nada los lee ni los
+escribe desde la app), pero borrar una tabla es una operación destructiva que no
+corresponde meter en la misma pasada que un refactor de código; si en algún
+momento Gonzalo quiere limpiarlos de la base para no dejar basura, es una
+migración aparte a pedir explícitamente.
+
+### 2. Buscador global del Header — dejó de mostrar trabajos ajenos
+
+`Header.tsx` buscaba sobre `useStore((s) => s.jobs)` sin pasar por
+`visibleJobs(user, jobs)` — un rol `producción`/`instalación` (que en el resto de
+la app solo ve lo suyo vía `canViewJob`) podía ver en el dropdown de resultados
+nombre/cliente/responsable de trabajos ajenos, aunque la ficha se lo bloqueara
+después al entrar. Se agregó el filtro `visibleJobs(user, jobs)` antes de buscar
+(con guard `if (!user) return []` porque el hook corre antes del `if (!user)
+return null` del final del componente). De paso, el buscador matchea contra
+`materialIds` — campo `@deprecated` desde el 02/09, reemplazado por `products` —
+así que no encontraba nada cargado en meses; ahora busca
+`job.products[].label`/`.materialIds` en su lugar.
+
+### 3. Guard de rutas admin-only — nuevo, aplicado a `/usuarios`
+
+Hallazgo de la auditoría (sección 39, hallazgo 3): `UsersPage` no validaba ningún
+permiso — a diferencia de `ConfigPage` (que sí chequea `canManageCatalog` y
+degrada a solo lectura), cualquier persona logueada que navegara a `/usuarios` a
+mano veía la lista completa de usuarios con el checkbox de activar/desactivar
+cuentas (el guardado en sí fallaba por RLS, pero la UI se mostraba igual).
+
+Nuevo componente **`Common/RequireRole.tsx`** — wrapper de ruta genérico
+(`{ allow: (role) => boolean; children }`) que redirige a `/` con `<Navigate>` si
+el usuario no cumple el chequeo, mismo patrón que ya usa `AppLayout` para
+`!user`. Aplicado en `App.tsx` a la ruta `/usuarios`:
+`<RequireRole allow={canManageUsers}><UsersPage /></RequireRole>`. `/configuracion`
+se dejó como está (su propio chequeo interno con degradado a solo lectura es
+correcto ahí — ver los catálogos de tipos/materiales no es sensible). Este
+componente queda como el patrón a reusar cuando se construya el Histórico
+admin-only (Fase 4).
+
+### Verificación
+
+`npm run build` (tsc + vite) y `npm run lint` limpios — sin warnings nuevos (el
+único warning que tira `oxlint` es preexistente, de `Badges.tsx`, sin relación con
+esta ronda). Grep final sobre todo `src/` confirma cero referencias sueltas a
+`StageKey`/`JobStage`/`StageStatus`/`STAGE_LABELS`/`setStageStatus`/
+`activeStageKeys`/`defaultStages`/`job_stages`. Se probó que el login carga sin
+errores de consola en `localhost:5173`; no se hizo una pasada visual autenticada
+completa esta ronda (los cambios son en su mayoría de tipos/backend — remoción de
+código muerto, un filtro de búsqueda, y un redirect de ruta — de riesgo bajo y sin
+UI nueva que mostrar).
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main` en un commit dedicado a esta ronda (además
+del commit previo de NUEVO/APROBADO, ya en `main` desde antes de arrancar esto).
+
+### Lo que sigue de la Fase 2 original — ya cerrado
+
+Con esto se completan los 3 ítems que el plan de la sección 38 (auditoría) había
+puesto en Fase 2. Quedan Fase 3 (unificar estados — separar macro-etapa de
+sub-estado en `JobStatus`), Fase 4 (soft-delete + tacho en Kanban + Histórico
+admin-only + subir umbral de archivado a 5 días), Fase 5 (fricción de uso diario)
+y Fase 6 (manual) — a la espera de que Gonzalo pida seguir con la que corresponda.

@@ -6,7 +6,6 @@ import type { Job } from '../types';
 export const JOB_SELECT = `
   *,
   job_assigned_users(user_id),
-  job_stages(*),
   job_files(*, file_versions(*)),
   block_records(*),
   quality_checks(*),

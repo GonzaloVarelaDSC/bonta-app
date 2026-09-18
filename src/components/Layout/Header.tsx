@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
 import { ROLES } from '../../data/catalog';
+import { visibleJobs } from '../../lib/permissions';
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const navigate = useNavigate();
@@ -34,9 +35,13 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   }, []);
 
   const results = useMemo(() => {
-    if (query.trim().length < 2) return [];
+    if (!user || query.trim().length < 2) return [];
     const q = query.toLowerCase();
-    return jobs.filter((j) => {
+    // Solo entre lo que el usuario puede ver de verdad (canViewJob) — buscar sobre
+    // `jobs` sin filtrar dejaba ver nombre/cliente/responsable de trabajos ajenos
+    // a roles produccion/instalacion en el dropdown de resultados, aunque después
+    // la ficha se lo bloqueara al entrar (hallazgo de la auditoría del 17/09).
+    return visibleJobs(user, jobs).filter((j) => {
       const client = clients.find((c) => c.id === j.clientId);
       const responsible = users.find((u) => u.id === j.responsibleUserId);
       return (
@@ -44,11 +49,11 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         j.name.toLowerCase().includes(q) ||
         client?.name.toLowerCase().includes(q) ||
         responsible?.name.toLowerCase().includes(q) ||
-        j.materialIds.some((m) => m.includes(q)) ||
+        j.products.some((p) => p.label.toLowerCase().includes(q) || p.materialIds.some((m) => m.toLowerCase().includes(q))) ||
         j.installation?.address.toLowerCase().includes(q)
       );
     }).slice(0, 8);
-  }, [query, jobs, clients, users]);
+  }, [query, jobs, clients, users, user]);
 
   const myNotifs = user ? notifications.filter((n) => n.userId === user.id).slice(0, 12) : [];
   const unread = myNotifs.filter((n) => !n.read).length;

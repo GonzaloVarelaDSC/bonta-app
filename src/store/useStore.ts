@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import type {
   User, Job, Comment, ActivityLogEntry, Notification, Priority, JobStatus,
-  BlockReason, StageKey, StageStatus, JobType, Material,
+  BlockReason, JobType, Material,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
 import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial } from '../lib/dbMappers';
 import { friendlyError } from '../lib/errors';
-import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, QC_TEMPLATE, STAGE_LABELS } from '../data/catalog';
+import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, QC_TEMPLATE } from '../data/catalog';
 import type { Client } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
@@ -68,7 +68,6 @@ interface StoreState {
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
   unblockJob: (jobId: string, byUserId: string) => Promise<void>;
-  setStageStatus: (jobId: string, stageKey: StageKey, status: StageStatus, byUserId: string) => Promise<void>;
   addFileVersion: (jobId: string, file: File, byUserId: string, targetFileId?: string) => Promise<void>;
   deleteFileVersion: (jobId: string, fileId: string, versionId: string, byUserId: string) => Promise<void>;
   approveFileVersion: (jobId: string, fileId: string, versionId: string, byUserId: string) => Promise<void>;
@@ -96,7 +95,6 @@ export interface NewJobInput {
   jobTypeId: Job['jobTypeId']; description: string;
   committedDate: string; priorityManual: Priority; clientImportant: boolean;
   products: Job['products']; specialRequirements: string;
-  activeStageKeys: StageKey[];
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
 }
@@ -239,10 +237,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     const label = rawLabel.trim();
     if (!label) throw new Error('Falta el nombre del tipo de trabajo.');
     const id = slugifyId(label, get().jobTypes.map((t) => t.id));
-    // Etapas por defecto genéricas — este alcance de Configuración no incluye
-    // elegir etapas al crear un tipo nuevo (ver CLAUDE.md §21); se puede ajustar
-    // después desde la ficha de un trabajo concreto si hace falta más detalle.
-    const { data, error } = await supabase.from('job_types').insert({ id, label, default_stages: ['diseno', 'control_calidad'] }).select().single();
+    const { data, error } = await supabase.from('job_types').insert({ id, label }).select().single();
     if (error) throw error;
     set((s) => ({ jobTypes: [...s.jobTypes, mapJobType(data)] }));
   },
@@ -273,7 +268,6 @@ export const useStore = create<StoreState>()((set, get) => ({
   },
 
   createJob: async (input) => {
-    const jobType = get().jobTypes.find((t) => t.id === input.jobTypeId)!;
     // Falta dirección de instalación es lo único que de verdad bloquea un trabajo
     // recién creado — medidas/material/técnica se cargan después si hacen falta,
     // no ameritan nacer en "Falta información".
@@ -294,10 +288,6 @@ export const useStore = create<StoreState>()((set, get) => ({
 
     if (input.assignedUserIds.length) {
       await supabase.from('job_assigned_users').insert(input.assignedUserIds.map((userId) => ({ job_id: jobId, user_id: userId })));
-    }
-    const stages = jobType.defaultStages.filter((k) => input.activeStageKeys.includes(k));
-    if (stages.length) {
-      await supabase.from('job_stages').insert(stages.map((k) => ({ job_id: jobId, key: k, label: STAGE_LABELS[k], active: true, status: 'pendiente' })));
     }
     await supabase.from('quality_checks').insert(QC_TEMPLATE.map((q) => ({ job_id: jobId, key: q.key, label: q.label, required: q.required, checked: false })));
     if (input.requiresInstallation) {
@@ -480,13 +470,6 @@ export const useStore = create<StoreState>()((set, get) => ({
     const { error } = await supabase.from('jobs').update({ status: 'EN_PRODUCCION', last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'desbloqueo', 'Desbloqueó el trabajo.');
-    await refreshJob(set, jobId);
-  },
-
-  setStageStatus: async (jobId, stageKey, status, byUserId) => {
-    await supabase.from('job_stages').update({ status }).eq('job_id', jobId).eq('key', stageKey);
-    await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
-    await insertActivity(set, jobId, byUserId, 'etapa', `Marcó la etapa "${STAGE_LABELS[stageKey]}" como ${status.replace('_', ' ')}.`);
     await refreshJob(set, jobId);
   },
 

@@ -55,7 +55,6 @@ export type JobTypeId = string;
 export interface JobType {
   id: JobTypeId;
   label: string;
-  defaultStages: StageKey[];
 }
 
 // Editable desde Configuración, igual que JobTypeId — ver ese comentario arriba.
@@ -64,20 +63,6 @@ export type MaterialId = string;
 export interface Material {
   id: MaterialId;
   label: string;
-}
-
-export type StageKey =
-  | 'diseno' | 'impresion' | 'corte' | 'laminado' | 'armado'
-  | 'carpinteria' | 'terminacion' | 'control_calidad' | 'embalaje' | 'instalacion';
-
-export type StageStatus = 'pendiente' | 'en_progreso' | 'terminado';
-
-export interface JobStage {
-  key: StageKey;
-  label: string;
-  active: boolean;
-  status: StageStatus;
-  assignedUserId?: string;
 }
 
 export type JobStatus =
@@ -241,7 +226,6 @@ export interface Job {
   specialRequirements: string;
 
   status: JobStatus;
-  stages: JobStage[];
 
   priorityAuto: Priority;
   priorityManual: Priority | null;

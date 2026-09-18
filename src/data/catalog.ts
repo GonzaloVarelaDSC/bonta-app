@@ -1,4 +1,4 @@
-import type { JobType, Material, Role, JobStatus, StageKey, BlockReason, SampleReview } from '../types';
+import type { JobType, Material, Role, JobStatus, BlockReason, SampleReview } from '../types';
 
 export const ROLES: Role[] = [
   { id: 'admin', label: 'Administrador', description: 'Control total del sistema' },
@@ -7,19 +7,6 @@ export const ROLES: Role[] = [
   { id: 'produccion', label: 'Producción', description: 'Trabajos asignados a producción' },
   { id: 'instalacion', label: 'Instalación', description: 'Trabajos que requieren instalación en sitio' },
 ];
-
-export const STAGE_LABELS: Record<StageKey, string> = {
-  diseno: 'Diseño',
-  impresion: 'Impresión',
-  corte: 'Corte',
-  laminado: 'Laminado',
-  armado: 'Armado',
-  carpinteria: 'Carpintería',
-  terminacion: 'Terminación',
-  control_calidad: 'Control de calidad',
-  embalaje: 'Embalaje',
-  instalacion: 'Instalación',
-};
 
 // Sintetizado (26/08) alrededor de máquina/proceso real del estudio en vez de
 // una "vertical" abstracta por cliente (antes eran 17 tipos tipo "Señalética"/
@@ -33,16 +20,16 @@ export const STAGE_LABELS: Record<StageKey, string> = {
 // `DEFAULT_JOB_TYPES`/`DEFAULT_MATERIALS` se usan como estado inicial del store
 // antes de que responda el fetch, y en `resetDemoData`/seed.ts.
 export const DEFAULT_JOB_TYPES: JobType[] = [
-  { id: 'impresion_v7000', label: 'Impresión V7000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
-  { id: 'impresion_s40', label: 'Impresión S40', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
-  { id: 'impresion_p9000', label: 'Impresión P9000', defaultStages: ['diseno', 'impresion', 'corte', 'control_calidad'] },
-  { id: 'corte_laser', label: 'Corte láser', defaultStages: ['diseno', 'corte', 'control_calidad'] },
-  { id: 'corte_cnc', label: 'Corte CNC', defaultStages: ['diseno', 'corte', 'control_calidad'] },
-  { id: 'corporeo', label: 'Corpóreo', defaultStages: ['diseno', 'corte', 'armado', 'terminacion', 'control_calidad', 'instalacion'] },
-  { id: 'carpinteria', label: 'Carpintería', defaultStages: ['diseno', 'carpinteria', 'terminacion', 'control_calidad'] },
-  { id: 'acrilico', label: 'Acrílico', defaultStages: ['diseno', 'corte', 'terminacion', 'control_calidad'] },
-  { id: 'vidrieras_stands', label: 'Vidrieras y stands', defaultStages: ['diseno', 'impresion', 'armado', 'control_calidad', 'instalacion'] },
-  { id: 'otro', label: 'Otro', defaultStages: ['diseno', 'control_calidad'] },
+  { id: 'impresion_v7000', label: 'Impresión V7000' },
+  { id: 'impresion_s40', label: 'Impresión S40' },
+  { id: 'impresion_p9000', label: 'Impresión P9000' },
+  { id: 'corte_laser', label: 'Corte láser' },
+  { id: 'corte_cnc', label: 'Corte CNC' },
+  { id: 'corporeo', label: 'Corpóreo' },
+  { id: 'carpinteria', label: 'Carpintería' },
+  { id: 'acrilico', label: 'Acrílico' },
+  { id: 'vidrieras_stands', label: 'Vidrieras y stands' },
+  { id: 'otro', label: 'Otro' },
 ];
 
 // Ids del catálogo original de 17 verticales (pre-26/08, ver 003_seed_catalogs.sql)

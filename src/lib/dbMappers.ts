@@ -2,8 +2,8 @@
 // de la app (camelCase, anidado) definido en src/types. Mantener esto separado del store
 // es lo que permite que los componentes no sepan que existe una base de datos detrás.
 import type {
-  User, Client, Job, Comment, ActivityLogEntry, Notification, JobStage, JobFile, BlockRecord,
-  QualityCheckItem, InstallationInfo, MaterialId, StageKey, SizeItem, Product, JobType, Material,
+  User, Client, Job, Comment, ActivityLogEntry, Notification, JobFile, BlockRecord,
+  QualityCheckItem, InstallationInfo, MaterialId, SizeItem, Product, JobType, Material,
 } from '../types';
 
 export function mapProfile(row: any): User {
@@ -36,15 +36,11 @@ export function mapNotification(row: any): Notification {
 }
 
 export function mapJobType(row: any): JobType {
-  return { id: row.id, label: row.label, defaultStages: (row.default_stages ?? []) as StageKey[] };
+  return { id: row.id, label: row.label };
 }
 
 export function mapMaterial(row: any): Material {
   return { id: row.id, label: row.label };
-}
-
-function mapStage(row: any): JobStage {
-  return { key: row.key as StageKey, label: row.label, active: row.active, status: row.status, assignedUserId: row.assigned_user_id ?? undefined };
 }
 
 function mapFile(row: any): JobFile {
@@ -92,7 +88,7 @@ export function mapJob(row: any): Job {
     products: (row.products ?? []) as Product[],
     technique: row.technique ?? '', finish: row.finish ?? '', color: row.color ?? '',
     observations: row.observations ?? '', specialRequirements: row.special_requirements ?? '',
-    status: row.status, stages: (row.job_stages ?? []).map(mapStage),
+    status: row.status,
     priorityAuto: row.priority_auto, priorityManual: row.priority_manual ?? null,
     requiresInstallation: row.requires_installation, installation: mapInstallation(row.installations),
     sampleReview: row.sample_review ?? 'none', sampleReviewAt: row.sample_review_at ?? undefined,
