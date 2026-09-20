@@ -476,11 +476,21 @@ pida de nuevo explícitamente.
   `StatusSelect`, `CountdownBadge`, `Avatar` (todos en `Common/Badges.tsx`) —
   siempre reusar, nunca crear una versión nueva de un badge de prioridad/estado en
   otro componente.
-- **Estilo de comunicación con Gonzalo (20/09):** no narrar el paso a paso de lo
-  que se está haciendo (qué archivo se va a leer, qué se va a chequear antes de
-  tocar código, etc.). Ir directo a la respuesta/resultado final. Está bien
-  seguir documentando cada ronda acá en CLAUDE.md con el detalle de siempre —
-  esto aplica al texto que se le muestra a él en el chat, no a este archivo.
+- **Estilo de comunicación con Gonzalo (20/09, reforzado el mismo día tras
+  reincidir):** CERO narración de proceso en el chat — ni un archivo que se va
+  a leer, ni "ahora hago X", ni una frase corta antes de cada tool call del
+  estilo "Corro el script", "Reviro el bypass", "Dev server activo". Ni
+  siquiera una línea de una oración por paso: eso también es narración y ya
+  se probó y lo rechazó explícitamente ("PERO TE DIJE QUE NO PONGAS TODO ESTO
+  EN LAS RESPUESTAS! SOLO LO QUE ME INTERESA A MI!"). Trabajar en silencio
+  (los tool calls no le llegan como texto narrado) y recién escribir un
+  mensaje al final, con el resultado/respuesta directa — qué se hizo (si
+  preguntó), o directamente lo que pidió (capturas, datos, confirmación), sin
+  el racconto de cómo se llegó ahí. Si hace falta pedirle algo en el medio
+  (confirmar un SQL, una decisión), eso sí amerita un mensaje, pero corto y
+  sobre esa decisión puntual, no sobre lo que se estuvo hacendo. Sigue
+  valiendo documentar cada ronda acá en CLAUDE.md con el detalle de siempre —
+  esto es solo sobre el chat.
 
 ---
 
