@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 20/09/2026 (sección 45).
+la contradiga más arriba**. Última actualización: 20/09/2026 (sección 46).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3568,3 +3568,30 @@ de la Fase 4) — `git diff src/App.tsx` vacío antes de commitear.
 ### Estado de git
 
 Commiteado y pusheado a `origin/main`.
+
+---
+
+## 46. Actualización 20/09 (cont.) — se reproduce de nuevo el bloqueo del navegador integrado contra `bonta-app.vercel.app`
+
+Gonzalo pidió probar el sitio ya deployado. **Se reprodujo el mismo problema
+ya documentado en la sección 30, punto 6** — en una sesión completamente
+nueva, meses después, lo que confirma que no fue un glitch puntual: `navigate`
+carga `https://bonta-app.vercel.app` sin problema, pero **todas** las
+herramientas de lectura probadas (`get_page_text`, `computer{screenshot}`,
+`read_console_messages`, `read_network_requests`) devuelven el mismo error,
+"Policy check temporarily unavailable; retry", específicamente contra ese
+origen — las mismas herramientas funcionan sin problema contra
+`localhost:5173` en la misma sesión (confirmado varias veces en las rondas
+anteriores). No se insistió en loop (ya estaba anotado que no vale la pena).
+
+**No se pudo verificar el deploy real esta ronda.** Lo que sí se pudo
+verificar (y se verificó, ronda a ronda, con el bypass de auth local en
+`localhost:5173`) es que el código compila limpio y se comporta como se
+espera en cada feature — pero eso prueba el código, no el build real ya
+publicado en Vercel. Si una sesión futura se encuentra con el mismo bloqueo,
+no perder tiempo reintentando — pedirle a Gonzalo que:
+1. revise si hay algún permiso pendiente de aprobar para ese origen en el
+   panel del navegador integrado, o
+2. mire él mismo `bonta-app.vercel.app` y confirme visualmente.
+
+Sin cambios de código en esta ronda.
