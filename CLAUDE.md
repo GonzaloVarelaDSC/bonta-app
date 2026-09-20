@@ -476,6 +476,11 @@ pida de nuevo explícitamente.
   `StatusSelect`, `CountdownBadge`, `Avatar` (todos en `Common/Badges.tsx`) —
   siempre reusar, nunca crear una versión nueva de un badge de prioridad/estado en
   otro componente.
+- **Estilo de comunicación con Gonzalo (20/09):** no narrar el paso a paso de lo
+  que se está haciendo (qué archivo se va a leer, qué se va a chequear antes de
+  tocar código, etc.). Ir directo a la respuesta/resultado final. Está bien
+  seguir documentando cada ronda acá en CLAUDE.md con el detalle de siempre —
+  esto aplica al texto que se le muestra a él en el chat, no a este archivo.
 
 ---
 
