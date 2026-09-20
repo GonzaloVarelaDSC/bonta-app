@@ -75,9 +75,12 @@ export type RiskLevel = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO';
 
 // Muchos clientes piden una muestra / prueba impresa (colores, definición,
 // textura) antes de mandar a producir el trabajo entero. `none` = no hay muestra
-// en juego; `awaiting` = se le mandó y falta el OK del cliente (no arrancar la
-// producción completa); `approved` = el cliente la aprobó, vía libre.
-export type SampleReview = 'none' | 'awaiting' | 'approved';
+// en juego; `in_production` = ya se emitió la OT de la muestra y se está
+// haciendo, todavía no se le avisó al cliente (20/09, CLAUDE.md §48); `awaiting`
+// = la muestra ya está y se le avisó al cliente, falta que venga a verla y dé el
+// OK (no arrancar la producción completa); `approved` = el cliente la aprobó,
+// vía libre.
+export type SampleReview = 'none' | 'in_production' | 'awaiting' | 'approved';
 
 export interface FileVersion {
   id: string;

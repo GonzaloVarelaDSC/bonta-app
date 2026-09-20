@@ -213,11 +213,12 @@ export function BlockedBadge({ blocked, reason, size = 'md' }: { blocked: boolea
 }
 
 // Pill discreto de "muestra/prueba al cliente" — no aparece si el trabajo no
-// tiene muestra en juego (`none`). Ámbar = falta el OK; verde = aprobada.
+// tiene muestra en juego (`none`). Azul = en producción (todavía no se avisó
+// al cliente); ámbar = falta el OK del cliente; verde = aprobada.
 export function SampleReviewBadge({ state, at, size = 'md' }: { state: SampleReview; at?: string; size?: 'sm' | 'md' }) {
   if (state === 'none') return null;
   const meta = SAMPLE_REVIEW_META[state];
-  const tone = state === 'awaiting' ? 'norm' : 'plan';
+  const tone = state === 'approved' ? 'plan' : state === 'awaiting' ? 'norm' : 'info';
   return (
     <span
       title={at ? `${meta.chip} · ${fmtDate(at)}` : meta.chip}

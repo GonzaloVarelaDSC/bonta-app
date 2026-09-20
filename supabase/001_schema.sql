@@ -111,7 +111,7 @@ create table if not exists jobs (
   requires_installation boolean not null default false,
   client_important boolean not null default false,
   -- Muestra/prueba al cliente antes de producir todo (ver 016).
-  sample_review text not null default 'none' check (sample_review in ('none','awaiting','approved')),
+  sample_review text not null default 'none' check (sample_review in ('none','in_production','awaiting','approved')),
   sample_review_at timestamptz,
 
   last_activity_at timestamptz not null default now()

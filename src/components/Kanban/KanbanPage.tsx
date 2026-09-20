@@ -66,8 +66,14 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
       </div>
       <div className="mt-1.5 flex items-start gap-1.5 min-w-0">
         <span className="text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>
-        {job.sampleReview === 'awaiting' && (
-          <span className="shrink-0 text-[10px] font-semibold bg-norm-bg text-norm-text rounded px-1.5 py-0.5" title="Muestra enviada — falta el OK del cliente">
+        {(job.sampleReview === 'in_production' || job.sampleReview === 'awaiting') && (
+          <span
+            className={clsx(
+              'shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5',
+              job.sampleReview === 'in_production' ? 'bg-info-bg text-info-text' : 'bg-norm-bg text-norm-text'
+            )}
+            title={job.sampleReview === 'in_production' ? 'Muestra en producción — todavía no se avisó al cliente' : 'Muestra enviada — falta el OK del cliente'}
+          >
             muestra
           </span>
         )}

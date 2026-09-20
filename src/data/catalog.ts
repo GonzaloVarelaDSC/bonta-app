@@ -65,6 +65,7 @@ export const DEFAULT_MATERIALS: Material[] = [
 // texto corto del pill que aparece en las listas (vacío en 'none' = no se muestra).
 export const SAMPLE_REVIEW_META: Record<SampleReview, { option: string; chip: string }> = {
   none: { option: 'Sin muestra', chip: '' },
+  in_production: { option: 'En producción (OT emitida)', chip: 'Muestra en producción' },
   awaiting: { option: 'Enviada, falta OK', chip: 'Muestra: falta OK' },
   approved: { option: 'Aprobada por el cliente', chip: 'Muestra OK' },
 };

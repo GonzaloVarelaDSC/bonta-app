@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 20/09/2026 (sección 47).
+la contradiga más arriba**. Última actualización: 20/09/2026 (sección 48).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3632,3 +3632,81 @@ un segundo usuario real (asignarle una ficha a Gastón/Pancho/etc. y que
 revise su propia campana, o mencionar a otra persona real en un comentario y
 que confirme si le llegó). Sin cambios de código en esta ronda — no
 correspondía tocar algo que ya funciona como se especificó.
+
+---
+
+## 48. Actualización 20/09 (cont.) — "Muestra al cliente": nuevo estado intermedio "En producción (OT emitida)"
+
+Gonzalo explicó una dinámica real que los 3 estados existentes (`none`/
+`awaiting`/`approved`, sección 23) no cubrían: antes de poder avisarle al
+cliente que la muestra está lista para que venga a verla (`awaiting`), primero
+se emite una OT para FABRICAR esa muestra y hay que esperar a que esté hecha.
+Ese tramo — "ya la mandé a hacer, todavía no le avisé a nadie" — no tenía
+representación; el flujo real es:
+
+**Sin muestra → Muestra en producción (OT emitida) → Enviada, falta OK →
+Aprobada por el cliente**
+
+### Cambios de código
+
+1. **`SampleReview`** (`types/index.ts`) pasa de 3 a 4 valores:
+   `'none' | 'in_production' | 'awaiting' | 'approved'`. Comentario del tipo
+   actualizado para explicar el matiz entre `in_production` (la muestra se está
+   haciendo, el cliente todavía no sabe nada) y `awaiting` (la muestra ya existe,
+   se le avisó al cliente, falta que venga y la apruebe) — son dos momentos
+   distintos, no lo mismo con otro nombre.
+2. **`SAMPLE_REVIEW_META`** (`data/catalog.ts`) — nueva entrada
+   `in_production: { option: 'En producción (OT emitida)', chip: 'Muestra en
+   producción' }`, insertada entre `none` y `awaiting` (el `<select>` de la
+   ficha itera `Object.keys(SAMPLE_REVIEW_META)`, así que el orden de este
+   objeto es el orden real de las opciones — quedó en el orden del flujo).
+3. **`SampleReviewBadge`** (`Common/Badges.tsx`) — el pill ahora usa 3 tonos en
+   vez de 2: `info` (azul, "en curso" — mismo lenguaje que el resto de la app,
+   decisión 9 de la sección 4) para `in_production`, `norm` (ámbar) para
+   `awaiting` sin cambios, `plan` (verde) para `approved` sin cambios.
+4. **Tag del Kanban** (`KanbanPage.tsx`, `CardBody`) — antes solo aparecía en
+   `awaiting`; ahora aparece también en `in_production`, con el mismo texto
+   corto "muestra" pero coloreado distinto (azul vs. ámbar) para que se pueda
+   distinguir de un vistazo en qué momento está sin tener que abrir la ficha.
+5. **`setSampleReview`** (`store/useStore.ts`) — el mapa de texto para el log
+   de actividad y la notificación al responsable/asignados suma la entrada de
+   `in_production` ("muestra en producción (OT emitida)").
+6. **Migración `020_job_sample_review_in_production.sql`** — el `check` de
+   `jobs.sample_review` solo permitía `'none'/'awaiting'/'approved'`; se
+   recrea el constraint agregando `'in_production'`. **Hay que correrla en
+   Supabase:**
+   ```sql
+   alter table jobs drop constraint if exists jobs_sample_review_check;
+   alter table jobs add constraint jobs_sample_review_check
+     check (sample_review in ('none', 'in_production', 'awaiting', 'approved'));
+   ```
+   Verificación después de correrla: `select sample_review, count(*) from jobs
+   group by sample_review;` no debería tirar error, y ya se puede probar
+   marcar una ficha real en "En producción (OT emitida)" sin que rechace el
+   update. También sumada a `001_schema.sql` para instalaciones nuevas.
+
+### Lo que no se tocó
+
+`JobDetailPage.tsx` no necesitó ningún cambio propio — el `<select>` ya
+generaba sus opciones iterando `SAMPLE_REVIEW_META`, así que el estado nuevo
+apareció solo al agregarlo al catálogo. Tampoco se tocó Carga rápida ni la
+hoja de exportación al cliente (mismo criterio ya documentado en la sección 23:
+la muestra es un dato operativo interno que surge con el trabajo ya en curso,
+no al darlo de alta).
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios. Probado en vivo con el bypass de auth
+local (4 fichas fake, una por cada valor de `sampleReview`, revertido con una
+Edit puntual sobre `src/App.tsx` — confirmado `git diff src/App.tsx` vacío
+antes de commitear): en la ficha, el `<select>` mostró las 4 opciones en el
+orden correcto con "En producción (OT emitida)" preseleccionado en la ficha
+correspondiente; el badge de la cabecera mostró "Muestra en producción ·
+20 sep 2026"; en el Dashboard las 4 fichas mostraron "Sin muestra" (sin pill),
+"Muestra en producción", "Muestra: falta OK" y "Muestra OK" respectivamente;
+en el Kanban las tarjetas 2 y 3 (`in_production`/`awaiting`) mostraron el tag
+"muestra" en azul y ámbar respectivamente, tal como se esperaba.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.

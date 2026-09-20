@@ -388,7 +388,12 @@ export const useStore = create<StoreState>()((set, get) => ({
       if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;
     }
-    const label = { none: 'sin muestra', awaiting: 'muestra enviada, falta OK del cliente', approved: 'muestra aprobada por el cliente' }[state];
+    const label = {
+      none: 'sin muestra',
+      in_production: 'muestra en producción (OT emitida)',
+      awaiting: 'muestra enviada, falta OK del cliente',
+      approved: 'muestra aprobada por el cliente',
+    }[state];
     await insertActivity(set, jobId, byUserId, 'muestra', `Marcó: ${label}.`);
     if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)}: ${label}.`);
     await refreshJob(set, jobId);
