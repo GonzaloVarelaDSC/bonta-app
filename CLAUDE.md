@@ -3684,6 +3684,7 @@ Aprobada por el cliente**
    group by sample_review;` no debería tirar error, y ya se puede probar
    marcar una ficha real en "En producción (OT emitida)" sin que rechace el
    update. También sumada a `001_schema.sql` para instalaciones nuevas.
+   **Confirmado corrida por Gonzalo (20/09, mismo día).**
 
 ### Lo que no se tocó
 
