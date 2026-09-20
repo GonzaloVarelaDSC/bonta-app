@@ -8,7 +8,7 @@ import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
 import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge, BlockedBadge } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
-import { fmtDate } from '../../lib/dates';
+import { fmtDate, fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { isBlocked } from '../../lib/selectors';
 import { BLOCK_REASON_LABELS } from '../../data/catalog';
@@ -79,11 +79,17 @@ export function DashboardJobCard({ job }: { job: Job }) {
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
         <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
 
-        <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium ml-auto flex-wrap justify-end">
-          <span className="whitespace-nowrap">Asignado {fmtDate(job.createdAt)}</span>
-          <span className="text-ink-700 font-normal hidden sm:inline">·</span>
-          <span className="whitespace-nowrap">Entrega {fmtDate(job.committedDate)}</span>
-          <CountdownBadge iso={job.committedDate} status={job.status} />
+        <div className="flex flex-col items-end gap-0.5 ml-auto">
+          <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium flex-wrap justify-end">
+            <span className="whitespace-nowrap">Asignado {fmtDate(job.createdAt)}</span>
+            <span className="text-ink-700 font-normal hidden sm:inline">·</span>
+            <span className="whitespace-nowrap">Entrega {fmtDate(job.committedDate)}</span>
+            <CountdownBadge iso={job.committedDate} status={job.status} />
+          </div>
+          {/* Hora exacta de creación (punto 2, 20/09) — mismo timestamp que
+              "Asignado" de arriba (createdAt), pero con la hora, en texto
+              secundario para no competir con el nombre/estado del trabajo. */}
+          <span className="text-[11px] text-ink-700 whitespace-nowrap">Creado {fmtShort(job.createdAt)}</span>
         </div>
 
         <button

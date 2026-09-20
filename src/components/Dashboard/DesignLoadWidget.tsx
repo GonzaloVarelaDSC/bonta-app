@@ -2,6 +2,7 @@ import { PenTool } from 'lucide-react';
 import clsx from 'clsx';
 import type { Job, User } from '../../types';
 import { Avatar } from '../Common/Badges';
+import { isActive } from '../../lib/selectors';
 
 // Piso de la escala de la barra: sin esto, con 2-4 trabajos totales (el caso
 // normal de este equipo chico) cualquiera con el número más alto queda con la
@@ -45,10 +46,20 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
   const producers = users.filter((u) => u.active && u.isProducer);
   if (producers.length < 2) return null;
 
+  // Bug reportado 20/09: se le asignaron ~3 trabajos a Gastón y el contador
+  // seguía en 0. Causa real: acá solo se contaban `EN_DISENO`/`DISENO_LISTO`, pero
+  // un trabajo recién asignado nace en `PENDIENTE` (§4.5 de CLAUDE.md) y no hay
+  // forma de pasarlo a "En diseño" salvo moviéndolo a mano en el Kanban o el
+  // select de estado — así que "asignado hoy" y "en diseño" casi nunca coinciden
+  // el mismo día. No era un problema de ID ni de caché: el filtro de estado era
+  // demasiado angosto para lo que el widget necesita responder ("¿cuánto tiene
+  // encima cada uno ahora mismo?"). Se amplía a cualquier trabajo activo
+  // (`isActive` — todo menos Entregado/Cancelado, mismo criterio que ya usa el
+  // resto del Dashboard) del que sea responsable, sin importar la etapa exacta.
   const counts = producers
     .map((u) => ({
       user: u,
-      count: jobs.filter((j) => j.responsibleUserId === u.id && (j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO')).length,
+      count: jobs.filter((j) => j.responsibleUserId === u.id && isActive(j)).length,
     }))
     .sort((a, b) => b.count - a.count);
 

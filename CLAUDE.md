@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/09/2026 (sección 44).
+la contradiga más arriba**. Última actualización: 20/09/2026 (sección 45).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3392,6 +3392,178 @@ texto del diálogo de cancelar), y uno ya `CANCELADO` (apareció como opción
 extra para poder revertirlo, y el botón "Cancelar trabajo" correctamente NO
 se mostró). `npm run build`/`npm run lint` limpios. Bypass revertido con Edit
 puntual, `git diff src/App.tsx` vacío antes de commitear.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+---
+
+## 45. Actualización 20/09 — 5 pedidos puntuales: contador de carga (bug real), notificación de asignación, menciones @ con autocompletado, hora de creación, "Tercerizado" más claro
+
+Ronda de correcciones puntuales sobre la app ya funcionando — sin auditoría
+nueva, sin tocar arquitectura, sobre lo que ya existe. Orden pedido por
+Gonzalo: contador → notificación de asignación → menciones → hora de creación
+→ "Tercerizado". Documento en ese orden.
+
+### 1. Bug del contador de "Carga de diseño" — encontrado y corregido
+
+**Síntoma reportado:** se le asignaron ~3 trabajos a Gastón y el contador
+seguía en 0.
+
+**Causa real** (`Dashboard/DesignLoadWidget.tsx`): el contador solo contaba
+trabajos con `status === 'EN_DISENO' || status === 'DISENO_LISTO'`. Un
+trabajo recién asignado nace en `PENDIENTE` (decisión 5, sección 4) y no hay
+ninguna forma de pasarlo a "En diseño" salvo moverlo a mano en el Kanban o el
+select de estado — así que "se lo asigné hoy" y "está en diseño" casi nunca
+coinciden el mismo día. **No era un bug de ID, caché ni refresh** — se revisó
+específicamente cada una de esas hipótesis (`responsibleUserId` viene de la
+misma tabla `profiles` que `users`, sin desdoblamiento posible; el widget lee
+`jobs` en vivo del store, sin caché propia) y todas estaban bien. El filtro de
+estado era, literalmente, demasiado angosto para lo que el widget necesita
+responder: "¿cuánto tiene encima cada uno ahora mismo?".
+
+**Fix:** se amplía el conteo a cualquier trabajo **activo** (`isActive()` de
+`lib/selectors.ts` — ya existía, todo menos Entregado/Cancelado, mismo
+criterio que ya usa el resto del Dashboard) del que la persona sea
+responsable, sin importar la etapa exacta. Cubre los 7 criterios de aceptación
+que pidió Gonzalo (0→0, 1→1, 3→3, nueva asignación actualiza, cambio de
+asignación actualiza a ambos, trabajo que deja de contar por estado se
+actualiza, sin diferencia entre lo asignado y lo mostrado) porque ahora es un
+cálculo directo sobre `jobs` en cada render, sin estado intermedio que se
+pueda desincronizar. El título del widget ("Carga de diseño") no se tocó —
+hoy Gastón y Gonzalo son los únicos productores y solo hacen diseño, así que
+"todo lo activo que tiene asignado" y "carga de diseño" siguen siendo lo
+mismo en la práctica.
+
+No hay tests automatizados en el proyecto (confirmado en sección 2) — no se
+agregó suite nueva, se verificó en vivo con el bypass de auth local (ver
+"Verificación" más abajo).
+
+### 2. Notificación al asignar un trabajo
+
+**Hallazgo antes de tocar nada:** el store ya tenía una acción `assignJob`
+completa (con su propia notificación "Te asignaron a...") pero **sin ningún
+call site** — nada la llama desde la UI, porque no existe ninguna pantalla
+para reasignar un trabajo después de creado (`responsibleUserId` se fija una
+sola vez, en Carga rápida, y "Responsable interno" en la ficha es un `Field`
+de solo lectura). Es decir: **crear el trabajo es, hoy, el único evento real
+de asignación** que existe en la app.
+
+`createJob` ya notificaba al responsable en ese momento, pero con el texto
+genérico "Nueva ficha: ...", que no comunica que a esa persona puntual le
+tocó ser responsable (se lee más a "algo nuevo entró" que a "te asignaron
+esto"). Se separó en dos notificaciones distintas, mismo mecanismo de
+siempre (`insertNotifications`, sin sistema paralelo):
+- **Responsable + "Asignar también a"** → `Te asignaron el trabajo "X".`
+  (mismo texto exacto que ya usaba `assignJob`, por consistencia).
+- **Admins que no son responsables ni asignados** → se quedan con `Nueva
+  ficha: "X".` (les interesa que algo entró, pero no es trabajo suyo).
+
+Sin duplicados: el segundo grupo excluye explícitamente a cualquiera que ya
+esté en el primero. El click-to-navegar de la campana (Header.tsx) ya
+funcionaba de antes — no hizo falta tocarlo.
+
+### 3. Menciones @ con autocompletado — nuevo
+
+`JobDetail/CommentsPanel.tsx` reescrito para agregar el dropdown que pedía
+Gonzalo. Comportamiento: tipear `@` + letras muestra hasta 6 usuarios activos
+cuyo nombre matchea (sin distinguir mayúsculas/tildes), con flechas ↑/↓ para
+moverse, Enter/Tab/click para elegir, Escape para cerrar. Al elegir, inserta
+`@Nombre ` en el texto y sigue escribiendo desde ahí.
+
+**La mención queda atada al ID real del usuario**, no al texto — se guarda en
+un mapa `id → nombre insertado` (`mentionedUsers`) en el momento de elegir del
+dropdown, no reconstruyendo desde el texto final. En `submit()`, esa mención
+solo cuenta si el `@Nombre` sigue de verdad presente en el texto (por si se
+borra a mano después de insertarla) — así nunca se notifica a alguien que ya
+no aparece mencionado. Si se mencionan varios, cada uno recibe su propia
+notificación; nunca se notifica a uno mismo (`filter(id => id !== user.id)`
+antes de mandar, más un filtro espejo agregado en `addComment` del store como
+defensa extra, mismo criterio que ya usa el resto de las acciones).
+
+**De paso, un bug real que tenía el código anterior** (de la Fase 5, §43): la
+detección de menciones por nombre buscaba `text.includes('@' + primerNombre)`
+sobre CUALQUIER usuario — si dos personas comparten nombre de pila, o si
+alguien tipeaba "@algo" que por casualidad coincidía con un nombre sin haber
+elegido a esa persona del dropdown, se generaba una mención (y notificación)
+no intencional, sin ningún vínculo real de ID. Reemplazado por completo por
+el mecanismo de arriba.
+
+Se mantienen los chips `@Coordinación`/`@Diseño`/`@Producción`/`@Instalación`
+(rol, Fase 5) sin cambios — combinan con las menciones individuales en el
+mismo array final, sin duplicados.
+
+`addComment` (store) ahora arma el texto de la notificación con `jobLabel()`
+("Te mencionaron en un comentario — {trabajo}.") en vez del genérico de
+antes, mismo estilo que el resto de notificaciones del store.
+
+### 4. Hora de creación en la ficha del Dashboard
+
+`Dashboard/DashboardJobCard.tsx` — debajo de la línea "Asignado {fecha} ·
+Entrega {fecha} [countdown]" se agregó una segunda línea, más chica
+(`text-[11px]`, gris secundario): "Creado {fecha}, {hora}" (`fmtShort`, ya
+usado en otros lados de la app para fecha+hora compacta). Mismo timestamp que
+"Asignado" de arriba (`job.createdAt` — hoy no existe un timestamp de
+asignación separado, se fija en el mismo momento que se crea el trabajo), la
+diferencia es que esta línea suma la hora exacta. No compite con nombre/
+descripción del trabajo porque vive en el bloque de metadata de la derecha,
+no en el bloque de contenido principal.
+
+### 5. "Tercerizado" más claro en Carga rápida / Detalle
+
+`Common/ProductsEditor.tsx` — el pill único "Tercerizada" (que solo cambiaba
+de color al activarse, sin texto propio para el estado "no") se reemplazó por
+un segmentado de dos opciones siempre visibles: **"Hecho acá" | "Tercerizado"**
+(con el ícono de camión en la segunda). Mismo lugar exacto en la cabecera de
+cada producto, mismo tamaño — no se agregó ningún paso ni pantalla nueva. La
+diferencia es que ahora el estado activo nunca depende solo del color/relleno:
+siempre hay texto explícito de las dos opciones, así que no se puede confundir
+con una etiqueta de categoría ("esta pantalla es para tercerizados") — queda
+claro que es una característica de ESE producto puntual, con un "no" real
+disponible. La vista de solo lectura (`ProductsView`, minuta técnica y
+pestaña Detalle en modo vista) no se tocó — ahí seguir mostrando el pill
+"Tercerizada" solo cuando aplica es el patrón correcto (mismo criterio que
+`BlockedBadge`/`SampleReviewBadge`: positivo-únicamente).
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios en cada paso. Probado en vivo con el
+bypass de auth local (2 productores con distinta carga real — uno con 3
+trabajos activos en 3 estados distintos, PENDIENTE/EN_DISENO/EN_PRODUCCION—
+más 2 usuarios con nombres parecidos "Alejandra Ruiz"/"Alejandro Paz" para
+probar el filtro del autocompletado):
+- Carga de diseño mostró correctamente 3 para el productor con los 3 trabajos
+  activos (antes del fix hubiera mostrado 1).
+- La ficha del Dashboard mostró "Creado 18 sep, 11:12" debajo de "Asignado...".
+- Tipear "@ale" en Comentarios mostró el dropdown con "Alejandra Ruiz" y
+  "Alejandro Paz"; clickear insertó "@Alejandra " y el cursor quedó
+  correctamente después, se pudo seguir escribiendo sin romper nada; el envío
+  corrió `submit()` completo sin errores de lógica (el único error de
+  consola fue el esperado por IDs falsos contra Supabase real).
+- El segmentado "Hecho acá"/"Tercerizado" en Carga rápida cambió de estado
+  correctamente al clickear, con el color/fondo del producto acompañando.
+
+Bypass de auth local revertido con Edit puntual (no `git checkout --`, lección
+de la Fase 4) — `git diff src/App.tsx` vacío antes de commitear.
+
+### Pendiente / a revisar
+
+- **Punto 1 (notificación de asignación):** cubre el único evento de
+  asignación que existe hoy (creación). Si en algún momento Gonzalo pide
+  poder **reasignar** un trabajo después de creado (cambiar "Responsable
+  interno" desde la ficha), la acción `assignJob` del store ya está lista
+  para eso — solo faltaría construir la UI y llamarla; ahí la notificación
+  "Te asignaron..." se dispararía en ese momento también, sin cambios
+  adicionales.
+- **Punto 3 (menciones):** el dropdown se ancla siempre al mismo lugar (arriba
+  del textarea), no sigue la posición exacta del cursor dentro del texto —
+  simplificación deliberada (seguir el caret real en un `<textarea>` simple
+  necesitaría medir texto con canvas/librería aparte) que no debería notarse
+  en el uso normal (comentarios cortos), pero si Gonzalo lo ve raro con
+  comentarios largos, avisar.
+- Nada del resto del tintero (subida real de archivos, Manual, mobile, AFIP,
+  etc.) se tocó en esta ronda — sigue todo como estaba.
 
 ### Estado de git
 

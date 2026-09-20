@@ -57,16 +57,35 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
               placeholder={`Producto ${i + 1} — ej. "Corpóreo 3D"`}
               className="flex-1 min-w-[140px] bg-transparent text-sm font-semibold text-ink-900 placeholder:font-normal placeholder:text-ink-400 focus:outline-none"
             />
-            <button
-              type="button" onClick={() => update(i, { outsourced: !product.outsourced })}
-              aria-pressed={!!product.outsourced}
-              title="Marcar si esta pieza la hace un proveedor externo"
-              className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full border px-2 py-1 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                product.outsourced ? 'bg-site-text text-white border-site-text' : 'border-ink-200 text-ink-700 hover:border-site/50'
-              }`}
+            {/* Antes era un solo pill "Tercerizada" que solo cambiaba de color al
+                activarse — sin texto propio para el estado "no", se confundía con
+                una etiqueta de categoría ("esta pantalla es para tercerizados")
+                en vez de una característica de ESTE producto puntual (punto 4,
+                20/09). Segmentado con las dos opciones siempre visibles — el
+                estado activo nunca depende solo del color. */}
+            <div
+              role="group" aria-label={`¿"${product.label || `Producto ${i + 1}`}" es tercerizado?`}
+              className="inline-flex rounded-full border border-ink-200 overflow-hidden shrink-0 text-[11px] font-semibold"
             >
-              <Truck size={12} aria-hidden /> Tercerizada
-            </button>
+              <button
+                type="button" onClick={() => update(i, { outsourced: false })}
+                aria-pressed={!product.outsourced}
+                className={`px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  !product.outsourced ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'
+                }`}
+              >
+                Hecho acá
+              </button>
+              <button
+                type="button" onClick={() => update(i, { outsourced: true })}
+                aria-pressed={!!product.outsourced}
+                className={`inline-flex items-center gap-1 px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  product.outsourced ? 'bg-site-text text-white' : 'text-ink-700 hover:bg-ink-50'
+                }`}
+              >
+                <Truck size={11} aria-hidden /> Tercerizado
+              </button>
+            </div>
             <button type="button" onClick={() => remove(i)} aria-label={`Quitar producto ${i + 1}`} className="text-ink-700 hover:text-crit-text shrink-0">
               <X size={15} />
             </button>

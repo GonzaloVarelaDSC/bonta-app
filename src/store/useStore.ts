@@ -304,11 +304,19 @@ export const useStore = create<StoreState>()((set, get) => ({
     // le dicta el pedido a Gonzalo y Gonzalo lo carga, pero el crédito es de Pancho).
     const actorId = get().currentUser?.id ?? input.createdByUserId;
     await insertActivity(set, jobId, actorId, 'crear', `Creó el trabajo — ${input.name}.`);
-    // Aviso de "cayó una ficha nueva": al responsable, a los asignados, y a los
-    // dueños (admins) para que sepan qué entró — menos quien la está cargando.
+    // Aviso de "te asignaron un trabajo" (punto 1, 20/09) — hoy la creación es el
+    // único momento real en que se fija responsable/asignados (no hay UI para
+    // reasignar después, ver `assignJob` sin call sites), así que este es "el
+    // evento real de asignación". Texto explícito ("Te asignaron...") en vez del
+    // genérico "Nueva ficha" que tenía antes, para que quede claro que es una
+    // asignación y no solo un aviso de que algo se cargó. Los admins que no son
+    // responsables ni asignados siguen recibiendo el aviso genérico de "Nueva
+    // ficha" (les interesa saber qué entró, pero no es trabajo suyo).
+    const assignedRecipients = [...new Set([input.responsibleUserId, ...input.assignedUserIds])].filter((id) => id && id !== actorId);
+    await insertNotifications(assignedRecipients, jobId, `Te asignaron el trabajo "${input.name}".`);
     const owners = get().users.filter((u) => u.active && u.role === 'admin').map((u) => u.id);
-    const newJobRecipients = [input.responsibleUserId, ...input.assignedUserIds, ...owners].filter((id) => id && id !== actorId);
-    await insertNotifications(newJobRecipients, jobId, `Nueva ficha: "${input.name}".`);
+    const ownerOnlyRecipients = owners.filter((id) => id !== actorId && !assignedRecipients.includes(id));
+    await insertNotifications(ownerOnlyRecipients, jobId, `Nueva ficha: "${input.name}".`);
 
     const job = await fetchJobById(jobId);
     if (!job) throw new Error('No se pudo leer el trabajo recién creado.');
@@ -444,7 +452,11 @@ export const useStore = create<StoreState>()((set, get) => ({
     const { error } = await supabase.from('comments').insert({ job_id: jobId, user_id: userId, text, mentions });
     if (error) throw error;
     await supabase.from('jobs').update({ last_activity_at: new Date().toISOString() }).eq('id', jobId);
-    await insertNotifications(mentions, jobId, 'Te mencionaron en un comentario.');
+    const job = get().jobs.find((j) => j.id === jobId);
+    // Defensa extra además del filtro que ya hace CommentsPanel antes de llamar
+    // acá — nunca notificarse a sí mismo, mismo criterio que el resto de las
+    // acciones del store (blockJob, addFileVersion, etc.).
+    await insertNotifications(mentions.filter((id) => id !== userId), jobId, `Te mencionaron en un comentario — ${job ? jobLabel(job) : 'un trabajo'}.`);
     await refreshComments(set, jobId);
     await refreshMyNotifications(set, get);
   },
