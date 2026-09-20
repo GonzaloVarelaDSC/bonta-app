@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 20/09/2026 (sección 46).
+la contradiga más arriba**. Última actualización: 20/09/2026 (sección 47).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3595,3 +3595,40 @@ no perder tiempo reintentando — pedirle a Gonzalo que:
 2. mire él mismo `bonta-app.vercel.app` y confirme visualmente.
 
 Sin cambios de código en esta ronda.
+
+---
+
+## 47. Actualización 20/09 (cont.) — "no me salta notificación": descartado como bug, era auto-notificación (por diseño)
+
+Gonzalo probó las notificaciones del punto 1/3 de la sección 45 (asignación y
+menciones) y reportó que no le saltaba ninguna: creó una ficha asignándosela a
+sí mismo y no vio aviso; entró a otra ficha, se mencionó a sí mismo en un
+comentario y tampoco. Se revisó a fondo antes de tocar código.
+
+**Diagnóstico (sin cambios de código, confirmado por revisión + SQL real):**
+ambas pruebas fueron auto-referenciales, y la app **filtra la auto-notificación
+a propósito** en los dos casos, exactamente como pedía el brief original (punto
+2/3, 20/09: "no autonotificación"):
+- `createJob` arma destinatarios con `.filter((id) => id && id !== actorId)`
+  antes de notificar "Te asignaron..." (`store/useStore.ts` — ver §45.2). Si el
+  responsable sos vos mismo, la lista queda vacía.
+- Las menciones se filtran dos veces: en `CommentsPanel.tsx` (`.filter((id) =>
+  id !== user.id)`, construcción de `mentions`) y de nuevo en `addComment` del
+  store (mismo filtro, defensa extra) — ver §45.3.
+
+Se sospechó también un drift de la policy RLS de `notifications` (ya pasó dos
+veces antes, CLAUDE.md §12.8/§22/§27) como causa alternativa — **descartado**:
+Gonzalo corrió `select policyname, cmd, qual, with_check from pg_policies where
+tablename = 'notifications';` y la policy real coincide exactamente con
+`002_policies.sql` (`notifications_insert` con `with_check: true`,
+`notifications_select`/`notifications_update` filtradas por
+`user_id = auth.uid()`). **No hay ningún problema de RLS vigente en esta
+tabla.**
+
+**Conclusión: no es un bug, es la regla "no auto-notificación" funcionando
+como se pidió.** Con una sola cuenta logueada es imposible generar una prueba
+que no sea auto-referencial — para verificar de verdad el sistema hace falta
+un segundo usuario real (asignarle una ficha a Gastón/Pancho/etc. y que
+revise su propia campana, o mencionar a otra persona real en un comentario y
+que confirme si le llegó). Sin cambios de código en esta ronda — no
+correspondía tocar algo que ya funciona como se especificó.
