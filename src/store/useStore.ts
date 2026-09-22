@@ -125,27 +125,29 @@ async function insertActivity(
   return entry;
 }
 
-async function insertNotifications(userIds: string[], jobId: string, text: string): Promise<Notification[]> {
+async function insertNotifications(userIds: string[], jobId: string, text: string): Promise<void> {
   const rows = userIds.filter((id, i, arr) => arr.indexOf(id) === i).map((userId) => ({ user_id: userId, job_id: jobId, text }));
-  if (rows.length === 0) return [];
-  // Las notificaciones son un efecto secundario best-effort. Si el insert falla
-  // — típicamente porque la policy RLS de `notifications` en la base real quedó
-  // más restrictiva que el `with check (true)` de 002_policies.sql (ya pasó, ver
-  // CLAUDE.md §12.8/§22) — NO tiene que hacer fallar la acción que la disparó
-  // (crear la ficha, cambiar el estado, comentar, asignar...). Se loguea y sigue.
-  const { data, error } = await supabase.from('notifications').insert(rows).select();
+  if (rows.length === 0) return;
+  // CAUSA RAÍZ real (22/09, ver CLAUDE.md §50): esto encadenaba `.select()`
+  // después del insert para devolver la fila creada — pero esa lectura de
+  // vuelta TAMBIÉN pasa por la policy de SELECT de `notifications`
+  // (`user_id = auth.uid()`). Como acá casi siempre se notifica a OTRA
+  // persona (no a quien dispara la acción), `auth.uid()` nunca coincide con
+  // el `user_id` insertado — PostgREST no puede devolver la fila y reporta
+  // toda la operación como fallida (permission denied / RLS), aunque el
+  // INSERT en sí era válido según `with_check(true)`. Nadie usaba el valor de
+  // retorno en ningún call site, así que sacar el `.select()` alcanza: sin
+  // pedir la fila de vuelta, no hay nada que la policy de SELECT tenga que
+  // aprobar, y el insert pasa. Esto es lo que tenía en 0 la tabla
+  // `notifications` para cualquier caso cruzado desde que existe la feature.
+  const { error } = await supabase.from('notifications').insert(rows);
   if (error) {
-    // Antes esto quedaba 100% invisible (solo console.warn) — mismo patrón que
-    // ya causó incidentes reales sin poder diagnosticarlos a distancia
-    // (§12.8/§22/§27/§49 de CLAUDE.md). Si vuelve a fallar la escritura en
-    // `notifications` (drift de RLS, tabla sin migrar, lo que sea), ahora
-    // también se ve como toast — no bloquea la acción principal, pero deja de
-    // ser un fallo fantasma.
+    // Las notificaciones son un efecto secundario best-effort — que fallen no
+    // tiene que tumbar la acción que las dispara. Antes esto quedaba 100%
+    // invisible (solo console.warn); ahora también se ve como toast (§49).
     console.error('[notificaciones] no se pudieron crear, se ignora y la acción principal sigue:', error);
     useStore.setState({ toast: `No se pudo avisar a nadie de este cambio (${friendlyError(error)})` });
-    return [];
   }
-  return (data ?? []).map(mapNotification);
 }
 
 // Guardo de módulo: init() puede correr dos veces (StrictMode en dev) o si algún
