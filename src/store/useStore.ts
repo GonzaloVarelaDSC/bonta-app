@@ -121,7 +121,14 @@ async function insertNotifications(userIds: string[], jobId: string, text: strin
   // (crear la ficha, cambiar el estado, comentar, asignar...). Se loguea y sigue.
   const { data, error } = await supabase.from('notifications').insert(rows).select();
   if (error) {
-    console.warn('[notificaciones] no se pudieron crear, se ignora y la acción principal sigue:', error.message);
+    // Antes esto quedaba 100% invisible (solo console.warn) — mismo patrón que
+    // ya causó incidentes reales sin poder diagnosticarlos a distancia
+    // (§12.8/§22/§27/§49 de CLAUDE.md). Si vuelve a fallar la escritura en
+    // `notifications` (drift de RLS, tabla sin migrar, lo que sea), ahora
+    // también se ve como toast — no bloquea la acción principal, pero deja de
+    // ser un fallo fantasma.
+    console.error('[notificaciones] no se pudieron crear, se ignora y la acción principal sigue:', error);
+    useStore.setState({ toast: `No se pudo avisar a nadie de este cambio (${friendlyError(error)})` });
     return [];
   }
   return (data ?? []).map(mapNotification);
