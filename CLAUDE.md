@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 49).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 50).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3861,3 +3861,86 @@ infraestructura (Realtime) + respaldo (polling).
 ### Estado de git
 
 Commiteado y pusheado a `origin/main`.
+
+---
+
+## 50. Actualización 22/09 (cont.) — notificaciones cruzadas: causa raíz real encontrada (RLS de lectura tras el insert) y corregida
+
+Continuación directa de §49 — esa ronda dejó dos fixes de red de contención
+(migración de Realtime + polling) pero **no** la causa real, porque en ese
+momento la tabla `notifications` tenía **0 filas totales** (confirmado con
+`select * from notifications` real — nunca se había insertado ninguna, ni
+siquiera en meses de uso). Gonzalo insistió en seguir, se agregó un toast de
+diagnóstico visible (en vez del `console.warn` silencioso de siempre) para
+sacar el error real a la superficie en vez de seguir adivinando — y ahí
+apareció.
+
+### El error real
+
+Toast: *"No se pudo avisar a nadie de este cambio (No tenés permiso para
+hacer esto, o falta una configuración de acceso en la base...)"* — un 42501 /
+RLS real, pese a que la policy `notifications_insert` tiene
+`with_check(true)` (confirmada correcta en §47 con un SELECT real contra la
+base). La contradicción se explica así: `insertNotifications` hacía
+`supabase.from('notifications').insert(rows).select()` — el `.select()`
+encadenado le pide a PostgREST que **devuelva la fila recién insertada**, y
+esa lectura de vuelta pasa *también* por la policy de `SELECT` de la tabla
+(`user_id = auth.uid()`). Como una notificación casi siempre es para **otra
+persona** (justo el caso que falla: asignación cruzada, mención a otro
+usuario), el `user_id` de la fila insertada nunca coincide con
+`auth.uid()` de quien la generó — PostgREST no puede armar la respuesta y
+reporta la operación completa como denegada, aunque el INSERT en sí cumplía
+`with_check(true)` sin problema. Una auto-notificación (si no estuviera ya
+filtrada aparte, ver §47) sí hubiera funcionado, porque ahí `user_id ==
+auth.uid()` — por eso nunca se detectó antes: los únicos casos que se
+probaron a fondo hasta ahora eran auto-referenciales.
+
+### El fix
+
+`insertNotifications` (`store/useStore.ts`) — se saca el `.select()`:
+```ts
+const { error } = await supabase.from('notifications').insert(rows);
+```
+Ningún call site (11 en total) usaba el valor de retorno de la función, así
+que devolver `void` en vez de `Notification[]` no rompe nada — verificado con
+`npm run build` limpio. Sin este `.select()`, PostgREST no necesita volver a
+leer la fila para responder, así que la policy de `SELECT` no entra en juego
+y el insert pasa aunque sea para otro usuario.
+
+### Fixes acumulados de esta investigación (§49 + §50), los 4 juntos
+
+1. Migración `021_notifications_realtime_publication.sql` — Realtime
+   habilitado para `notifications` (confirmado corrido por Gonzalo).
+2. Polling de respaldo cada 30s en `init()` (útil igual, sigue activo).
+3. `CommentsPanel.tsx` — mención por texto tipeado sin clickear el dropdown,
+   detectada igual si matchea sin ambigüedad (§49).
+4. **`insertActivity` vuelto best-effort** (ya no `throw`) — hallazgo
+   colateral de esta misma investigación: como estaba ANTES de
+   `insertNotifications` en las 17 acciones del store, si fallaba (por lo
+   que sea) abortaba la función entera antes de llegar siquiera a intentar
+   la notificación. Independiente del bug del `.select()`, pero del mismo
+   tipo (un efecto secundario no crítico frenando la acción principal) — se
+   corrigió en la misma ronda por aparecer en la misma investigación.
+5. **Este fix (§50) es el que realmente resuelve el síntoma reportado** — los
+   4 anteriores eran necesarios pero no suficientes sin este.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios. Deploy confirmado en producción vía
+`curl` (comparando el hash del bundle servido contra el del build local) —
+técnica nueva para esta sesión: como el navegador integrado no puede leer
+contenido de `bonta-app.vercel.app` (bloqueo documentado en §30.6/§46), se
+usó `curl` directo (sin esa restricción) para confirmar que el JS deployado
+tiene el string nuevo del fix, en vez de asumir que el push a `main` ya se
+reflejó. Sirve como técnica de verificación de deploy para sesiones futuras
+cuando el navegador integrado esté bloqueado contra el sitio real.
+
+No se pudo probar de punta a punta con cuentas reales desde esta sesión
+(regla de contraseñas) — Gonzalo tiene que confirmar con un caso cruzado
+real (ficha asignada a otra persona, o mención a otra persona) que la
+notificación ahora sí aparece, y correr de nuevo el SELECT de `notifications`
+para confirmar que ya no está en 0 filas.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main` (`f748234`).
