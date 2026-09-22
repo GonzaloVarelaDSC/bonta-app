@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 20/09/2026 (sección 48).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 49).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3722,6 +3722,141 @@ correspondiente; el badge de la cabecera mostró "Muestra en producción ·
 "Muestra en producción", "Muestra: falta OK" y "Muestra OK" respectivamente;
 en el Kanban las tarjetas 2 y 3 (`in_production`/`awaiting`) mostraron el tag
 "muestra" en azul y ámbar respectivamente, tal como se esperaba.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+---
+
+## 49. Actualización 22/09 — notificaciones: 2 causas reales encontradas y corregidas (asignación y @mención cruzadas nunca llegaban)
+
+Gonzalo reportó, con casos concretos y reales (no auto-referenciales como en
+§47): Alejandra le asignó una ficha nueva a él y no le llegó nada; él mencionó
+a Alejandra con `@` en un comentario y a ella tampoco le llegó nada. A
+diferencia de §47 (que descartó bug porque las pruebas eran de auto-
+notificación), acá el actor y el destinatario son personas distintas — sí
+correspondía investigar a fondo.
+
+### Investigación (sin tocar código hasta confirmar)
+
+Se revisó de punta a punta: tabla `notifications` (schema + RLS, ya
+confirmada correcta en §47), `insertNotifications`/`refreshMyNotifications`/
+`createJob`/`addComment` en `useStore.ts`, `CommentsPanel.tsx` completo,
+`Header.tsx` (cómo lee/renderiza la campana), y el mecanismo de tiempo real
+(`init()`, canales `jobs-changes`/`my-notifications`). Se encontraron **dos
+causas independientes**, una por caso, más un problema de fondo compartido
+por los dos:
+
+**Causa compartida — Realtime nunca se activó para `notifications` en
+Supabase.** El canal `my-notifications` (`useStore.ts`, `init()`) se suscribe
+a `postgres_changes` sobre la tabla `notifications` desde que se agregó en
+§18.9 (07/09) — pero Supabase Realtime **no transmite cambios de una tabla a
+menos que esa tabla esté agregada explícitamente a la publicación
+`supabase_realtime`** (Database → Replication en el Dashboard, o
+`alter publication supabase_realtime add table ...`). Ninguna migración de
+este repo lo hizo nunca — se buscó con grep en todo `supabase/*.sql`, cero
+resultados. La suscripción no tira ningún error (parece andar bien), pero
+nunca recibe nada: la campana solo se actualiza si el usuario **recarga la
+página completa** (que dispara `refreshMyNotifications` vía `get_loadAll` en
+`init()`), nunca en vivo. Con Gonzalo y Alejandra usando la app con la pestaña
+abierta todo el día sin recargar, esto alcanza para explicar el síntoma
+exacto de los dos casos ("no me saltó nada, ni en la campana ni en la app")
+sin que la notificación en sí haya fallado en insertarse.
+
+**Causa específica del caso 2 (mención) — el mensaje se mandó sin pasar por
+el dropdown.** Desde la Fase 5/§45.3, una mención solo cuenta si se
+**seleccionó del dropdown de autocompletado** (`mentionedUsers`, un mapa
+`id → nombre`) — es el mecanismo que ata la mención a un ID real en vez de a
+texto suelto (evita el bug viejo de §43). Pero si alguien tipea el `@Nombre`
+completo a mano y sigue escribiendo o manda directo sin clickear la
+sugerencia, `activeMentionToken()` corta el token apenas aparece un espacio y
+el dropdown se cierra solo — sin haber clickeado nada, `mentionedUsers` queda
+vacío y `submit()` nunca genera esa mención, aunque el texto "@Alejandra" esté
+ahí tal cual y el mensaje se publique bien. Es un flujo de tipeo natural (mirá
+Slack/WhatsApp: uno tipea el nombre y sigue) que la implementación actual no
+cubría — coincide exactamente con "mencioné a Alejandra... y envié el
+mensaje" del reporte.
+
+**El caso 1 (asignación) no tiene una causa de código propia** — se revisó
+`createJob` (`useStore.ts` línea ~315) línea por línea y el cálculo de
+destinatarios es correcto (`assignedRecipients` incluye al responsable, excluye
+solo al actor). La causa es la compartida de arriba: la notificación
+probablemente sí se insertó bien en la base, pero nadie la vio porque dependía
+de Realtime (roto) y ninguno de los dos recargó la página.
+
+### Fixes aplicados (sin duplicar el sistema existente, sin parche visual)
+
+1. **Migración `021_notifications_realtime_publication.sql`** — agrega
+   `notifications` a la publicación `supabase_realtime` (idempotente, chequea
+   `pg_publication_tables` antes de intentar el `alter`). **Hay que correrla
+   en Supabase:**
+   ```sql
+   do $$
+   begin
+     if not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+     ) then
+       alter publication supabase_realtime add table notifications;
+     end if;
+   end $$;
+   ```
+   Esto arregla el "en vivo" de verdad — la campana se va a actualizar sola,
+   sin recargar, apenas esto esté corrido.
+2. **Polling de respaldo, 30s** (`store/useStore.ts`, dentro de `init()`,
+   mismo bloque protegido por el guardo `realtimeStarted` — no agrega un
+   sistema nuevo, solo vuelve a llamar a la función `refreshMyNotifications`
+   que ya existía) — red de contención para que la campana se ponga al día
+   sola aunque el paso 1 no se haya corrido todavía, o si en el futuro se
+   desconfigura la publicación de Realtime sin que nadie se dé cuenta (ya pasó
+   con RLS tres veces en este proyecto — ver §12.8/§22/§27 — un gap de
+   infraestructura de Supabase que se corrige a mano y puede volver a
+   drifear). No reemplaza el fix de Realtime, lo respalda.
+3. **`CommentsPanel.tsx`, `submit()`** — se suma `typedMentions`: si el texto
+   final tiene un `@Token` que nunca se seleccionó del dropdown pero matchea
+   de forma **inequívoca** (un solo usuario activo posible) el nombre de pila
+   de alguien real, cuenta igual como mención. Sigue atado a la lista real de
+   usuarios (no es el bug viejo de §43 — ahí se matcheaba contra CUALQUIER
+   usuario sin filtro de ambigüedad ni de `active`); si dos personas
+   comparten nombre de pila, esto no alcanza para desambiguar y hace falta
+   usar el dropdown — degradación aceptable, no reintroduce el problema
+   original.
+
+### Validación
+
+`npm run build`/`npm run lint` limpios. La causa 2 (mención sin clickear el
+dropdown) se verificó en vivo con el bypass de auth local: se tipeó
+`"Hola @Alejandra revisá esto por favor"` en el textarea **sin clickear
+ninguna sugerencia** y se mandó — se confirmó por separado, ejecutando la
+misma función `normalize()` + regex de extracción tal cual vive en el
+componente, que el resultado matchea correctamente el ID de Alejandra
+(`u2`), a diferencia del comportamiento anterior (habría quedado `[]`). No se
+pudo probar de punta a punta contra Supabase real (mismo límite de siempre:
+IDs falsos del bypass rechazados por la base real, y no hay forma de loguearse
+con las cuentas reales de Gonzalo/Alejandra desde esta sesión) — los 9 casos
+de validación que pidió Gonzalo requieren que él los pruebe con las cuentas
+reales después de correr la migración 021. El caso 1 (asignación) no tenía
+nada que reproducir en código — ya funcionaba correctamente, el fix es de
+infraestructura (Realtime) + respaldo (polling).
+
+### Pendiente
+
+- **Confirmar que Gonzalo corrió la migración 021** — mismo patrón de
+  siempre, no asumir. Verificar con:
+  ```sql
+  select schemaname, tablename from pg_publication_tables where pubname = 'supabase_realtime';
+  ```
+  Debería listar `notifications` (y probablemente `jobs`, si en algún momento
+  se habilitó — no confirmado, fuera del alcance de esta ronda).
+- Pedirle a Gonzalo que corra los 9 casos de validación de su propio mensaje
+  con Alejandra y su cuenta reales, ahora que la migración está corrida y el
+  polling de respaldo está activo — y que avise si alguno sigue sin andar.
+- El canal `jobs-changes` (cambios en vivo de `jobs`) tiene el mismo riesgo
+  potencial (¿está `jobs` en la publicación de Realtime?) pero no se tocó
+  esta ronda — quedó fuera de alcance explícito ("esto es exclusivamente
+  para notificaciones"). Si en algún momento se reporta que los cambios de
+  otro usuario en el Kanban/Dashboard no aparecen solos, revisar lo mismo.
 
 ### Estado de git
 

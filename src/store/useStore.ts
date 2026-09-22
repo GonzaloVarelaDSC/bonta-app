@@ -194,6 +194,20 @@ export const useStore = create<StoreState>()((set, get) => ({
           : { notifications: [notif, ...s.notifications], toast: notif.text }));
       })
       .subscribe();
+
+    // Red de contención del canal de arriba: el broadcast de `postgres_changes`
+    // depende de que la tabla `notifications` esté agregada a la publicación
+    // `supabase_realtime` en Supabase (Database → Replication) — un paso manual
+    // que no queda garantizado por las migraciones de este repo (no hay forma de
+    // correr `alter publication` de forma verificable desde acá, ver migración
+    // 021). Si ese paso nunca se hizo o se desconfiguró, el canal se suscribe
+    // sin error pero nunca recibe nada — silencioso, igual que el resto de los
+    // fallos de RLS que ya pasaron en este proyecto (§12.8/§22/§27). Este
+    // polling asegura que la campana se actualice sola de todas formas, aunque
+    // el usuario no recargue la página ni el realtime esté andando.
+    setInterval(() => {
+      if (get().currentUser) refreshMyNotifications(set, get);
+    }, 30000);
   },
 
   login: async (email, password) => {

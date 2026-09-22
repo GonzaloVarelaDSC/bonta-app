@@ -94,7 +94,22 @@ export function CommentsPanel({ job }: { job: Job }) {
     const roleMentions = MENTIONABLE
       .filter((m) => text.includes(m.label))
       .flatMap((m) => users.filter((u) => u.active && u.role === m.role).map((u) => u.id));
-    const mentions = [...new Set([...individualMentions, ...roleMentions])].filter((id) => id !== user.id);
+    // Red de contención: si se tipeó "@Nombre" completo pero nunca se
+    // seleccionó del dropdown (ej. se escribió rápido y se mandó sin clickear
+    // la sugerencia), igual cuenta como mención — siempre que matchee de forma
+    // inequívoca a un único usuario activo por su nombre de pila. Si dos
+    // personas comparten nombre de pila, esto no alcanza para desambiguar y
+    // hay que usar el dropdown — mismo criterio de seguridad de ID real que ya
+    // usa `individualMentions`, no un texto suelto sin verificar contra la
+    // lista de usuarios real (eso fue el bug de la Fase 5, ver CLAUDE.md §45.3).
+    const typedMentions = (text.match(/@([^\s@]+)/g) ?? [])
+      .map((token) => normalize(token.slice(1)))
+      .filter((name) => name.length > 0)
+      .flatMap((name) => {
+        const matches = users.filter((u) => u.active && normalize(u.name.split(' ')[0]) === name);
+        return matches.length === 1 ? [matches[0].id] : [];
+      });
+    const mentions = [...new Set([...individualMentions, ...roleMentions, ...typedMentions])].filter((id) => id !== user.id);
     addComment(job.id, user.id, text.trim(), mentions);
     setText('');
     setMentionedUsers(new Map());
