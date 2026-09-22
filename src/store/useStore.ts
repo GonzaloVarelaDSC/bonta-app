@@ -100,12 +100,26 @@ export interface NewJobInput {
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
 }
 
+// Historial de auditoría — best-effort, igual que `insertNotifications` de
+// abajo. Antes tiraba (`throw error`) si el insert fallaba, y como en TODOS
+// los call sites de este archivo va antes que el aviso al usuario
+// (`insertNotifications`) dentro de la misma función `async`, un fallo acá
+// (ej. drift de RLS en `activity_log`, mismo patrón ya visto en `notifications`
+// — ver §12.8/§22/§27/§49 de CLAUDE.md) abortaba la función entera SIN llegar
+// nunca a mandar la notificación real, aunque el cambio principal (crear el
+// trabajo, cambiar el estado, etc.) ya se hubiera guardado bien. Ningún call
+// site usa el valor de retorno, así que devolver `null` en vez de tirar es
+// seguro en los 17 lugares que lo llaman.
 async function insertActivity(
   set: (fn: (s: StoreState) => Partial<StoreState>) => void,
   jobId: string, userId: string, action: string, detail: string
-): Promise<ActivityLogEntry> {
+): Promise<ActivityLogEntry | null> {
   const { data, error } = await supabase.from('activity_log').insert({ job_id: jobId, user_id: userId, action, detail }).select().single();
-  if (error) throw error;
+  if (error) {
+    console.error('[historial] no se pudo registrar, se ignora y la acción principal sigue:', error);
+    useStore.setState({ toast: `No se pudo registrar en el historial (${friendlyError(error)})` });
+    return null;
+  }
   const entry = mapActivity(data);
   set((s) => ({ activityLog: [entry, ...s.activityLog] }));
   return entry;
