@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 51).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 52).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4043,3 +4043,183 @@ bug real de notificaciones). Todo lo pendiente real al cierre:
   `notifications` tenía (¿está `jobs` en la publicación?) — no confirmado,
   no se tocó, mencionado como posible próximo punto si se reporta que los
   cambios de otros usuarios en Kanban/Dashboard no aparecen solos.
+
+---
+
+## 52. Actualización 22/09 (cont.) — sección nueva: Presupuestos
+
+Primer paso de una sección completamente nueva, separada de Trabajos a
+propósito: un **presupuesto** es un posible trabajo que el cliente todavía no
+confirmó. Mientras no se confirme, nunca aparece en Trabajos/Kanban/Dashboard,
+nunca genera N° de Copernico/TRB, nunca entra al flujo de producción — son dos
+tablas de Postgres completamente separadas (`jobs` y `quotes`), sin ningún
+punto de contacto todavía. La conversión "presupuesto confirmado → trabajo
+real" y la exportación a PDF quedaron explícitamente fuera de esta ronda, a
+pedido — es el próximo paso, aparte.
+
+### Modelo de datos
+
+- **`types/index.ts`** — `QuoteStatus` (`BORRADOR` / `LISTO_PARA_ENVIAR` /
+  `ENVIADO` / `CONFIRMADO` / `RECHAZADO`), `QuoteItem` (mismo espíritu que
+  `Product` de un trabajo, pero sin `checked`/`outsourced` — no tiene sentido
+  todavía no siendo un trabajo en curso — y con un campo nuevo, `unit`, que
+  `Product` no tiene) y `Quote`.
+- **Reuso deliberado**: `QuoteItem.sizeItems` reusa `SizeItem` (mismo tipo que
+  ya usan los productos de un trabajo — cantidad+ancho+alto por renglón, así
+  "medidas" y "cantidad" quedan cubiertas por el mismo campo, sin inventar uno
+  nuevo), `QuoteItem.materialIds` reusa el catálogo de materiales existente, y
+  el cliente reusa `findOrCreateClient`/la tabla `clients` tal cual, sin
+  ningún campo ni tabla nueva para clientes.
+- **`Quote.code`** — identificación interna propia (`PRE-2026-00001`), **nunca
+  un N° de Copernico/TRB**. Se genera sola vía una secuencia de Postgres
+  (`quotes_code_seq`) al insertar — a diferencia de `jobs.code` (que nace
+  `null` y se carga a mano cuando existe el número real de Copernico, ver
+  decisión 4 de la sección 4), acá no hace falta ese vacío intermedio porque
+  nunca va a convertirse en el N° real: cuando el presupuesto se confirme y
+  pase a ser un trabajo (paso futuro, no implementado), ESE trabajo va a
+  nacer con su propio `code` en `null`, como cualquier trabajo nuevo — el
+  código del presupuesto no se hereda.
+- **`Quote.price`/`Quote.priceIncludesIva`** — `price` es `null` hasta que
+  alguien autorizado lo carga; `priceIncludesIva` en `null` significa "todavía
+  sin especificar" (nunca se asume IVA incluido o no por default — quedaría
+  ambiguo de cara al cliente). En la UI, `true` = "IVA incluido", `false` =
+  "+ IVA", con un segmentado de dos botones (mismo lenguaje que "Hecho acá" /
+  "Tercerizado" de Productos, §45.5) en vez de un checkbox — el estado activo
+  nunca depende solo del color.
+
+### Permisos — sin sistema paralelo
+
+- **`canManageQuotes(role)`** (`lib/permissions.ts`) — mismo criterio
+  exacto que `canCreateJobs`: admin/coordinador. Gonzalo y Gastón (diseño)
+  quedan incluidos a propósito — pueden preparar el detalle técnico de un
+  presupuesto aunque no puedan poner el precio (ver abajo). Gatea la sección
+  entera: el link del Sidebar y las 3 rutas (`RequireRole`, mismo patrón que
+  `/usuarios`/`/historico`).
+- **`canSetQuoteValue(user)`** — quién puede cargar/modificar el importe
+  final. El pedido original nombraba 5 personas puntuales (Pancho/Martín como
+  dueños, Richard/Nancy/Alejandra como administración) — en vez de hardcodear
+  esos 5 nombres/emails (algo que este proyecto aprendió a evitar a fuerza de
+  incidentes, ver sección 5 y el patrón repetido de SQL con emails
+  hardcodeados en rondas anteriores), se buscó qué campo YA existente
+  distingue exactamente a ese mismo grupo — y `isProducer` lo hace
+  perfectamente: los 5 nombrados son los únicos con `is_producer = false`
+  (dueños/coordinadores que no procesan trabajos), mientras que Gonzalo y
+  Gastón (los dos únicos productores hoy) quedan afuera — coincide, además,
+  con que Nancy/Richard/Alejandra ya eran, desde el objetivo original del
+  proyecto (sección 1), quienes "pasan presupuestos" en Copernico. La regla
+  final: `(role === 'admin' || role === 'coordinador') && !isProducer`.
+  **Reforzado a nivel de base**, no solo en la UI: el trigger
+  `trg_quotes_price_guard` (`002_policies.sql`, función
+  `can_set_quote_price()`, mismo patrón que `jobs_update_guard`) rechaza el
+  update si cambia `price`/`price_includes_iva` y quien lo intenta no cumple
+  esa misma regla — igual que con `jobs`, la UI es solo un espejo de lo que la
+  base ya exige.
+- **RLS de `quotes`**: select/insert/update solo `is_admin_or_coordinador()`
+  (mismo criterio que `jobs_insert`) — produccion/instalacion no tienen
+  ninguna necesidad comercial de ver presupuestos. Sin policy de `delete`
+  (no se pidió eliminar presupuestos esta ronda).
+
+### UI — reuso de componentes existentes
+
+- **`Common/QuoteItemsEditor.tsx`** (nuevo, pero deliberadamente chico) —
+  reusa `SizeItemsEditor`/`SizeItemsView` tal cual (import directo, cero
+  código duplicado) y el mismo patrón de chips de material que
+  `ProductsEditor.tsx`. Lo único genuinamente nuevo es el input de "Unidad"
+  (con `<datalist>` de sugerencias — `QUOTE_UNIT_SUGGESTIONS` en
+  `data/catalog.ts`: m², ml, unidad, kg, m, juego — texto libre, no un
+  catálogo cerrado, mismo criterio que materiales/notas en todo el resto de
+  la app).
+- **`Common/Badges.tsx`** — `QuoteStatusBadge`/`QuoteStatusSelect`, mismo
+  patrón exacto que `StatusBadge`/`StatusSelect` de un trabajo, reusando los
+  mismos `STATUS_TONE_CLASSES`/`STATUS_DOT_CLASSES` ya definidos — ningún
+  color/clase nueva, solo un mapeo de tono distinto
+  (`QUOTE_STATUS_TONE`): gris=borrador, azul=listo para enviar,
+  violeta=enviado, verde=confirmado, rojo=rechazado.
+- **`components/Quotes/`** (carpeta nueva, mismo patrón de organización por
+  feature que el resto):
+  - `QuotesPage.tsx` — lista con buscador + filtro de estado/cliente, mismo
+    lenguaje visual que `JobsPage.tsx` (incluida la columna de acciones
+    `sticky right-0`, mismo fix recién aplicado a `JobsTable`, sección 51).
+    Carga los presupuestos de forma perezosa (`loadQuotes()` en un
+    `useEffect`, con un flag `quotesLoaded` en el store) — a diferencia de
+    `jobs`, no se traen en `get_loadAll()` en cada login, porque no todos
+    visitan esta sección siempre.
+  - `QuoteFormPage.tsx` (ruta `/presupuestos/nuevo`) — alta en un solo tramo,
+    mismo espíritu que `QuickJobPage.tsx` pero recortado a lo que pide un
+    presupuesto: cliente (con el mismo aviso de "¿quisiste decir X?" de
+    casi-duplicado, §26), nombre, ítems. Sin fecha de entrega, prioridad,
+    instalación ni asignación — eso es de un trabajo confirmado.
+  - `QuoteDetailPage.tsx` (ruta `/presupuestos/:id`) — ficha simple: cabecera
+    (código, cliente, nombre, `QuoteStatusSelect` siempre editable), sección
+    "Detalle del trabajo" con el mismo patrón ver/editar que `ProductsTab` de
+    un trabajo (§14.3), y sección "Valor del presupuesto" — de solo lectura
+    con una nota explicativa si `!canSetQuoteValue(user)`, editable si sí.
+- **Sidebar** — nueva sección propia "Ventas" (separada visualmente de
+  Trabajos/Kanban/Dashboard, refuerza la separación conceptual que pidió
+  Gonzalo), gateada por `canManageQuotes`.
+
+### SQL
+
+**Migración `022_quotes.sql`** — tabla `quotes` + secuencia
+`quotes_code_seq` + función `can_set_quote_price()` + trigger
+`quotes_price_guard` + RLS. **Hay que correrla en Supabase** (SQL Editor →
+New query → pegar el contenido del archivo → Run). También mergeada en
+`001_schema.sql` (tabla) y `002_policies.sql` (función/trigger/RLS) para que
+una instalación nueva de cero ya nazca con esto, mismo criterio de siempre.
+
+Verificación después de correrla:
+```sql
+select column_name from information_schema.columns where table_name = 'quotes';
+select policyname from pg_policies where tablename = 'quotes';
+```
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios en cada paso. Probado en vivo con el
+bypass de auth local (2 usuarios simulados — uno productor/diseño sin permiso
+de precio, uno dueño/no-productor con permiso — y 2 presupuestos fake, uno
+`BORRADOR` sin precio y uno `ENVIADO` con precio+IVA cargados):
+- Lista: 2 presupuestos con código/cliente/estado/valor formateado
+  correctamente ("$ 450.000 — IVA incluido").
+- Ficha como Gonzalo (productor): sección "Valor" en solo lectura ("Todavía
+  sin cargar" + nota de quién puede cargarlo) — confirmado que NO se muestra
+  ningún input editable.
+- Ficha como Pancho (dueño, no productor): sección "Valor" con importe + IVA
+  incluido/+ IVA + botón "Guardar valor", todos editables.
+- Editar detalle del trabajo: cliente/nombre/ítems (material, medidas,
+  notas) todo editable, "Agregar ítem"/"Agregar medida" funcionando.
+- Alta (`/presupuestos/nuevo`): botón deshabilitado hasta cargar cliente+
+  nombre, se habilita correctamente, el submit dispara el insert real contra
+  Supabase (falla con el error esperado por sesión falsa del bypass — mismo
+  patrón de siempre, no es un bug del código) mostrando el error traducido en
+  criollo, sin crashear.
+- Los 11 puntos de validación del pedido original quedan cubiertos por
+  construcción: presupuesto nunca toca la tabla `jobs` (tablas separadas),
+  nunca genera `code` de tipo TRB, y todo el resto (cliente, nombre, ítems,
+  borrador, cambio de estado, permiso de precio, IVA) se probó en vivo arriba.
+
+Bypass de auth local revertido con Edit puntual — `git diff src/App.tsx`
+vacío antes de commitear.
+
+### Pendiente / próximos pasos (explícitamente fuera de esta ronda)
+
+1. **Conversión "presupuesto confirmado → trabajo real"** — todavía no
+   implementada, a pedido explícito de Gonzalo ("no implementes todavía...
+   eso lo vamos a hacer en pasos separados"). Cuando se implemente: definir
+   qué pasa con los ítems del presupuesto (¿se copian tal cual a
+   `Job.products`? necesitaría un mapeo `QuoteItem → Product`, agregando
+   `checked`/`outsourced` con default), quién puede confirmar, y si el
+   presupuesto queda "vinculado" al trabajo nuevo de alguna forma (¿un
+   campo `convertedToJobId` en `Quote`?).
+2. **Exportación a PDF** — tampoco implementada esta ronda, mismo pedido
+   explícito. La app ya tiene un patrón de "hoja para imprimir" con
+   `window.print()` (`JobExportPage.tsx`, ver sección 11) que podría
+   reusarse como referencia cuando se pida.
+3. **Sin acción de eliminar/archivar un presupuesto** — no se pidió, no se
+   armó ninguna policy de `delete` ni soft-delete. Si en algún momento hace
+   falta, mismo patrón que `deleteJob` (borrado lógico, sección 42).
+4. No se tocó nada del tintero existente en esta ronda.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.

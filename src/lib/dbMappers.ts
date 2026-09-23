@@ -4,6 +4,7 @@
 import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobFile, BlockRecord,
   QualityCheckItem, InstallationInfo, MaterialId, SizeItem, Product, JobType, Material,
+  Quote, QuoteItem,
 } from '../types';
 
 export function mapProfile(row: any): User {
@@ -41,6 +42,17 @@ export function mapJobType(row: any): JobType {
 
 export function mapMaterial(row: any): Material {
   return { id: row.id, label: row.label };
+}
+
+export function mapQuote(row: any): Quote {
+  return {
+    id: row.id, code: row.code, clientId: row.client_id, name: row.name,
+    items: (row.items ?? []) as QuoteItem[],
+    status: row.status,
+    price: row.price ?? null,
+    priceIncludesIva: row.price_includes_iva ?? null,
+    createdByUserId: row.created_by_user_id, createdAt: row.created_at, lastActivityAt: row.last_activity_at,
+  };
 }
 
 function mapFile(row: any): JobFile {

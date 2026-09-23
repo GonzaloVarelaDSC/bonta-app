@@ -20,6 +20,20 @@ export function canDeleteJob(role: RoleId) { return role === 'admin' || role ===
 // no hace falta desenredar nada.
 export function canViewHistorico(role: RoleId) { return role === 'admin'; }
 
+// Presupuestos (22/09) — mismo criterio que canCreateJobs: quien puede dar de
+// alta un trabajo puede preparar un presupuesto (Gonzalo/Gastón incluidos,
+// para cargar el detalle técnico aunque no puedan poner el precio — ver abajo).
+export function canManageQuotes(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
+// Quién puede cargar/modificar el importe final: dueños (Pancho/Martín) y
+// administración (Richard/Nancy/Alejandra) — no diseño/producción (Gonzalo/
+// Gastón). No se hardcodean nombres/emails: se reusa `isProducer`, que ya
+// separa exactamente a ese mismo grupo del resto (ver CLAUDE.md §52) — más
+// `role` para que un futuro rol `produccion`/`instalacion` con `isProducer`
+// en falso tampoco quede habilitado por accidente.
+export function canSetQuoteValue(user: User) {
+  return (user.role === 'admin' || user.role === 'coordinador') && !user.isProducer;
+}
+
 /** ¿Puede este usuario ver este trabajo? Admin/coordinador ven todo; el resto solo lo suyo. */
 export function canViewJob(user: User, job: Job): boolean {
   if (user.role === 'admin' || user.role === 'coordinador') return true;

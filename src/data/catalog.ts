@@ -1,4 +1,4 @@
-import type { JobType, Material, Role, JobStatus, BlockReason, SampleReview } from '../types';
+import type { JobType, Material, Role, JobStatus, BlockReason, SampleReview, QuoteStatus } from '../types';
 
 export const ROLES: Role[] = [
   { id: 'admin', label: 'Administrador', description: 'Control total del sistema' },
@@ -121,6 +121,19 @@ export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]
 // Es una lista fija de nombres (no perfiles) — se guarda en `jobs.assigned_names`.
 // Orden alfabético.
 export const ASSIGN_ALSO_NAMES = ['Ares', 'Ariel', 'Hector', 'Jose', 'Jose Garra', 'Rolli'];
+
+export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  BORRADOR: 'Borrador',
+  LISTO_PARA_ENVIAR: 'Listo para enviar',
+  ENVIADO: 'Enviado',
+  CONFIRMADO: 'Confirmado',
+  RECHAZADO: 'Rechazado',
+};
+
+// Sugerencias del <datalist> de "Unidad" en cada ítem de presupuesto — texto
+// libre, no un catálogo cerrado (mismo criterio que materiales/notas: el
+// rubro tiene demasiadas variantes para forzar una lista rígida).
+export const QUOTE_UNIT_SUGGESTIONS = ['m²', 'ml', 'unidad', 'kg', 'm', 'juego'];
 
 export const QC_TEMPLATE = [
   { key: 'medidas', label: 'Medidas correctas', required: true },

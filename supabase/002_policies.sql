@@ -19,6 +19,18 @@ returns boolean as $$
     or exists (select 1 from job_assigned_users where job_id = target_job_id and user_id = auth.uid());
 $$ language sql stable security definer;
 
+-- Presupuestos (22/09): quién puede cargar/modificar el importe final —
+-- dueños y administración (is_producer = false), nunca diseño/producción.
+-- Mismo criterio que lib/permissions.ts canSetQuoteValue, sin hardcodear
+-- emails/nombres acá.
+create or replace function can_set_quote_price()
+returns boolean as $$
+  select coalesce(
+    (select role in ('admin','coordinador') and is_producer = false from profiles where id = auth.uid()),
+    false
+  );
+$$ language sql stable security definer;
+
 -- ============ Guardia de campos protegidos en "jobs" ============
 -- Diseño/Producción/Instalación pueden actualizar el trabajo (para cambiar estado, por ejemplo)
 -- pero no campos estructurales — eso queda para Coordinador/Admin, igual que en la matriz de roles.
@@ -46,6 +58,22 @@ $$ language plpgsql security definer;
 drop trigger if exists trg_jobs_update_guard on jobs;
 create trigger trg_jobs_update_guard before update on jobs for each row execute procedure jobs_update_guard();
 
+-- ============ Guardia de precio en "quotes" ============
+create or replace function quotes_price_guard()
+returns trigger as $$
+begin
+  if new.price is distinct from old.price or new.price_includes_iva is distinct from old.price_includes_iva then
+    if not can_set_quote_price() then
+      raise exception 'Tu rol no tiene permiso para cargar el valor del presupuesto.';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_quotes_price_guard on quotes;
+create trigger trg_quotes_price_guard before update on quotes for each row execute procedure quotes_price_guard();
+
 -- ============ Activar RLS ============
 alter table profiles enable row level security;
 alter table clients enable row level security;
@@ -64,6 +92,7 @@ alter table quality_checks enable row level security;
 alter table installations enable row level security;
 alter table installation_assigned_users enable row level security;
 alter table notifications enable row level security;
+alter table quotes enable row level security;
 
 -- ============ profiles ============
 drop policy if exists profiles_select on profiles;
@@ -182,3 +211,14 @@ drop policy if exists notifications_update on notifications;
 create policy notifications_update on notifications for update to authenticated using (user_id = auth.uid());
 drop policy if exists notifications_insert on notifications;
 create policy notifications_insert on notifications for insert to authenticated with check (true);
+
+-- ============ presupuestos ============
+-- Solo admin/coordinador ven y preparan presupuestos (mismo criterio que
+-- jobs_insert) — el importe además está protegido a nivel de fila por el
+-- trigger trg_quotes_price_guard de arriba.
+drop policy if exists quotes_select on quotes;
+create policy quotes_select on quotes for select to authenticated using (is_admin_or_coordinador());
+drop policy if exists quotes_insert on quotes;
+create policy quotes_insert on quotes for insert to authenticated with check (is_admin_or_coordinador());
+drop policy if exists quotes_update on quotes;
+create policy quotes_update on quotes for update to authenticated using (is_admin_or_coordinador());

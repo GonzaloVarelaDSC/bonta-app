@@ -1,8 +1,8 @@
 import clsx from 'clsx';
-import type { Priority, RiskLevel, JobStatus, SampleReview } from '../../types';
+import type { Priority, RiskLevel, JobStatus, SampleReview, QuoteStatus } from '../../types';
 import { PRIORITY_META } from '../../lib/priority';
 import { RISK_META } from '../../lib/risk';
-import { STATUS_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
+import { STATUS_LABELS, SAMPLE_REVIEW_META, QUOTE_STATUS_LABELS } from '../../data/catalog';
 import { countdown, fmtDate } from '../../lib/dates';
 import { isClosedStatus } from '../../lib/statusChange';
 
@@ -150,6 +150,46 @@ export function StatusSelect({ status, options, onChange, disabled }: { status: 
       )}
     >
       {options.map((s) => <option key={s} value={s}>● {STATUS_LABELS[s]}</option>)}
+    </select>
+  );
+}
+
+// Estado de presupuesto — mismo lenguaje de pill+punto que StatusBadge/
+// StatusSelect de arriba, reusando los mismos tonos (`STATUS_TONE_CLASSES`).
+// Gris = borrador, azul = listo para enviar, violeta = enviado (esperando
+// respuesta), verde = confirmado, rojo = rechazado.
+const QUOTE_STATUS_TONE: Record<QuoteStatus, StatusTone> = {
+  BORRADOR: 'wait',
+  LISTO_PARA_ENVIAR: 'info',
+  ENVIADO: 'review',
+  CONFIRMADO: 'plan',
+  RECHAZADO: 'crit',
+};
+
+export function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
+  return (
+    <span className={clsx('inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 border', STATUS_TONE_CLASSES[QUOTE_STATUS_TONE[status]])}>
+      <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT_CLASSES[QUOTE_STATUS_TONE[status]])} aria-hidden />
+      {QUOTE_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+export function QuoteStatusSelect({ status, onChange, disabled }: { status: QuoteStatus; onChange: (s: QuoteStatus) => void; disabled?: boolean }) {
+  return (
+    <select
+      value={status}
+      disabled={disabled}
+      aria-label="Estado del presupuesto"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as QuoteStatus)}
+      className={clsx(
+        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+        STATUS_TONE_CLASSES[QUOTE_STATUS_TONE[status]]
+      )}
+    >
+      {(Object.keys(QUOTE_STATUS_LABELS) as QuoteStatus[]).map((s) => <option key={s} value={s}>● {QUOTE_STATUS_LABELS[s]}</option>)}
     </select>
   );
 }

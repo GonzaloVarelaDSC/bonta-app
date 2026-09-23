@@ -14,10 +14,13 @@ import { ConfigPage } from './components/Common/ConfigPage';
 import { ChequeoArchivosPage } from './components/Herramientas/ChequeoArchivosPage';
 import { ManualPage } from './components/Manual/ManualPage';
 import { HistoricoPage } from './components/Historico/HistoricoPage';
+import { QuotesPage } from './components/Quotes/QuotesPage';
+import { QuoteFormPage } from './components/Quotes/QuoteFormPage';
+import { QuoteDetailPage } from './components/Quotes/QuoteDetailPage';
 import { RequireRole } from './components/Common/RequireRole';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
-import { canManageUsers, canViewHistorico } from './lib/permissions';
+import { canManageUsers, canViewHistorico, canManageQuotes } from './lib/permissions';
 
 export default function App() {
   const init = useStore((s) => s.init);
@@ -50,6 +53,9 @@ export default function App() {
           <Route path="/chequeo-archivos" element={<ChequeoArchivosPage />} />
           <Route path="/manual" element={<ManualPage />} />
           <Route path="/clientes" element={<ClientsPage />} />
+          <Route path="/presupuestos" element={<RequireRole allow={canManageQuotes}><QuotesPage /></RequireRole>} />
+          <Route path="/presupuestos/nuevo" element={<RequireRole allow={canManageQuotes}><QuoteFormPage /></RequireRole>} />
+          <Route path="/presupuestos/:id" element={<RequireRole allow={canManageQuotes}><QuoteDetailPage /></RequireRole>} />
           <Route path="/usuarios" element={<RequireRole allow={canManageUsers}><UsersPage /></RequireRole>} />
           <Route path="/configuracion" element={<ConfigPage />} />
           <Route path="/historico" element={<RequireRole allow={canViewHistorico}><HistoricoPage /></RequireRole>} />

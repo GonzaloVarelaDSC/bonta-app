@@ -264,3 +264,46 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+// Presupuestos — un posible trabajo que el cliente todavía NO confirmó.
+// Deliberadamente separado de Job: mientras esté acá, nunca aparece en
+// Trabajos/Kanban/Dashboard ni genera N° de Copernico/TRB (ver CLAUDE.md §52).
+// `BORRADOR` = se está armando; `LISTO_PARA_ENVIAR` = ya tiene todo cargado;
+// `ENVIADO` = se le mandó al cliente; `CONFIRMADO`/`RECHAZADO` = respuesta del
+// cliente. La conversión a trabajo real (cuando confirma) es un paso aparte,
+// todavía no implementado a propósito.
+export type QuoteStatus = 'BORRADOR' | 'LISTO_PARA_ENVIAR' | 'ENVIADO' | 'CONFIRMADO' | 'RECHAZADO';
+
+/**
+ * Un renglón del presupuesto — mismo espíritu que `Product` (ver más arriba)
+ * pero más liviano: sin `checked`/`outsourced` (no tiene sentido todavía no
+ * siendo un trabajo en curso). Reusa `SizeItem` para medidas+cantidad, igual
+ * que los productos de un trabajo — `unit` es lo único nuevo (m², ml, unidad,
+ * etc.), porque un presupuesto sí necesita dejar explícita la unidad para que
+ * el cliente entienda qué se está cotizando.
+ */
+export interface QuoteItem {
+  id: string;
+  label: string; // descripción breve
+  unit: string; // m², ml, unidad, kg, etc. — texto libre
+  materialIds: MaterialId[];
+  sizeItems: SizeItem[]; // medidas + cantidad por renglón
+  notes: string;
+}
+
+export interface Quote {
+  id: string;
+  code: string; // identificación interna (PRE-2026-00001) — se genera sola, NUNCA un N° de Copernico/TRB
+  clientId: string;
+  name: string;
+  items: QuoteItem[];
+  status: QuoteStatus;
+  // Importe — null mientras nadie lo cargó todavía. `priceIncludesIva` en null
+  // significa "no se especificó" (no asumir ninguno de los dos por default,
+  // para no dejar un número ambiguo de cara al cliente).
+  price: number | null;
+  priceIncludesIva: boolean | null;
+  createdByUserId: string;
+  createdAt: string;
+  lastActivityAt: string;
+}

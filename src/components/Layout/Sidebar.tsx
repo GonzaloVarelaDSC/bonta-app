@@ -1,10 +1,10 @@
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive, Receipt,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canManageUsers, canCreateJobs, canViewHistorico } from '../../lib/permissions';
+import { canManageUsers, canCreateJobs, canViewHistorico, canManageQuotes } from '../../lib/permissions';
 
 // "Clientes" se sacó del menú a pedido: los clientes no se administran acá, viven en
 // Copernico. La ruta /clientes y la tabla siguen existiendo (el wizard las usa para
@@ -51,6 +51,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {item.label}
           </NavLink>
         ))}
+        {/* Separado a propósito del resto (Trabajos/Kanban/Dashboard) — un
+            presupuesto es un posible trabajo que el cliente todavía no
+            confirmó, nunca aparece ahí (ver types/index.ts, Quote). */}
+        {user && canManageQuotes(user.role) && (
+          <>
+            <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Ventas</div>
+            <NavLink to="/presupuestos" className={({ isActive }) => clsx(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+            )}>
+              <Receipt size={17} strokeWidth={2} /> Presupuestos
+            </NavLink>
+          </>
+        )}
         {user && (canManageUsers(user.role) || canViewHistorico(user.role)) && (
           <>
             <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Administración</div>

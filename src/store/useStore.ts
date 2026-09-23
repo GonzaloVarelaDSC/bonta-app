@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import type {
   User, Job, Comment, ActivityLogEntry, Notification, Priority, JobStatus,
-  BlockReason, JobType, Material,
+  BlockReason, JobType, Material, Quote, QuoteItem, QuoteStatus,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
-import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial } from '../lib/dbMappers';
+import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote } from '../lib/dbMappers';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, QC_TEMPLATE } from '../data/catalog';
 import type { Client } from '../types';
@@ -40,6 +40,11 @@ interface StoreState {
   comments: Comment[];
   activityLog: ActivityLogEntry[];
   notifications: Notification[];
+  // Presupuestos — separados de `jobs` a propósito (ver types/index.ts, Quote).
+  // No se cargan en get_loadAll junto con el resto: es una sección que no todos
+  // visitan siempre, así que se trae sola cuando entra a /presupuestos.
+  quotes: Quote[];
+  quotesLoaded: boolean;
   // Último aviso para mostrar como toast (una ficha nueva que cayó, una
   // asignación, etc.). Lo pinta AppLayout y se limpia solo.
   toast: string | null;
@@ -85,6 +90,13 @@ interface StoreState {
   refreshAll: () => Promise<void>;
   loadJobComments: (jobId: string) => Promise<void>;
   loadJobActivity: (jobId: string) => Promise<void>;
+
+  // Presupuestos — ver lib/permissions.ts canManageQuotes/canSetQuoteValue.
+  loadQuotes: () => Promise<void>;
+  createQuote: (input: NewQuoteInput) => Promise<Quote>;
+  updateQuote: (quoteId: string, patch: { name?: string; clientId?: string; items?: QuoteItem[] }) => Promise<void>;
+  setQuoteStatus: (quoteId: string, status: QuoteStatus) => Promise<void>;
+  setQuoteValue: (quoteId: string, price: number | null, priceIncludesIva: boolean | null) => Promise<void>;
 }
 
 export interface JobSpecs {
@@ -98,6 +110,10 @@ export interface NewJobInput {
   products: Job['products']; specialRequirements: string;
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
+}
+
+export interface NewQuoteInput {
+  clientId: string; name: string; items: QuoteItem[]; createdByUserId: string;
 }
 
 // Historial de auditoría — best-effort, igual que `insertNotifications` de
@@ -167,6 +183,8 @@ export const useStore = create<StoreState>()((set, get) => ({
   comments: [],
   activityLog: [],
   notifications: [],
+  quotes: [],
+  quotesLoaded: false,
   toast: null,
 
   clearToast: () => set(() => ({ toast: null })),
@@ -252,7 +270,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [] });
+    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false });
   },
 
   // Busca un cliente por nombre (tal cual está tipeado, sin distinguir mayúsculas/espacios)
@@ -671,6 +689,68 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) throw error;
     const rows = (data ?? []).map(mapActivity);
     set((s) => ({ activityLog: [...rows, ...s.activityLog.filter((a) => a.jobId !== jobId)] }));
+  },
+
+  // ============ Presupuestos ============
+  // Un presupuesto NUNCA toca la tabla `jobs` — es su propia tabla, con su
+  // propio `code` autogenerado (PRE-2026-XXXXX, nunca un N° de Copernico/TRB).
+  // Mientras no se implemente el paso de "confirmar → convertir en trabajo"
+  // (a propósito, todavía no — ver types/index.ts), un presupuesto no puede
+  // aparecer en Trabajos/Kanban/Dashboard porque ni siquiera comparten tabla.
+  loadQuotes: async () => {
+    const { data, error } = await supabase.from('quotes').select('*').order('last_activity_at', { ascending: false });
+    if (error) throw error;
+    set({ quotes: (data ?? []).map(mapQuote), quotesLoaded: true });
+  },
+
+  createQuote: async (input) => {
+    const { data, error } = await supabase.from('quotes').insert({
+      client_id: input.clientId, name: input.name, items: input.items, created_by_user_id: input.createdByUserId,
+    }).select().single();
+    if (error) throw error;
+    const quote = mapQuote(data);
+    set((s) => ({ quotes: [quote, ...s.quotes] }));
+    return quote;
+  },
+
+  updateQuote: async (quoteId, patch) => {
+    const before = get().quotes.find((q) => q.id === quoteId);
+    const nowIso = new Date().toISOString();
+    set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? { ...q, ...patch, lastActivityAt: nowIso } : q) }));
+    const dbPatch: Record<string, unknown> = { last_activity_at: nowIso };
+    if (patch.name !== undefined) dbPatch.name = patch.name;
+    if (patch.clientId !== undefined) dbPatch.client_id = patch.clientId;
+    if (patch.items !== undefined) dbPatch.items = patch.items;
+    const { error } = await supabase.from('quotes').update(dbPatch).eq('id', quoteId);
+    if (error) {
+      if (before) set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? before : q) }));
+      throw error;
+    }
+  },
+
+  setQuoteStatus: async (quoteId, status) => {
+    const before = get().quotes.find((q) => q.id === quoteId);
+    const nowIso = new Date().toISOString();
+    set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? { ...q, status, lastActivityAt: nowIso } : q) }));
+    const { error } = await supabase.from('quotes').update({ status, last_activity_at: nowIso }).eq('id', quoteId);
+    if (error) {
+      if (before) set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? before : q) }));
+      throw error;
+    }
+  },
+
+  // El permiso real se exige en la UI (canSetQuoteValue) Y en la base (trigger
+  // quotes_price_guard en 002_policies.sql) — si alguien sin permiso llega a
+  // llamar esto igual, la base lo rechaza.
+  setQuoteValue: async (quoteId, price, priceIncludesIva) => {
+    const before = get().quotes.find((q) => q.id === quoteId);
+    const nowIso = new Date().toISOString();
+    set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? { ...q, price, priceIncludesIva, lastActivityAt: nowIso } : q) }));
+    const { error } = await supabase.from('quotes').update({ price, price_includes_iva: priceIncludesIva, last_activity_at: nowIso }).eq('id', quoteId);
+    if (error) {
+      if (before) set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? before : q) }));
+      throw error;
+    }
   },
 }));
 

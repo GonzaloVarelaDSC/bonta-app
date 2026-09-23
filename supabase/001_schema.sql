@@ -237,3 +237,24 @@ begin
     alter publication supabase_realtime add table notifications;
   end if;
 end $$;
+
+-- Presupuestos (22/09) — separados de "jobs" a propósito, ver 022_quotes.sql
+-- y CLAUDE.md §52 para el detalle completo de la decisión.
+create sequence if not exists quotes_code_seq;
+
+create table if not exists quotes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default ('PRE-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('quotes_code_seq')::text, 5, '0')),
+  client_id uuid not null references clients(id) on delete restrict,
+  name text not null,
+  items jsonb not null default '[]'::jsonb,
+  status text not null default 'BORRADOR'
+    check (status in ('BORRADOR', 'LISTO_PARA_ENVIAR', 'ENVIADO', 'CONFIRMADO', 'RECHAZADO')),
+  price numeric,
+  price_includes_iva boolean,
+  created_by_user_id uuid not null references profiles(id),
+  created_at timestamptz not null default now(),
+  last_activity_at timestamptz not null default now()
+);
+create index if not exists idx_quotes_client on quotes(client_id);
+create index if not exists idx_quotes_status on quotes(status);
