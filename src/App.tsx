@@ -17,6 +17,7 @@ import { HistoricoPage } from './components/Historico/HistoricoPage';
 import { QuotesPage } from './components/Quotes/QuotesPage';
 import { QuoteFormPage } from './components/Quotes/QuoteFormPage';
 import { QuoteDetailPage } from './components/Quotes/QuoteDetailPage';
+import { QuoteExportPage } from './components/Quotes/QuoteExportPage';
 import { RequireRole } from './components/Common/RequireRole';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
@@ -43,6 +44,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/trabajos/:id/exportar" element={<JobExportPage />} />
+        <Route path="/presupuestos/:id/exportar" element={<QuoteExportPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/trabajos" element={<JobsPage />} />

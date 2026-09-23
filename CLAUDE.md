@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 52).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 53).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4219,6 +4219,96 @@ vacío antes de commitear.
    armó ninguna policy de `delete` ni soft-delete. Si en algún momento hace
    falta, mismo patrón que `deleteJob` (borrado lógico, sección 42).
 4. No se tocó nada del tintero existente en esta ronda.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+---
+
+## 53. Actualización 22/09 (cont.) — exportar presupuesto a PDF/impresión
+
+Segundo paso de Presupuestos (ver sección 52) — la exportación quedó
+explícitamente pendiente de esa ronda, a pedido. Mismo patrón exacto que ya
+existe para un trabajo (`JobExportPage.tsx`, sección 11.3): se "exporta" con
+el diálogo nativo de impresión del navegador (`window.print()` → "Guardar
+como PDF"), sin sumar ninguna librería de generación de PDF nueva.
+
+### `QuoteExportPage.tsx` (nuevo, ruta `/presupuestos/:id/exportar`)
+
+Copia casi textual de `JobExportPage.tsx` — mismo layout, mismo wrapper
+`Section variant="plain"`, mismas clases `print:*` de Tailwind, mismo botón
+"Imprimir / Guardar como PDF". Fuera del `AppLayout` (sin sidebar), igual que
+la hoja de trabajo. Lo que cambia:
+
+- **Encabezado**: mismo logo (`/logo-mark.png`) + "Estudio Bonta" que ya usa
+  toda la app — **no se inventó ningún dato institucional** (dirección,
+  CUIT, teléfono): se buscó en toda la aplicación y no hay ninguno cargado
+  todavía, así que no corresponde mostrar nada ahí. Si en algún momento
+  Gonzalo carga esos datos en algún lado, se suman acá.
+- **N° del documento**: `quote.code` (`PRE-2026-00001`) — **nunca**
+  `job.code`/TRB. La hoja de un trabajo (`JobExportPage`) y la de un
+  presupuesto son componentes separados que ni siquiera importan el mismo
+  tipo de dato, así que no hay forma de que se cuele un N° de Copernico acá.
+- **Ítems**: itera `quote.items` en vez de `job.products` — mismo
+  `SizeItemsView` reusado, más `unit` (nuevo, no lo tiene un `Product`).
+- **Precio** — bloque nuevo, el más destacado visualmente de toda la hoja
+  (borde de 2px, fondo propio, tipografía más grande) porque es el dato que
+  más le importa al cliente y el resto de la hoja solo lo justifica:
+  "$XXX.XXX IVA incluido" o "$XXX.XXX + IVA", **nunca recalculado** — se
+  muestra el valor tal cual está guardado en `quote.price`/
+  `priceIncludesIva`.
+- **Pie**: mismo estilo de disclaimer que la hoja de trabajo, adaptado
+  ("sujeto a confirmación" en vez de nada — no se agregó ningún texto
+  comercial que no estuviera ya en el patrón existente).
+
+### Regla dura: no se puede exportar sin precio cargado
+
+Pedido explícito: "NO permitir exportar un presupuesto... si todavía no
+tiene cargado el importe". Dos capas:
+
+1. **UI** (`QuoteDetailPage.tsx`): el botón "Exportar presupuesto" de la
+   cabecera es un link real (`<a href=".../exportar" target="_blank">`)
+   solo si `quote.price !== null`; si no, se reemplaza por un `<span>` con
+   la misma apariencia pero `cursor-not-allowed`, texto atenuado, sin
+   `href` (no navega a ningún lado) y un `title` explicando por qué. Además,
+   debajo de la cabecera aparece un aviso visible en ámbar: *"Para poder
+   exportarlo como presupuesto final, primero cargá el importe más abajo,
+   en «Valor del presupuesto»."* — cumple literal el pedido de "mostrar una
+   indicación clara".
+2. **Ruta** (`QuoteExportPage.tsx`): si alguien entra a la URL directo
+   (salteando el botón) y el presupuesto no tiene precio, redirige de
+   vuelta a la ficha del presupuesto en vez de mostrar una hoja con
+   "Todavía sin cargar" en el lugar del precio — la exportación es
+   "todo o nada", no una hoja a medio completar.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios. Probado en vivo con el bypass de auth
+local (2 presupuestos fake: uno con 2 ítems + precio con IVA incluido, otro
+sin precio):
+- Presupuesto sin precio: botón "Exportar presupuesto" deshabilitado
+  (confirmado que el texto visible sigue diciendo "Exportar presupuesto" con
+  `get_page_text` — el árbol de accesibilidad mostró el `title` en vez del
+  texto visible en un punto, particularidad de cómo ese navegador arma el
+  nombre accesible de un `<span>` con `title`, no un bug real) + aviso ámbar
+  visible debajo de la cabecera.
+- Presupuesto con precio: se abrió `/presupuestos/q1/exportar` — logo +
+  "Estudio Bonta" + "PRESUPUESTO", N° interno `PRE-2026-00001` (no TRB) +
+  fecha, cliente + nombre, los 2 ítems con material/unidad/medidas/notas
+  completos y legibles (sin cortes), bloque de precio bien destacado
+  "$ 850.000 IVA incluido", pie con el disclaimer. Los 8 puntos de
+  validación del pedido quedan cubiertos por esta prueba + lo ya descripto
+  arriba (código interno en vez de TRB, precio sin recalcular).
+
+Bypass de auth local revertido con Edit puntual — `git diff src/App.tsx`
+vacío antes de commitear.
+
+### Pendiente / próximos pasos
+
+Sigue igual que al cierre de la sección 52: conversión "presupuesto
+confirmado → trabajo real" explícitamente para una ronda aparte (a pedido),
+sin acción de eliminar/archivar presupuestos.
 
 ### Estado de git
 

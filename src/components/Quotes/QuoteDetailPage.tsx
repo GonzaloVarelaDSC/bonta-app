@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, DollarSign } from 'lucide-react';
+import { ArrowLeft, Pencil, DollarSign, FileOutput } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canSetQuoteValue } from '../../lib/permissions';
 import { friendlyError } from '../../lib/errors';
@@ -55,13 +55,37 @@ export function QuoteDetailPage() {
         <ArrowLeft size={13} aria-hidden /> Volver a Presupuestos
       </Link>
 
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
         <div>
           <div className="font-mono text-xs text-ink-700 mb-1">{quote.code}</div>
           <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{quote.name}</h1>
           <div className="text-sm text-ink-700 mt-0.5">{client?.name}</div>
         </div>
-        <QuoteStatusSelect status={quote.status} onChange={changeStatus} />
+        <div className="flex items-center gap-2">
+          {quote.price !== null ? (
+            <a
+              href={`/presupuestos/${quote.id}/exportar`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200"
+            >
+              <FileOutput size={13} /> Exportar presupuesto
+            </a>
+          ) : (
+            <span
+              title="Cargá el importe en «Valor del presupuesto» antes de poder exportarlo"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-400 bg-ink-100 rounded-md px-2.5 py-1.5 cursor-not-allowed"
+            >
+              <FileOutput size={13} /> Exportar presupuesto
+            </span>
+          )}
+          <QuoteStatusSelect status={quote.status} onChange={changeStatus} />
+        </div>
+      </div>
+      <div className="mb-5">
+        {quote.price === null && (
+          <p className="text-xs text-urg-text bg-urg-bg rounded-md px-2.5 py-1.5 w-fit">
+            Para poder exportarlo como presupuesto final, primero cargá el importe más abajo, en «Valor del presupuesto».
+          </p>
+        )}
       </div>
 
       <div className="space-y-4">
