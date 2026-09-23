@@ -52,6 +52,7 @@ export function mapQuote(row: any): Quote {
     price: row.price ?? null,
     priceIncludesIva: row.price_includes_iva ?? null,
     createdByUserId: row.created_by_user_id, createdAt: row.created_at, lastActivityAt: row.last_activity_at,
+    convertedJobId: row.converted_job_id ?? null,
   };
 }
 
@@ -96,6 +97,7 @@ export function mapJob(row: any): Job {
     readyAt: row.ready_at ?? undefined,
     deletedAt: row.deleted_at ?? undefined,
     deletedBy: row.deleted_by ?? undefined,
+    sourceQuoteId: row.source_quote_id ?? undefined,
     jobTypeId: row.job_type_id, description: row.description ?? '', quantity: row.quantity ?? '',
     measurements: row.measurements ?? '', sizeItems: (row.size_items ?? []) as SizeItem[],
     materialIds: (row.material_ids ?? []) as MaterialId[],

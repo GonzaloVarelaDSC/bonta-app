@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 53).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 54).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4309,6 +4309,161 @@ vacío antes de commitear.
 Sigue igual que al cierre de la sección 52: conversión "presupuesto
 confirmado → trabajo real" explícitamente para una ronda aparte (a pedido),
 sin acción de eliminar/archivar presupuestos.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+---
+
+## 54. Actualización 22/09 (cont.) — conversión Presupuesto → Trabajo ("Confirmar presupuesto")
+
+Tercer y último paso pendiente de Presupuestos (secciones 52/53): el punto
+donde un presupuesto que el cliente aceptó se convierte en un trabajo real,
+con su propio N° de Copernico/TRB (vacío al nacer, como cualquier trabajo) y
+entra al flujo normal de producción. La conversión de vuelta ("trabajo → otro
+presupuesto") sigue sin existir, no se pidió.
+
+### Qué datos exige un trabajo que un presupuesto no tiene
+
+`jobs.job_type_id`, `jobs.committed_date` y `jobs.responsible_user_id` son
+`not null` en la base (`001_schema.sql`) y `Quote` no los carga nunca (no
+tiene tipo de trabajo, fecha de entrega ni responsable — ver `types/index.ts`).
+En vez de inventarlos, se piden en un modal chico al confirmar
+(`ConfirmQuoteModal.tsx`, nuevo) — todo lo demás (cliente, nombre, ítems con
+sus materiales/medidas/notas) se copia solo del presupuesto, sin volver a
+pedirse. La unidad de cada ítem (`QuoteItem.unit`, campo que `Product` no
+tiene) se conserva agregándola al principio de las notas del producto
+(`quoteItemToProduct()` en `useStore.ts`) para no perder el dato.
+
+### `confirmQuote` — reusa `createJob` entero, no un camino paralelo
+
+Nueva acción del store, `confirmQuote(quoteId, { jobTypeId, committedDate,
+responsibleUserId }, byUserId)`:
+1. Valida que el presupuesto no esté ya `CONFIRMADO` (mensaje claro si lo
+   está — "no se puede volver a convertir").
+2. Hace un **update condicional** (`.eq('id', quoteId).neq('status',
+   'CONFIRMADO')` + `.select()`) que pone `status = 'CONFIRMADO'` SOLO si
+   nadie lo confirmó un instante antes — si `data` vuelve vacío, alguien ya
+   ganó la carrera y se aborta sin crear nada. Esto es lo que previene el
+   Caso C del pedido (doble confirmación) incluso ante dos clicks casi
+   simultáneos, no solo el botón deshabilitado en la UI.
+3. Arma `products` (mapeando cada `QuoteItem`) y `description` (los nombres
+   de los ítems unidos con " + "), y llama a `get().createJob({...})` **tal
+   cual** — mismo insert, mismo historial (`insertActivity`), mismas
+   notificaciones (`insertNotifications`: "Te asignaron el trabajo..." al
+   responsable, "Nueva ficha" a los demás admins) que ya usa cualquier alta
+   desde Carga rápida. No se inventó ningún aviso nuevo — el pedido decía
+   explícitamente no hacerlo si no hay una regla clara, y esta ya existe.
+   `requiresInstallation: false` y `priorityManual: 'NORMAL'` como default
+   (un presupuesto no tiene ninguno de los dos) — el trabajo nace en
+   `PENDIENTE`, igual que cualquier alta nueva.
+4. Guarda `quotes.converted_job_id = job.id` (vínculo ida) — el trabajo ya
+   nace con `jobs.source_quote_id = quote.id` (vínculo vuelta, seteado por el
+   propio `createJob` vía un campo nuevo opcional en `NewJobInput`).
+5. Si falla el paso 4 (el trabajo se creó pero no se pudo guardar el
+   vínculo) — a propósito **no se revierte el status** a como estaba: eso
+   dejaría la puerta abierta a reintentar y crear un SEGUNDO trabajo, que es
+   justo lo que hay que evitar. Queda un presupuesto Confirmado sin
+   `convertedJobId`, a completar a mano (caso límite, no se dio en la
+   verificación). Si en cambio falla ANTES de crear el trabajo (ej. falta
+   algún dato), sí se revierte el status para poder reintentar sin riesgo.
+
+### Modelo de datos — migración `023_quote_job_conversion.sql`
+
+`jobs.source_quote_id uuid references quotes(id)` y `quotes.converted_job_id
+uuid references jobs(id)`, con sus índices. **Hay que correrla en Supabase**
+(junto con la 022 de la sección 52, que tampoco tiene confirmación de
+Gonzalo todavía — verificar las dos con `select column_name from
+information_schema.columns where table_name in ('jobs','quotes') and
+column_name in ('source_quote_id','converted_job_id');`, debería devolver
+ambas). También mergeada en `001_schema.sql`, como `alter table` después de
+las dos tablas (no se pudo poner la columna inline en el `create table` de
+`jobs` porque `quotes` se define más abajo en el mismo archivo — la FK
+cruzada necesita que las dos tablas ya existan).
+
+Ningún trigger/policy nuevo hizo falta: `jobs_update_guard` solo corre en
+`UPDATE` (el insert de `createJob` no lo dispara) y `quotes_price_guard` solo
+mira cambios de `price`/`price_includes_iva` — el update de `status`/
+`converted_job_id` de `confirmQuote` no toca ninguno de los dos campos
+protegidos.
+
+### UI — no se puede confirmar dos veces, no se puede "trampear" el estado
+
+- **`QuoteStatusSelect`** (`Common/Badges.tsx`) le saca `CONFIRMADO` a las
+  opciones elegibles — antes se podía poner un presupuesto en "Confirmado"
+  desde el dropdown genérico sin que eso generara ningún trabajo, un estado
+  inconsistente. Mismo criterio ya usado para `BLOQUEADO`/`CANCELADO` en el
+  select de estado de un trabajo (`lib/statusChange.ts`, secciones 41/44):
+  esos estados especiales solo se alcanzan por su propia acción dedicada.
+- **`QuoteDetailPage.tsx`**: mientras no está confirmado, header con
+  `QuoteStatusSelect` + botón nuevo "Confirmar presupuesto" (verde, mismo
+  tono `plan-text` que ya usa "Abrir en WhatsApp" en `ClientMessageModal`)
+  que abre `ConfirmQuoteModal`. Una vez confirmado: el select desaparece (se
+  reemplaza por `QuoteStatusBadge`, de solo lectura), el botón "Confirmar
+  presupuesto" desaparece del todo (primera barrera contra el Caso C), y
+  aparece un banner verde "✓ Confirmado — se generó el trabajo... Ver trabajo
+  generado →" con link directo a `/trabajos/:id`.
+- **"Detalle del trabajo" queda fijo tras confirmar**: el botón "Editar" de
+  esa sección se oculta (`QuoteDetailSection` recibe un prop `locked`) con
+  una nota explicando por qué — editar el presupuesto después de que ya
+  generó un trabajo real sería engañoso (el trabajo ya tiene su propia copia
+  y no se sincroniza). La sección "Valor del presupuesto" NO se bloqueó
+  (queda como registro histórico del precio pactado, sin motivo real para
+  impedir corregir un error de tipeo ahí).
+- **`JobDetailPage.tsx`**: si `job.sourceQuoteId` existe, un link chico
+  "Generado desde un presupuesto →" al lado del N° de Copernico/TRB en la
+  cabecera, hacia `/presupuestos/:id`. Minimalista a propósito — no carga la
+  lista completa de presupuestos solo para mostrar el código acá, alcanza
+  con el link.
+
+### Validación (Casos A/B/C del pedido)
+
+Probado en vivo con el bypass de auth local (2 presupuestos fake — uno sin
+confirmar con precio cargado, otro ya `CONFIRMADO` con un trabajo `j1`
+vinculado — revertido con Edit puntual, `git diff src/App.tsx` vacío antes
+de commitear):
+
+- **Caso A (no confirmado)**: el presupuesto sin confirmar mostró el select
+  de 4 estados (sin "Confirmado") + botón "Confirmar presupuesto" visible;
+  al abrir el modal, tipo de trabajo vacío a propósito ("Elegir..."), fecha
+  precargada a +7 días (mismo default que Carga rápida), responsable
+  precargado al primer productor activo — los 3 campos editables. Confirmar
+  con el tipo de trabajo elegido disparó el flujo real contra Supabase
+  (falló con el error esperado por los IDs falsos del bypass, traducido en
+  criollo — "Hay un dato con formato inválido..." — sin crashear, el botón
+  volvió a su estado normal y el modal se pudo seguir usando).
+- **Caso B (confirmado)**: el presupuesto ya `CONFIRMADO` mostró el badge de
+  solo lectura, el banner verde con el link al trabajo, "Detalle del
+  trabajo" sin botón "Editar" + nota explicativa, y el trabajo vinculado
+  (`/trabajos/j1`) mostrando correctamente "Generado desde un presupuesto →"
+  de vuelta hacia `/presupuestos/q2`, con el producto copiado (material +
+  medidas + "Unidad: m²" dentro de las notas) — conserva los datos cargados,
+  como pide el checklist.
+- **Caso C (doble confirmación)**: cubierto por construcción — el botón y el
+  select de "Confirmar"/"Confirmado como opción" desaparecen apenas
+  `quote.status === 'CONFIRMADO'`, y aunque alguien fuerce la llamada al
+  store igual, el guard de estado (paso 1 de `confirmQuote`) y el update
+  condicional (paso 2) lo bloquean en el servidor. No se pudo ensayar la
+  carrera real de dos clicks simultáneos contra Supabase real desde acá,
+  pero la lógica del update condicional es la misma técnica que ya usa el
+  proyecto en otros lados para evitar carreras sin necesitar una transacción
+  explícita.
+
+`npm run build`/`npm run lint` limpios (mismo único warning preexistente de
+`Badges.tsx`).
+
+### Pendiente
+
+- Confirmar que Gonzalo corrió las migraciones `022_quotes.sql` (sección 52,
+  todavía sin confirmar) y `023_quote_job_conversion.sql` (esta sección) en
+  Supabase — verificar con el SELECT de arriba antes de asumir que ya están
+  aplicadas.
+- La conversión inversa (revertir un trabajo generado a presupuesto) no se
+  pidió y no existe.
+- Nada más del alcance de Presupuestos quedó abierto — con esto se cierran
+  los 3 pasos que Gonzalo pidió por separado (sección/alta, exportación,
+  conversión a trabajo).
 
 ### Estado de git
 

@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, DollarSign, FileOutput } from 'lucide-react';
+import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
+import { ArrowLeft, Pencil, DollarSign, FileOutput, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canSetQuoteValue } from '../../lib/permissions';
+import { canSetQuoteValue, canManageQuotes } from '../../lib/permissions';
 import { friendlyError } from '../../lib/errors';
-import { QuoteStatusSelect } from '../Common/Badges';
+import { QuoteStatusBadge, QuoteStatusSelect } from '../Common/Badges';
 import { QuoteItemsEditor, QuoteItemsView } from '../Common/QuoteItemsEditor';
+import { ConfirmQuoteModal } from './ConfirmQuoteModal';
 import { fmtShort } from '../../lib/dates';
 import type { Quote, QuoteItem, QuoteStatus, User } from '../../types';
 
@@ -25,11 +26,18 @@ function formatPrice(price: number | null, includesIva: boolean | null): string 
 
 export function QuoteDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useStore((s) => s.currentUser) as User;
   const quotes = useStore((s) => s.quotes);
   const quotesLoaded = useStore((s) => s.quotesLoaded);
   const loadQuotes = useStore((s) => s.loadQuotes);
   const clients = useStore((s) => s.clients);
+  const jobs = useStore((s) => s.jobs);
   const setQuoteStatus = useStore((s) => s.setQuoteStatus);
+  const confirmQuote = useStore((s) => s.confirmQuote);
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (!quotesLoaded) loadQuotes().catch(() => {});
@@ -37,6 +45,7 @@ export function QuoteDetailPage() {
 
   const quote = quotes.find((q) => q.id === id);
   const client = clients.find((c) => c.id === quote?.clientId);
+  const linkedJob = quote?.convertedJobId ? jobs.find((j) => j.id === quote.convertedJobId) : undefined;
 
   if (quotesLoaded && !quote) return <Navigate to="/presupuestos" replace />;
   if (!quote) return <div className="p-10 text-center text-ink-700">Cargando...</div>;
@@ -46,6 +55,22 @@ export function QuoteDetailPage() {
       await setQuoteStatus(quote!.id, status);
     } catch (err) {
       alert(friendlyError(err));
+    }
+  }
+
+  // Presupuesto confirmado → trabajo real. Reusa el mecanismo existente de
+  // creación de trabajo entero (número de Copernico/TRB, notificaciones,
+  // historial) — ver `confirmQuote` en useStore.ts.
+  async function handleConfirm(jobTypeId: string, committedDate: string, responsibleUserId: string) {
+    setConfirming(true);
+    try {
+      const job = await confirmQuote(quote!.id, { jobTypeId, committedDate, responsibleUserId }, user.id);
+      setShowConfirmModal(false);
+      navigate(`/trabajos/${job.id}`);
+    } catch (err) {
+      alert(friendlyError(err));
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -77,27 +102,57 @@ export function QuoteDetailPage() {
               <FileOutput size={13} /> Exportar presupuesto
             </span>
           )}
-          <QuoteStatusSelect status={quote.status} onChange={changeStatus} />
+          {quote.status === 'CONFIRMADO' ? (
+            <QuoteStatusBadge status={quote.status} />
+          ) : (
+            <QuoteStatusSelect status={quote.status} onChange={changeStatus} />
+          )}
+          {quote.status !== 'CONFIRMADO' && canManageQuotes(user.role) && (
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-plan-text rounded-md px-2.5 py-1.5 hover:brightness-110"
+            >
+              <CheckCircle2 size={13} /> Confirmar presupuesto
+            </button>
+          )}
         </div>
       </div>
-      <div className="mb-5">
-        {quote.price === null && (
+      <div className="mb-5 space-y-2">
+        {quote.price === null && quote.status !== 'CONFIRMADO' && (
           <p className="text-xs text-urg-text bg-urg-bg rounded-md px-2.5 py-1.5 w-fit">
             Para poder exportarlo como presupuesto final, primero cargá el importe más abajo, en «Valor del presupuesto».
+          </p>
+        )}
+        {quote.status === 'CONFIRMADO' && (
+          <p className="text-xs text-plan-text bg-plan-bg rounded-md px-2.5 py-1.5 w-fit">
+            ✓ Confirmado — se generó el trabajo{linkedJob?.code ? ` ${linkedJob.code}` : ''}.{' '}
+            {linkedJob ? (
+              <Link to={`/trabajos/${linkedJob.id}`} className="font-semibold underline">Ver trabajo generado →</Link>
+            ) : (
+              <Link to={`/trabajos/${quote.convertedJobId}`} className="font-semibold underline">Ver trabajo generado →</Link>
+            )}
           </p>
         )}
       </div>
 
       <div className="space-y-4">
-        <QuoteDetailSection quote={quote} />
+        <QuoteDetailSection quote={quote} locked={quote.status === 'CONFIRMADO'} />
         <QuoteValueSection key={quote.id} quote={quote} />
         <p className="text-[11px] text-ink-700">Actualizado {fmtShort(quote.lastActivityAt)}</p>
       </div>
+
+      {showConfirmModal && (
+        <ConfirmQuoteModal
+          confirming={confirming}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleConfirm}
+        />
+      )}
     </div>
   );
 }
 
-function QuoteDetailSection({ quote }: { quote: Quote }) {
+function QuoteDetailSection({ quote, locked }: { quote: Quote; locked: boolean }) {
   const clients = useStore((s) => s.clients);
   const updateQuote = useStore((s) => s.updateQuote);
   const findOrCreateClient = useStore((s) => s.findOrCreateClient);
@@ -144,12 +199,15 @@ function QuoteDetailSection({ quote }: { quote: Quote }) {
     <div className="bg-white border border-ink-100 rounded-xl shadow-card p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink-900">Detalle del trabajo</h2>
-        {mode === 'view' && (
+        {mode === 'view' && !locked && (
           <button onClick={startEdit} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 border border-brand-300 rounded-lg px-3 py-1.5 hover:bg-brand-50">
             <Pencil size={12} /> Editar
           </button>
         )}
       </div>
+      {locked && (
+        <p className="text-xs text-ink-700 -mt-1">Este presupuesto ya se confirmó — el detalle quedó fijo tal como se usó para generar el trabajo.</p>
+      )}
 
       {mode === 'view' ? (
         <QuoteItemsView items={quote.items} />

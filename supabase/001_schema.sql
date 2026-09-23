@@ -258,3 +258,13 @@ create table if not exists quotes (
 );
 create index if not exists idx_quotes_client on quotes(client_id);
 create index if not exists idx_quotes_status on quotes(status);
+
+-- Vínculo Presupuesto ↔ Trabajo (22/09, ver 023_quote_job_conversion.sql) —
+-- confirmar un presupuesto genera un trabajo real, vinculado en las dos
+-- direcciones. Se agrega como ALTER en vez de columna inline en cada CREATE
+-- TABLE de arriba porque `quotes` se define después de `jobs` en este mismo
+-- archivo — la referencia cruzada necesita que las dos tablas ya existan.
+alter table jobs add column if not exists source_quote_id uuid references quotes(id);
+alter table quotes add column if not exists converted_job_id uuid references jobs(id);
+create index if not exists idx_jobs_source_quote on jobs(source_quote_id);
+create index if not exists idx_quotes_converted_job on quotes(converted_job_id);

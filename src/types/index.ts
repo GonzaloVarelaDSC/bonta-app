@@ -212,6 +212,10 @@ export interface Job {
   // consultable/restaurable desde Histórico.
   deletedAt?: string;
   deletedBy?: string | null;
+  // Si este trabajo nació de confirmar un presupuesto (ver Quote.convertedJobId
+  // más abajo), acá queda el vínculo inverso — permite ir del trabajo de vuelta
+  // al presupuesto de origen. `undefined` para cualquier trabajo cargado normal.
+  sourceQuoteId?: string;
 
   jobTypeId: JobTypeId;
   description: string;
@@ -306,4 +310,9 @@ export interface Quote {
   createdByUserId: string;
   createdAt: string;
   lastActivityAt: string;
+  // Vínculo al trabajo real generado al confirmar (ver `confirmQuote` en el
+  // store) — `null` mientras el presupuesto no se confirmó. Una vez seteado,
+  // no vuelve a ponerse en null (un presupuesto confirmado no se puede volver
+  // a convertir — ver CLAUDE.md, conversión Presupuesto → Trabajo).
+  convertedJobId: string | null;
 }

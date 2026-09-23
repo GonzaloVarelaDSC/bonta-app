@@ -175,6 +175,15 @@ export function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
   );
 }
 
+// "Confirmado" se saca de las opciones elegibles a mano — desde la conversión
+// Presupuesto → Trabajo (22/09) ese estado SOLO se alcanza a través de la
+// acción "Confirmar presupuesto" (genera el trabajo real, vinculado). Dejarlo
+// en este select hubiera permitido marcar "Confirmado" sin generar ningún
+// trabajo, un estado inconsistente — mismo criterio ya usado para
+// BLOQUEADO/CANCELADO en el select de estado de un trabajo (ver
+// lib/statusChange.ts).
+const SELECTABLE_QUOTE_STATUSES = (Object.keys(QUOTE_STATUS_LABELS) as QuoteStatus[]).filter((s) => s !== 'CONFIRMADO');
+
 export function QuoteStatusSelect({ status, onChange, disabled }: { status: QuoteStatus; onChange: (s: QuoteStatus) => void; disabled?: boolean }) {
   return (
     <select
@@ -189,7 +198,7 @@ export function QuoteStatusSelect({ status, onChange, disabled }: { status: Quot
         STATUS_TONE_CLASSES[QUOTE_STATUS_TONE[status]]
       )}
     >
-      {(Object.keys(QUOTE_STATUS_LABELS) as QuoteStatus[]).map((s) => <option key={s} value={s}>● {QUOTE_STATUS_LABELS[s]}</option>)}
+      {SELECTABLE_QUOTE_STATUSES.map((s) => <option key={s} value={s}>● {QUOTE_STATUS_LABELS[s]}</option>)}
     </select>
   );
 }

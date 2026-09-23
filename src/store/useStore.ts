@@ -97,6 +97,8 @@ interface StoreState {
   updateQuote: (quoteId: string, patch: { name?: string; clientId?: string; items?: QuoteItem[] }) => Promise<void>;
   setQuoteStatus: (quoteId: string, status: QuoteStatus) => Promise<void>;
   setQuoteValue: (quoteId: string, price: number | null, priceIncludesIva: boolean | null) => Promise<void>;
+  // Presupuesto confirmado → trabajo real (22/09). Ver JSDoc de la implementación.
+  confirmQuote: (quoteId: string, extra: ConfirmQuoteExtra, byUserId: string) => Promise<Job>;
 }
 
 export interface JobSpecs {
@@ -110,10 +112,31 @@ export interface NewJobInput {
   products: Job['products']; specialRequirements: string;
   requiresInstallation: boolean; installAddress: string; installContactPhone: string; installDate: string;
   createdByUserId: string; responsibleUserId: string; assignedUserIds: string[]; assignedNames: string[];
+  // Si este trabajo se genera al confirmar un presupuesto (ver `confirmQuote`
+  // más abajo) — vínculo inverso, ver Job.sourceQuoteId en types/index.ts.
+  sourceQuoteId?: string;
 }
 
 export interface NewQuoteInput {
   clientId: string; name: string; items: QuoteItem[]; createdByUserId: string;
+}
+
+// Datos que un presupuesto NUNCA tiene (no se piden al presupuestar, ver
+// types/index.ts Quote) pero que un trabajo exige sí o sí a nivel de base
+// (job_type_id/committed_date/responsible_user_id son NOT NULL en `jobs`,
+// ver 001_schema.sql) — se piden recién al confirmar, en vez de inventarlos.
+export interface ConfirmQuoteExtra {
+  jobTypeId: string;
+  committedDate: string; // fecha (sin hora) — se le agrega T18:00 igual que en Carga rápida
+  responsibleUserId: string;
+}
+
+// Un ítem de presupuesto no tiene "procesado"/"tercerizado" (no aplica todavía
+// a un trabajo en curso) ni campo `unit` en Product — la unidad, si estaba
+// cargada, se conserva agregándola a las notas para no perder el dato.
+function quoteItemToProduct(item: QuoteItem): Job['products'][number] {
+  const notes = item.unit ? `Unidad: ${item.unit}${item.notes ? `\n${item.notes}` : ''}` : item.notes;
+  return { id: crypto.randomUUID(), label: item.label, materialIds: item.materialIds, sizeItems: item.sizeItems, notes, checked: false };
 }
 
 // Historial de auditoría — best-effort, igual que `insertNotifications` de
@@ -338,6 +361,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       special_requirements: input.specialRequirements,
       status: missingInstallAddress ? 'FALTA_INFORMACION' : 'PENDIENTE', priority_manual: input.priorityManual,
       requires_installation: input.requiresInstallation, client_important: input.clientImportant,
+      source_quote_id: input.sourceQuoteId ?? null,
     }).select().single();
     if (error) throw error;
     const jobId = jobRow.id;
@@ -750,6 +774,80 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) {
       if (before) set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? before : q) }));
       throw error;
+    }
+  },
+
+  // Presupuesto confirmado por el cliente → se convierte en un trabajo real.
+  // Reusa `createJob` entero (mismo insert, mismo historial, mismas
+  // notificaciones — "Te asignaron el trabajo..." al responsable y "Nueva
+  // ficha" a los demás admins, sin sistema paralelo) para no duplicar nada de
+  // lo que ya existe. El trabajo nace en PENDIENTE (createJob decide el estado
+  // inicial igual que siempre) y sin N° de Copernico/TRB (mismo mecanismo de
+  // siempre: nace en null, se carga a mano después — ver decisión 4, CLAUDE.md
+  // sección 4).
+  confirmQuote: async (quoteId, extra, byUserId) => {
+    const quote = get().quotes.find((q) => q.id === quoteId);
+    if (!quote) throw new Error('No se encontró el presupuesto.');
+    if (quote.status === 'CONFIRMADO' || quote.convertedJobId) {
+      throw new Error('Este presupuesto ya fue confirmado — no se puede volver a convertir.');
+    }
+    if (!extra.jobTypeId || !extra.committedDate || !extra.responsibleUserId) {
+      throw new Error('Faltan datos para poder generar el trabajo.');
+    }
+
+    // "Reserva" la confirmación con un update condicional (solo si sigue sin
+    // confirmar) antes de crear nada — si dos personas confirman casi al mismo
+    // tiempo, la segunda encuentra `status` ya en CONFIRMADO, el `.neq` no
+    // matchea ninguna fila, `locked` vuelve vacío, y se aborta sin generar un
+    // segundo trabajo (Caso C del pedido: prevenir duplicados).
+    const nowIso = new Date().toISOString();
+    const { data: locked, error: lockError } = await supabase
+      .from('quotes')
+      .update({ status: 'CONFIRMADO', last_activity_at: nowIso })
+      .eq('id', quoteId)
+      .neq('status', 'CONFIRMADO')
+      .select()
+      .maybeSingle();
+    if (lockError) throw lockError;
+    if (!locked) throw new Error('Este presupuesto ya fue confirmado — no se puede volver a convertir.');
+
+    let job: Job | undefined;
+    try {
+      // Copia lo que ya está cargado en el presupuesto — nada se vuelve a
+      // pedir. `unit` (que Product no tiene) se conserva dentro de las notas.
+      const products = quote.items.map(quoteItemToProduct);
+      const description = quote.items.map((it) => it.label).filter(Boolean).join(' + ');
+
+      job = await get().createJob({
+        name: quote.name, clientId: quote.clientId, contactName: '', contactPhone: '',
+        jobTypeId: extra.jobTypeId, description,
+        committedDate: new Date(`${extra.committedDate}T18:00`).toISOString(),
+        priorityManual: 'NORMAL', clientImportant: false,
+        products, specialRequirements: '',
+        requiresInstallation: false, installAddress: '', installContactPhone: '', installDate: '',
+        createdByUserId: byUserId, responsibleUserId: extra.responsibleUserId,
+        assignedUserIds: [], assignedNames: [],
+        sourceQuoteId: quote.id,
+      });
+
+      const { error } = await supabase.from('quotes').update({ converted_job_id: job.id }).eq('id', quoteId);
+      if (error) throw error;
+      set((s) => ({ quotes: s.quotes.map((q) => q.id === quoteId ? { ...q, status: 'CONFIRMADO', convertedJobId: job!.id, lastActivityAt: nowIso } : q) }));
+      return job;
+    } catch (err) {
+      if (!job) {
+        // Todavía no se llegó a crear ningún trabajo — deshacemos el "lock" de
+        // arriba para que se pueda reintentar sin riesgo de duplicar nada.
+        await supabase.from('quotes').update({ status: quote.status }).eq('id', quoteId);
+      } else {
+        // El trabajo YA se creó pero falló guardar el vínculo de vuelta en el
+        // presupuesto — a propósito NO revertimos el status acá: reintentar
+        // desde este mismo estado arriesgaría crear un SEGUNDO trabajo
+        // (justo lo que hay que prevenir). Queda un presupuesto Confirmado
+        // sin `convertedJobId` — se completa a mano (ver el error abajo).
+        console.error('[presupuestos] el trabajo se creó pero no se pudo guardar el vínculo de vuelta:', err);
+      }
+      throw err;
     }
   },
 }));

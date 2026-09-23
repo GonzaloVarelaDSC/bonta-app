@@ -90,7 +90,14 @@ export function JobDetailPage() {
           </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="font-mono text-xs text-ink-700 mb-1">{job.code ?? 'Sin N° de trabajo'}</div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-xs text-ink-700">{job.code ?? 'Sin N° de trabajo'}</span>
+                {job.sourceQuoteId && (
+                  <Link to={`/presupuestos/${job.sourceQuoteId}`} className="text-[11px] text-brand-600 hover:underline">
+                    Generado desde un presupuesto →
+                  </Link>
+                )}
+              </div>
               <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
               <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
               {(creator || responsible) && (
