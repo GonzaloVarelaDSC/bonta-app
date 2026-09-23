@@ -55,7 +55,12 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
             <th className="px-2 py-2.5 font-medium">Responsable</th>
             <th className="px-2 py-2.5 font-medium">Entrega</th>
             {!compact && <th className="px-2 py-2.5 font-medium">Actualizado</th>}
-            <th className="px-2 py-2.5 font-medium"><span className="sr-only">Abrir</span></th>
+            {/* Pegada al borde derecho del scroll horizontal (sticky) — en una
+                tabla de 8-9 columnas el tacho de eliminar quedaba al final,
+                fuera de la vista, y había que scrollear hasta el fondo para
+                encontrarlo (Gonzalo, 22/09). Con `sticky right-0` queda
+                siempre visible sin importar cuánto se scrollee la tabla. */}
+            <th className="px-2 py-2.5 font-medium sticky right-0 bg-white"><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
@@ -71,7 +76,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                   if ((e.target as HTMLElement).closest('select, button, input')) return;
                   navigate(`/trabajos/${j.id}`);
                 }}
-                className="border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
+                className="group border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
               >
                 <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /></td>
                 <td className="px-2 py-2.5 whitespace-nowrap">
@@ -102,7 +107,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                     : <CountdownBadge iso={j.committedDate} status={j.status} />}
                 </td>
                 {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}
-                <td className="px-2 py-2.5">
+                <td className="px-2 py-2.5 sticky right-0 bg-white group-hover:bg-ink-50/70 transition-colors">
                   <div className="flex items-center gap-2">
                     <button
                       type="button" onClick={() => navigate(`/trabajos/${j.id}`)}

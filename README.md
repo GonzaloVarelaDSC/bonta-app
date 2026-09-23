@@ -26,19 +26,23 @@ npm run preview
 
 ## Qué incluye esta Fase 1
 
-- Login real con Supabase Auth (email + contraseña, recuperación por mail) y roles (Admin, Coordinador/Producción, Diseño, Producción, Instalación) con permisos aplicados tanto en la interfaz como en la base de datos (Row Level Security + un trigger que protege los campos que solo Coordinador/Admin pueden tocar).
-- CRUD de trabajos con el modelo de datos completo (cliente, especificaciones técnicas, etapas de producción, instalación, control de calidad), persistido en Postgres.
-- Cálculo de prioridad automática (cascada de reglas por fecha/bloqueo/cliente) y riesgo, con posibilidad de forzar una prioridad manual.
-- Tabla de trabajos con filtros y buscador global.
-- Kanban con drag & drop que actualiza el estado en la base y registra el movimiento en el historial — con actualización optimista para que se sienta instantáneo.
-- Ficha de trabajo completa: general, especificaciones, producción por etapas, archivos versionados con aprobación, instalación, historial y comentarios internos con menciones.
-- Sistema de bloqueos con motivo obligatorio.
-- Dashboard con KPIs clickeables que filtran la tabla, y detección de "trabajos silenciosos" (sin movimiento en 48h).
-- Alta de trabajo en wizard de 5 pasos con detección de información faltante.
-- Actualización en vivo: un cambio de estado que hace un compañero aparece solo, sin recargar (suscripción realtime de Supabase sobre la tabla de trabajos).
-- Responsive: sidebar como menú lateral colapsable en mobile, pestaña de comentarios dedicada en pantallas chicas.
+(Actualizado 22/09/2026 — para el detalle ronda a ronda de todo lo que cambió desde el diseño original, ver `CLAUDE.md`, que es la fuente de verdad viva de este proyecto.)
 
-Lo que queda deliberadamente para Fase 2/3 (ver el documento de especificación, sección "Alcance"): calendario, reportes completos, ficha de cliente con historial extendido, checklist de calidad configurable desde administración, dependencias entre trabajos, plantillas, notificaciones por push/email, y subida de archivos real a Supabase Storage (por ahora `addFileVersion` registra el nombre y metadata del archivo pero no sube el binario — ver nota abajo).
+- Login real con Supabase Auth (email + contraseña, recuperación por mail) y roles (Admin, Coordinador, Diseño, Producción, Instalación) con permisos aplicados tanto en la interfaz como en la base de datos (Row Level Security + un trigger que protege los campos que solo Coordinador/Admin pueden tocar).
+- Alta de trabajo con **Carga rápida** (una sola pantalla, no un wizard multi-paso — se sacó el wizard original) con detección de información faltante que avisa pero no bloquea.
+- CRUD de trabajos con el modelo de datos completo (cliente, productos con material/medidas/notas, instalación, control de calidad), persistido en Postgres.
+- Prioridad 100% manual (5 niveles), editable desde cualquier vista — no se calcula sola por fecha.
+- Tabla de Trabajos con filtros (prioridad/estado/cliente/responsable/bloqueados/archivados) y buscador global.
+- Kanban de 7 columnas con drag & drop, tacho para eliminar (borrado lógico, restaurable desde Histórico), auto-archivado de trabajos entregados hace 5+ días.
+- Ficha de trabajo completa: general (con resumen de "minuta técnica"), detalle (productos/materiales/medidas), control de calidad (recordatorio, no bloqueo), archivos versionados con aprobación, instalación, historial y comentarios con `@menciones` (autocompletado por ID real + menciones por sector/rol).
+- Sistema de bloqueos con motivo obligatorio, y "muestra al cliente" (sin muestra / en producción / enviada, falta OK / aprobada) para trabajos que necesitan aprobación de una prueba antes de producir todo.
+- **Notificaciones in-app reales** (campana en el header): te avisa cuando te asignan un trabajo o te mencionan en un comentario, con actualización en vivo (Supabase Realtime, con un polling de respaldo cada 30s) y marcado de leído/no leído.
+- Dashboard con KPIs clickeables (escopeados a A mí/Por mí/Todos), widget de carga de diseño por productor, y detección de "trabajos silenciosos" (sin movimiento en 48h).
+- Sección Histórico (solo admin) para consultar/restaurar trabajos archivados o eliminados.
+- Actualización en vivo de trabajos: un cambio que hace un compañero aparece solo, sin recargar (suscripción realtime de Supabase).
+- Responsive: sidebar como menú lateral colapsable en mobile.
+
+Lo que queda deliberadamente fuera de esta fase (ver el documento de especificación original, sección "Alcance", y `CLAUDE.md` para el detalle): calendario, reportes completos, ficha de cliente con historial extendido, checklist de calidad configurable por tipo de trabajo, dependencias entre trabajos, plantillas, notificaciones por email/push (las in-app sí existen), facturación electrónica (proyecto aparte, ver `CLAUDE.md` §28), y subida de archivos real a Supabase Storage (por ahora `addFileVersion` registra el nombre y metadata del archivo pero no sube el binario — ver nota abajo).
 
 ## Estructura del código
 
@@ -49,7 +53,7 @@ src/
   lib/          Lógica de negocio pura: prioridad, riesgo, fechas, permisos, selectores,
                 cliente de Supabase, mapeo de filas de la base al modelo de la app
   store/        Estado de la aplicación (Zustand) — todas las llamadas a Supabase viven acá
-  components/   UI, organizada por sección (Layout, Dashboard, Jobs, Kanban, JobDetail, NewJob, Users, Auth)
+  components/   UI, organizada por sección (Layout, Dashboard, Jobs, Kanban, JobDetail, QuickJob, Users, Historico, Auth)
 supabase/       Migraciones SQL (esquema, políticas RLS, catálogos, datos de prueba) — ver README ahí
 ```
 

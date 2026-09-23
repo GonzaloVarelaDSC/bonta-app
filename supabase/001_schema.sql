@@ -221,3 +221,19 @@ create table if not exists notifications (
   created_at timestamptz not null default now()
 );
 create index if not exists idx_notifications_user on notifications(user_id, read);
+
+-- La campana se actualiza en vivo (sin recargar) vía Supabase Realtime — pero
+-- Realtime solo transmite cambios de tablas agregadas a la publicación
+-- `supabase_realtime`, algo que NO pasa solo por crear la tabla. Sin esto, la
+-- app funciona pero la campana no se entera de nada hasta la próxima recarga
+-- de página. Ver también 021_notifications_realtime_publication.sql y
+-- CLAUDE.md §49/§50 para el diagnóstico completo.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table notifications;
+  end if;
+end $$;

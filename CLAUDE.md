@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 50).
+la contradiga más arriba**. Última actualización: 22/09/2026 (sección 51).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -3944,3 +3944,102 @@ para confirmar que ya no está en 0 filas.
 ### Estado de git
 
 Commiteado y pusheado a `origin/main` (`f748234`).
+
+---
+
+## 51. Actualización 22/09 (cont.) — confirmado funcionando; tacho de Trabajos pegado al borde; docs actualizadas al cierre de la sesión
+
+Gonzalo confirmó que las notificaciones cruzadas **ya andan** después del fix
+de §50. Antes de cerrar esta sesión larga (avisó que se iba a desconectar
+pronto), pidió 3 cosas más: un bug chico de UI, poner al día toda la
+documentación, y un paso a paso claro para el tema de `gh auth` que le
+aparecía como alerta en el chat.
+
+### 1. Tacho de eliminar en Trabajos, pegado al borde derecho — corregido
+
+**Síntoma:** en la tabla de Trabajos (`JobsTable.tsx`, reusada también en
+`ClientsPage.tsx`), con 8-9 columnas, el tacho de eliminar quedaba en la
+última columna, muy a la derecha — en pantallas no tan anchas, si no se
+scrolleaba la tabla hasta el final (el ScrollFadeX ya avisa que hay más
+contenido, pero igual hay que ir a buscarlo), el ícono quedaba prácticamente
+invisible o directamente fuera de la vista.
+
+**Fix:** la columna de acciones (flecha "Ver ficha" + tacho) pasa a
+`sticky right-0` — queda **pegada al borde derecho del área visible de la
+tabla**, sin importar cuánto se haya scrolleado horizontalmente. Se agregó
+`group` a la fila (`<tr>`) y `group-hover:bg-ink-50/70` a esa celda para que
+el fondo siga respondiendo al hover de la fila igual que antes, ya que una
+celda `sticky` necesita fondo propio (si no, el contenido scrolleado se ve
+"por debajo" al pasar). Verificado con la técnica de bypass de auth local +
+inspección de `getBoundingClientRect()` vía `javascript_tool` (la captura de
+pantalla del navegador integrado no reflejaba bien el viewport angosto
+emulado esta vez — se confirmó por medición real del DOM en cambio, que el
+borde derecho de la celda coincide exactamente con el borde del contenedor
+con scroll).
+
+### 2. Documentación actualizada
+
+- **`README.md`** — estaba desactualizado desde hace meses (mencionaba el
+  wizard de 5 pasos, que se sacó en la sección 12; no mencionaba el sistema
+  de notificaciones in-app real, ni Histórico, ni "muestra al cliente", ni
+  Carga rápida). Reescrita la sección "Qué incluye esta Fase 1" para reflejar
+  el estado real al 22/09, con una nota apuntando a este archivo
+  (`CLAUDE.md`) como la fuente de verdad viva para el detalle ronda a ronda.
+  También corregida la estructura de carpetas (`NewJob` ya no existe, es
+  `QuickJob`; falta agregar `Historico`).
+- **`supabase/001_schema.sql`** — se le agregó al final el mismo bloque
+  idempotente de la migración 021 (agregar `notifications` a la publicación
+  `supabase_realtime`). Sin esto, cualquier instalación nueva de cero
+  (siguiendo `supabase/README.md`, que solo corre 001→002→003) hubiera
+  nacido con el mismo bug de campana-no-se-actualiza-en-vivo que recién se
+  diagnosticó y arregló en producción (§49/§50) — el resto del schema
+  (columnas de `sample_review`, `deleted_at`, `assigned_names`, etc.) ya
+  estaba al día en este archivo desde rondas anteriores, confirmado con
+  grep antes de tocar nada.
+- **`supabase/README.md`** — revisado, **sin cambios**: sigue siendo preciso
+  tal cual está (solo pide correr 001→002→003→004→005 para una instalación
+  de cero con datos demo ficticios; como 001-002 ya están al día, no hacía
+  falta agregar nada ahí).
+- **`AUDITORIA_UXUI_2026-09-15.md`** — **sin tocar, a propósito**. Es un
+  informe fechado, tratado como snapshot histórico desde siempre (ver §30:
+  "todo lo demás... ya estaban resueltos... ese punto quedó congelado en el
+  momento en que se escribió") — no se actualiza en cada ronda, CLAUDE.md ya
+  documenta qué de ese informe sigue pendiente y qué no.
+
+### 3. `gh auth login` — paso a paso
+
+No es un bug de la app ni de Supabase — es la sesión de GitHub CLI de esta
+máquina, vencida. Se le dio a Gonzalo el paso a paso en el chat (login vía
+navegador con un código de un solo uso). No requiere ningún cambio de código
+ni de configuración del proyecto — queda documentado acá solo para que una
+sesión futura sepa que, si esa alerta reaparece, es indicarle exactamente
+esos mismos pasos, no investigar el repo.
+
+### Verificación
+
+`npm run build`/`npm run lint` limpios. Fix del tacho verificado en vivo
+(medición real del DOM, ver punto 1). Sin cambios de esquema real en
+Supabase esta ronda (el bloque agregado a `001_schema.sql` es solo para
+instalaciones futuras de cero — la base real de producción ya tiene el fix
+aplicado desde la migración 021 de §49).
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+### Cierre de esta sesión — resumen para quien retome
+
+Sesión larga (arrancó con verificación de datos de equipo, siguió con una
+auditoría completa en 6 fases, y cerró con una investigación a fondo de un
+bug real de notificaciones). Todo lo pendiente real al cierre:
+- Confirmar que Gonzalo siga probando notificaciones cruzadas con distintos
+  usuarios reales durante los próximos días — el fix está verificado por
+  lógica y por el toast de diagnóstico, pero conviene más uso real para
+  confirmarlo del todo.
+- Tintero de siempre, sin cambios: base de conocimiento de materiales,
+  Manual de uso, subida real de archivos a Storage, AFIP (aparte), mobile
+  (parcial), `credits_as_assigner` (columna muerta).
+- El canal `jobs-changes` podría tener el mismo riesgo de Realtime que
+  `notifications` tenía (¿está `jobs` en la publicación?) — no confirmado,
+  no se tocó, mencionado como posible próximo punto si se reporta que los
+  cambios de otros usuarios en Kanban/Dashboard no aparecen solos.
