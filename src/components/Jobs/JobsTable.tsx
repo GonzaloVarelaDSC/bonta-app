@@ -82,7 +82,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 <td className="px-2 py-2.5 whitespace-nowrap">
                   <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
                 </td>
-                <td className="px-2 py-2.5 text-ink-700 whitespace-nowrap">{client?.name}</td>
+                <td className="px-2 py-2.5 text-ink-700 max-w-[150px] truncate" title={client?.name}>{client?.name}</td>
                 <td className="px-2 py-2.5 text-ink-900 font-medium max-w-[260px] truncate">
                   {j.name}
                   {silent && <span className="ml-1.5 text-wait-text" title="Más de 48h sin movimiento">💤</span>}
