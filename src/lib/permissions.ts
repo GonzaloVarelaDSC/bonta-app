@@ -24,14 +24,16 @@ export function canViewHistorico(role: RoleId) { return role === 'admin'; }
 // alta un trabajo puede preparar un presupuesto (Gonzalo/Gastón incluidos,
 // para cargar el detalle técnico aunque no puedan poner el precio — ver abajo).
 export function canManageQuotes(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
-// Quién puede cargar/modificar el importe final: dueños (Pancho/Martín) y
-// administración (Richard/Nancy/Alejandra) — no diseño/producción (Gonzalo/
-// Gastón). No se hardcodean nombres/emails: se reusa `isProducer`, que ya
-// separa exactamente a ese mismo grupo del resto (ver CLAUDE.md §52) — más
-// `role` para que un futuro rol `produccion`/`instalacion` con `isProducer`
-// en falso tampoco quede habilitado por accidente.
+// Quién puede cargar/modificar el importe final (29/09, ver CLAUDE.md §55 —
+// ajusta la regla original de §52): dueños (Pancho/Martín), administración
+// (Richard/Nancy/Alejandra) y CUALQUIER admin, sea o no productor — Gonzalo
+// pidió poder cargarlo él también sin dejar de ser productor (sigue apareciendo
+// como Responsable / en "Carga de diseño"). Coordinador sigue necesitando
+// `!isProducer` (así Gastón, coordinador+productor, sigue afuera) — mismo
+// criterio de siempre, "admin = acceso total" ya vale para el resto de la app
+// (§18.5/§31.1), esto solo lo extiende acá. No se hardcodea ningún nombre/email.
 export function canSetQuoteValue(user: User) {
-  return (user.role === 'admin' || user.role === 'coordinador') && !user.isProducer;
+  return user.role === 'admin' || (user.role === 'coordinador' && !user.isProducer);
 }
 
 /** ¿Puede este usuario ver este trabajo? Admin/coordinador ven todo; el resto solo lo suyo. */

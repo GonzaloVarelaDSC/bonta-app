@@ -19,14 +19,15 @@ returns boolean as $$
     or exists (select 1 from job_assigned_users where job_id = target_job_id and user_id = auth.uid());
 $$ language sql stable security definer;
 
--- Presupuestos (22/09): quién puede cargar/modificar el importe final —
--- dueños y administración (is_producer = false), nunca diseño/producción.
--- Mismo criterio que lib/permissions.ts canSetQuoteValue, sin hardcodear
--- emails/nombres acá.
+-- Presupuestos (22/09, ajustado 29/09 — ver CLAUDE.md §55): quién puede
+-- cargar/modificar el importe final — dueños, administración, y cualquier
+-- admin sea o no productor (Gonzalo incluido); coordinador sigue necesitando
+-- is_producer = false (Gastón sigue afuera). Mismo criterio que
+-- lib/permissions.ts canSetQuoteValue, sin hardcodear emails/nombres acá.
 create or replace function can_set_quote_price()
 returns boolean as $$
   select coalesce(
-    (select role in ('admin','coordinador') and is_producer = false from profiles where id = auth.uid()),
+    (select role = 'admin' or (role = 'coordinador' and is_producer = false) from profiles where id = auth.uid()),
     false
   );
 $$ language sql stable security definer;

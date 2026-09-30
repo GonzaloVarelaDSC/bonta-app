@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 22/09/2026 (sección 54).
+la contradiga más arriba**. Última actualización: 30/09/2026 (sección 56).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4464,6 +4464,96 @@ de commitear):
 - Nada más del alcance de Presupuestos quedó abierto — con esto se cierran
   los 3 pasos que Gonzalo pidió por separado (sección/alta, exportación,
   conversión a trabajo).
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main`.
+
+---
+
+## 55. Actualización 30/09 — fix: columna Cliente de Trabajos truncada (tacho ya no requiere scroll)
+
+Gonzalo: en Trabajos, la columna Cliente quedaba muy ancha y el tacho de
+eliminar quedaba oculto, obligando a mover la barra de scroll horizontal
+hasta el final para encontrarlo — pese al fix de la sección 51 (`sticky
+right-0`), que ya lo pegaba al borde derecho del **área visible** de scroll
+pero no evitaba que hiciera falta scrollear si la tabla entera desbordaba
+mucho el ancho del viewport.
+
+**Causa:** a diferencia de la columna "Trabajo" (`max-w-[260px] truncate`),
+la celda de Cliente no tenía ningún límite de ancho — con
+`whitespace-nowrap` sin más, el nombre del cliente más largo estiraba toda
+la columna (y por lo tanto la tabla entera) sin límite.
+
+**Fix** (`Jobs/JobsTable.tsx`): la celda pasa a `max-w-[150px] truncate` +
+`title={client?.name}` (nombre completo visible al pasar el mouse). Con
+nombres de cliente reales el ahorro es suficiente para que, en un monitor de
+escritorio normal (1440px+), la tabla entre entera sin ningún scroll
+horizontal — verificado con clientes de nombre largo simulados
+("Constructora del Plata Sociedad Anónima") vía el bypass de auth local:
+a 1440px la tabla no desborda (`scrollWidth === clientWidth`); incluso a
+1280px, donde todavía sobran ~90px, el tacho sigue visible sin scrollear
+gracias al `sticky right-0` ya existente (`scrollLeft: 0` y el botón ya
+dentro del área visible del contenedor).
+
+`npm run build`/`npm run lint` limpios. Bypass de auth local revertido con
+Edit puntual, `git diff src/App.tsx` vacío antes de commitear.
+
+### Estado de git
+
+Commiteado y pusheado a `origin/main` (`2f7172c`).
+
+---
+
+## 56. Actualización 30/09 (cont.) — presupuestos: admin siempre puede cargar el precio, sea o no productor
+
+Gonzalo probó Presupuestos con su propia cuenta (admin + productor) y se
+encontró con que no podía cargar el valor — exactamente la regla que él
+mismo había pedido en la sección 52 ("solo dueños/administración sin
+producción", excluyendo a diseño/producción a propósito). Pidió una
+excepción **sin perder nada más** de lo que ya tiene siendo productor
+(seguir apareciendo como Responsable, en "Carga de diseño", etc.) — no una
+solución temporal vía SQL (que se le había ofrecido primero y rechazó
+explícitamente).
+
+**Ajuste de la regla** (reemplaza lo que decía §52 sobre esto):
+`canSetQuoteValue` — antes exigía `(admin o coordinador) Y no-productor`;
+ahora es `admin SIEMPRE, o coordinador no-productor`. En la práctica: Gonzalo
+(admin) queda habilitado sin tocar su `is_producer`; Gastón (coordinador +
+productor) sigue afuera, igual que antes; Pancho/Martín/Richard/Nancy/
+Alejandra no cambian (ya estaban adentro). Coherente con un criterio que ya
+regía para el resto de la app desde la sección 18 ("acceso total para
+dueños": admin ya puede editar/eliminar/lo que sea sin que `is_producer`
+importe) — esto solo lo extiende al valor del presupuesto, que hasta ahora
+era la única excepción. No se hardcodeó ningún email/nombre — sigue siendo
+puramente `role`/`is_producer`.
+
+**Código tocado, misma regla en las dos capas de siempre:**
+- `lib/permissions.ts`, `canSetQuoteValue`.
+- `supabase/002_policies.sql`, función `can_set_quote_price()` (el trigger
+  `trg_quotes_price_guard` que la usa no se tocó, solo la función).
+- **Migración nueva `024_quotes_price_admin_override.sql`** (solo un
+  `create or replace function`, sin cambio de esquema) — **hay que correrla
+  en Supabase.** `022_quotes.sql` (la migración original que creó la función
+  con la regla vieja) queda sin tocar a propósito, por convención del
+  proyecto — la versión nueva la reemplaza igual al correr 024 después.
+
+Verificado en vivo con el bypass de auth local (usuario admin + productor,
+igual que Gonzalo real): la sección "Valor del presupuesto" pasó de
+solo-lectura ("Solo dueños y administración pueden...") a mostrar el input
+de importe + segmentado IVA + botón "Guardar valor" editables. `npm run
+build`/`npm run lint` limpios. Bypass revertido con Edit puntual, `git diff
+src/App.tsx` vacío antes de commitear.
+
+### Pendiente
+
+Confirmar que Gonzalo corrió `024_quotes_price_admin_override.sql` en
+Supabase — sin eso, la UI ya deja ver el formulario de precio pero el
+`update` real sigue rechazado por el trigger viejo (`trg_quotes_price_guard`
+con la función sin actualizar), mismo patrón de siempre: no asumir aplicado
+sin confirmar. Verificación rápida después de correrla: cargar un valor
+real en un presupuesto con la cuenta de Gonzalo no debería tirar "Tu rol no
+tiene permiso para cargar el valor del presupuesto."
 
 ### Estado de git
 
