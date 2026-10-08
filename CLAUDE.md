@@ -4683,10 +4683,10 @@ las migraciones y pendientes.
 - **022_quotes.sql y 023_quote_job_conversion.sql:** Gonzalo confirmó en el chat
   ("ya están ambos SQL") — Presupuestos y su conversión a trabajo funcionan en
   producción.
-- **024_quotes_price_admin_override.sql:** se le dio el SQL literal para correr;
-  **no hay confirmación explícita** de que lo corrió. Verificación: cargar un
-  valor en un presupuesto con la cuenta de Gonzalo — no debe tirar "Tu rol no
-  tiene permiso para cargar el valor del presupuesto."
+- **024_quotes_price_admin_override.sql:** Gonzalo confirmó que lo corrió
+  (07/10, ya con el cierre de sesión hecho). Falta solo ver en uso real que
+  cargar un valor con su cuenta no tire "Tu rol no tiene permiso para cargar el
+  valor del presupuesto."
 - **025_activity_log_status_flags.sql:** Gonzalo confirmó que lo corrió. Falta
   **probar el aviso flotante de punta a punta con dos cuentas reales** (nunca se
   pudo desde acá: no hay login de otra persona). Verificación de publicación:
@@ -4706,7 +4706,7 @@ reportarlo.
 
 ### Pendientes / tintero vigentes
 
-- Probar el aviso flotante con dos usuarios reales (ver arriba) y confirmar 024.
+- Probar el aviso flotante con dos usuarios reales (ver arriba). 024 ya está corrida.
 - Tintero de siempre sin cambios: base de conocimiento de materiales (próximo
   gran tema, conviene chat nuevo), Manual de uso, subida real de archivos a
   Storage, mobile (relevado parcialmente, §27), AFIP (proyecto aparte, §28),
