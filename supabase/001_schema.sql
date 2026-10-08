@@ -171,6 +171,9 @@ create table if not exists activity_log (
   user_id uuid not null references profiles(id),
   action text not null,
   detail text not null,
+  -- Solo en action = 'estado': de dónde a dónde (ver 025) — alimenta el aviso flotante.
+  from_status text,
+  to_status text,
   created_at timestamptz not null default now()
 );
 
@@ -268,3 +271,15 @@ alter table jobs add column if not exists source_quote_id uuid references quotes
 alter table quotes add column if not exists converted_job_id uuid references jobs(id);
 create index if not exists idx_jobs_source_quote on jobs(source_quote_id);
 create index if not exists idx_quotes_converted_job on quotes(converted_job_id);
+
+-- Realtime para el aviso flotante de cambio de estado (07/10, ver 025) — mismo
+-- motivo que `notifications` más arriba: sin esto el canal nunca recibe nada.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'activity_log'
+  ) then
+    alter publication supabase_realtime add table activity_log;
+  end if;
+end $$;

@@ -62,6 +62,12 @@ export default {
         card: '0 1px 2px rgba(15,23,32,0.06), 0 1px 1px rgba(15,23,32,0.04)',
         pop: '0 12px 32px rgba(15,23,32,0.16), 0 2px 8px rgba(15,23,32,0.08)',
       },
+      // Entrada sobria del aviso flotante de cambio de estado — apenas un fade con
+      // 6px de desplazamiento, sin rebote (se usa con `motion-safe:`).
+      keyframes: {
+        'flag-in': { from: { opacity: '0', transform: 'translateY(-6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+      },
+      animation: { 'flag-in': 'flag-in 180ms ease-out' },
     },
   },
   plugins: [],

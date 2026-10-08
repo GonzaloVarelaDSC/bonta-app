@@ -316,3 +316,16 @@ export interface Quote {
   // a convertir — ver CLAUDE.md, conversión Presupuesto → Trabajo).
   convertedJobId: string | null;
 }
+
+// Aviso flotante de "otro usuario cambió el estado de un trabajo" (07/10) —
+// deliberadamente separado de `Notification` (la campana): no se persiste por
+// usuario ni se guarda en `notifications`, vive solo en memoria de la sesión.
+export interface StatusFlag {
+  id: string; // id de la fila de activity_log que lo originó
+  jobId: string;
+  jobName: string;
+  from: JobStatus;
+  to: JobStatus;
+  userName: string;
+  at: string;
+}

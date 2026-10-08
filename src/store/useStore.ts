@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type {
   User, Job, Comment, ActivityLogEntry, Notification, Priority, JobStatus,
-  BlockReason, JobType, Material, Quote, QuoteItem, QuoteStatus,
+  BlockReason, JobType, Material, Quote, QuoteItem, QuoteStatus, StatusFlag,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
@@ -48,9 +48,15 @@ interface StoreState {
   // Último aviso para mostrar como toast (una ficha nueva que cayó, una
   // asignación, etc.). Lo pinta AppLayout y se limpia solo.
   toast: string | null;
+  // Avisos flotantes de cambios de estado hechos por OTROS usuarios (el más
+  // reciente primero). Mecanismo aparte de `notifications` (la campana) y de
+  // `toast` — ver StatusFlag en types/index.ts.
+  statusFlags: StatusFlag[];
 
   init: () => Promise<void>;
   clearToast: () => void;
+  dismissStatusFlag: (id: string) => void;
+  dismissAllStatusFlags: () => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 
@@ -151,9 +157,20 @@ function quoteItemToProduct(item: QuoteItem): Job['products'][number] {
 // seguro en los 17 lugares que lo llaman.
 async function insertActivity(
   set: (fn: (s: StoreState) => Partial<StoreState>) => void,
-  jobId: string, userId: string, action: string, detail: string
+  jobId: string, userId: string, action: string, detail: string,
+  // Solo para cambios de estado: de dónde a dónde. Es lo que dispara el aviso
+  // flotante en las pantallas de los demás usuarios (ver canal 'status-flags').
+  statusChange?: { from: JobStatus; to: JobStatus }
 ): Promise<ActivityLogEntry | null> {
-  const { data, error } = await supabase.from('activity_log').insert({ job_id: jobId, user_id: userId, action, detail }).select().single();
+  const base: Record<string, unknown> = { job_id: jobId, user_id: userId, action, detail };
+  let { data, error } = await supabase.from('activity_log')
+    .insert(statusChange ? { ...base, from_status: statusChange.from, to_status: statusChange.to } : base)
+    .select().single();
+  if (error && statusChange) {
+    // Si todavía no se corrió la migración 025 (columnas from_status/to_status),
+    // no perder el renglón del historial: reintenta sin los datos del aviso.
+    ({ data, error } = await supabase.from('activity_log').insert(base).select().single());
+  }
   if (error) {
     console.error('[historial] no se pudo registrar, se ignora y la acción principal sigue:', error);
     useStore.setState({ toast: `No se pudo registrar en el historial (${friendlyError(error)})` });
@@ -209,8 +226,11 @@ export const useStore = create<StoreState>()((set, get) => ({
   quotes: [],
   quotesLoaded: false,
   toast: null,
+  statusFlags: [],
 
   clearToast: () => set(() => ({ toast: null })),
+  dismissStatusFlag: (id) => set((s) => ({ statusFlags: s.statusFlags.filter((f) => f.id !== id) })),
+  dismissAllStatusFlags: () => set(() => ({ statusFlags: [] })),
 
   init: async () => {
     // En dev, React StrictMode invoca el efecto de init() dos veces — sin este
@@ -259,7 +279,37 @@ export const useStore = create<StoreState>()((set, get) => ({
       })
       .subscribe();
 
-    // Red de contención del canal de arriba: el broadcast de `postgres_changes`
+    // Aviso flotante cuando OTRA persona cambia el estado de un trabajo (07/10).
+    // Escucha las filas de `activity_log` de tipo 'estado' (las que ya inserta
+    // `setStatus` para el Historial) — RLS (`can_view_job`) ya limita qué trabajos
+    // le llegan a cada usuario, y la propia fila trae `user_id` del autor, que se
+    // descarta si soy yo. No toca `notifications` (la campana).
+    supabase
+      .channel('status-flags')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, async (payload) => {
+        const row = payload.new as any;
+        const me = get().currentUser;
+        if (!row || !me || row.action !== 'estado' || !row.from_status || !row.to_status) return;
+        if (row.user_id === me.id) return;
+        if (get().statusFlags.some((f) => f.id === row.id)) return;
+        try {
+          const job = get().jobs.find((j) => j.id === row.job_id) ?? (await fetchJobById(row.job_id));
+          if (!job || job.deletedAt) return;
+          const author = get().users.find((u) => u.id === row.user_id);
+          const flag: StatusFlag = {
+            id: row.id, jobId: job.id, jobName: job.name,
+            from: row.from_status, to: row.to_status,
+            userName: author ? author.name.split(' ')[0] : 'Alguien',
+            at: row.created_at,
+          };
+          set((s) => (s.statusFlags.some((f) => f.id === flag.id) ? {} : { statusFlags: [flag, ...s.statusFlags].slice(0, 50) }));
+        } catch (err) {
+          console.warn('[avisos de estado] no se pudo armar el aviso, se ignora:', err);
+        }
+      })
+      .subscribe();
+
+    // Red de contención del canal `my-notifications`: el broadcast de `postgres_changes`
     // depende de que la tabla `notifications` esté agregada a la publicación
     // `supabase_realtime` en Supabase (Database → Replication) — un paso manual
     // que no queda garantizado por las migraciones de este repo (no hay forma de
@@ -293,7 +343,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false });
+    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [] });
   },
 
   // Busca un cliente por nombre (tal cual está tipeado, sin distinguir mayúsculas/espacios)
@@ -429,7 +479,10 @@ export const useStore = create<StoreState>()((set, get) => ({
       if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;
     }
-    await insertActivity(set, jobId, byUserId, 'estado', `Cambió el estado a ${status}.`);
+    await insertActivity(
+      set, jobId, byUserId, 'estado', `Cambió el estado a ${status}.`,
+      before && before.status !== status ? { from: before.status, to: status } : undefined
+    );
     if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)} pasó a ${status}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);

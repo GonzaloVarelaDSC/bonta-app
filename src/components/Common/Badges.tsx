@@ -110,6 +110,11 @@ export function StatusBadge({ status }: { status: JobStatus }) {
   );
 }
 
+/** Barra vertical de acento con el color del estado — mismos tonos que StatusBadge, para tarjetas que marcan un estado sin ser un badge. */
+export function StatusAccent({ status, className }: { status: JobStatus; className?: string }) {
+  return <span aria-hidden className={clsx('block w-1 rounded-full', STATUS_DOT_CLASSES[statusTone(status)], className)} />;
+}
+
 /** Select de prioridad con los mismos colores que PriorityBadge — para cambiar la
  *  prioridad desde la lista sin abrir la ficha, sin que la fecha limite la opción
  *  (un trabajo a 10 días puede ser crítico igual si es muy grande). */

@@ -4,6 +4,7 @@ import { Bell, X, AlertTriangle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { StatusFlags } from './StatusFlags';
 
 // AUDITORIA_UXUI_2026-09-15.md, ítem #4: loadError/dataLoading existían en el
 // store pero ningún componente los leía — si fallaba la carga inicial (boot o
@@ -88,6 +89,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <StatusFlags />
       <Toast />
     </div>
   );

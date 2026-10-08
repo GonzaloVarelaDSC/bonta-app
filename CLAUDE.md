@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 30/09/2026 (sección 56).
+la contradiga más arriba**. Última actualización: 07/10/2026 (sección 57).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4558,3 +4558,61 @@ tiene permiso para cargar el valor del presupuesto."
 ### Estado de git
 
 Commiteado y pusheado a `origin/main`.
+
+---
+
+## 57. Actualización 07/10 — aviso flotante de "otro usuario cambió el estado de un trabajo"
+
+Capa de comunicación nueva, **separada a propósito de la campana**
+(`notifications`, que no se tocó) y del `Toast` de una línea de AppLayout:
+cuando OTRA persona cambia el **estado** de un trabajo, a los demás usuarios
+conectados les aparece una tarjeta flotante con nombre del trabajo (lo más
+grande), `estado anterior → estado nuevo`, quién y a qué hora. Solo cambio de
+estado — descripción, medidas, comentarios, archivos, asignaciones o
+prioridad no lo disparan.
+
+**Cómo funciona (reusa lo que ya existía, sin tabla ni sistema nuevo):**
+- `setStatus` ya insertaba un renglón `action = 'estado'` en `activity_log`
+  (el Historial). Ahora ese insert suma `from_status`/`to_status`
+  (`insertActivity` recibe un 6º parámetro opcional `statusChange`). Es el
+  único lugar del código que escribe `'estado'`, así que cualquier cambio de
+  estado (select, Kanban, ficha, cancelar) pasa por ahí.
+- Canal Realtime nuevo `status-flags` en `init()` (`useStore.ts`) escucha
+  `INSERT` en `activity_log`. Si `action === 'estado'` y **`user_id` ≠ yo**,
+  arma un `StatusFlag` y lo prepende a `statusFlags` (estado en memoria, tope
+  50, sin persistencia — si se recarga la página se pierden).
+- **Quién lo ve:** lo decide la policy `activity_log_select`
+  (`can_view_job`) — Realtime respeta RLS, así que se aplica la misma regla de
+  visibilidad que ya rige para trabajos; no se creó ninguna matriz nueva.
+- **El autor no recibe el suyo:** se descarta en el handler comparando
+  `row.user_id` con el usuario actual (también vale para otra pestaña propia).
+- **No va a la campana:** no se inserta nada en `notifications`; la campana
+  (`setStatus` ya notificaba a responsable/asignados) quedó idéntica.
+
+**UI** — `Layout/StatusFlags.tsx` (nuevo, montado en `AppLayout`): `fixed`
+arriba a la derecha bajo el Header (no empuja layout, z-20 por debajo de los
+menús del Header y del drawer mobile). Tarjeta blanca `shadow-pop`, barra de
+acento con el color del estado nuevo (`StatusAccent`, nuevo en `Badges.tsx`,
+mismos tonos que `StatusBadge`), etiqueta chica "Cambio de estado", nombre del
+trabajo en `font-display`, estado anterior en gris → `StatusBadge` del nuevo,
+"Nombre · HH:mm". **No se cierra solo.** × cierra uno; click en el cuerpo abre
+`/trabajos/:id` (no lo cierra: la regla es "se cierra con ×"). Se apilan con
+el más reciente arriba, máx. 4 visibles + fila "+N avisos más · Cerrar todos";
+al cerrar uno aparece el siguiente guardado. Entrada con fade de 180ms
+(`animate-flag-in`, solo con `motion-safe`, keyframe en `tailwind.config.js`).
+`role="region"` + botones con `aria-label` completo.
+
+**Migración `025_activity_log_status_flags.sql` — hay que correrla en
+Supabase** (agrega las 2 columnas y publica `activity_log` en
+`supabase_realtime`, mismo paso que 021 para `notifications`). También
+mergeada en `001_schema.sql`. Sin la migración: la app NO se rompe (si el
+insert con `from_status/to_status` falla, `insertActivity` reintenta sin esas
+columnas y el Historial se registra igual) — simplemente no llega ningún
+aviso. Verificación: `select tablename from pg_publication_tables where
+pubname = 'supabase_realtime';` debe listar `activity_log`.
+
+Verificado en vivo con el bypass de auth local sembrando 6 avisos: 4 visibles
++ "+2 avisos más", cerrar uno sube el siguiente (queda "+1"), click abre la
+ficha. NO se pudo probar el camino real (dos cuentas + Realtime) desde acá —
+Gonzalo tiene que probarlo con dos usuarios reales después de correr la
+migración. `npm run build`/`npm run lint` limpios (mismo warning preexistente).
