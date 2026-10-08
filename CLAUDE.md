@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 07/10/2026 (sección 58).
+la contradiga más arriba**. Última actualización: 07/10/2026 (sección 59).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4644,3 +4644,95 @@ link fijo "Volver a Trabajos" para no mandar a una pantalla en blanco/otro sitio
 Dashboard → ficha → "Volver" regresa a `/`; ficha abierta directo muestra
 "Volver a Trabajos" con `href="/trabajos"`. Bypass revertido, `git diff
 src/App.tsx` vacío antes de commitear. Build/lint limpios.
+
+---
+
+## 59. Cierre de sesión 07/10 — resumen consolidado para quien retome (cambio de chat)
+
+Esta sesión cubrió §52–§58 (Presupuestos completo, columna Cliente, permiso de
+precio, aviso flotante, ajuste de la campana, "Volver"). Acá queda lo que **no**
+estaba escrito en ningún otro lado: decisiones tomadas en el chat, estado real de
+las migraciones y pendientes.
+
+### Decisiones tomadas en el chat (cerradas, no reabrir sin que Gonzalo lo pida)
+
+1. **Confirmar presupuesto sigue pidiendo los 3 datos en el mismo modal** (tipo de
+   trabajo, fecha de entrega, responsable) — Gonzalo eligió explícitamente **A1 + B1**
+   frente a la idea de pedir solo la fecha y completar el resto después. Es lo que
+   ya está construido (§54), no hay nada que cambiar. Motivo de fondo (por si
+   vuelve a plantearlo): `jobs.job_type_id`/`committed_date`/`responsible_user_id`
+   son NOT NULL, y hoy **no existe ninguna UI para editar el tipo de trabajo ni
+   para reasignar el responsable de un trabajo ya creado** (`assignJob` está en el
+   store sin ningún call site, ver §45.2) — pedir menos al confirmar obligaría a
+   construir primero esas dos ediciones. Además "Responsable" solo admite
+   productores (`isProducer`, hoy Gonzalo y Gastón), así que defaultearlo a "quien
+   confirma" rompería esa convención cuando confirma Pancho/Martín/coordinadores.
+2. **Admin carga el precio de un presupuesto siempre** (§56), Gastón (coordinador +
+   productor) no. Sin hardcodear nombres.
+3. **"Nueva ficha" ya no le llega a los admins ajenos al trabajo** (§57, ajuste):
+   la campana de una asignación es solo del asignado. Reponerlo es una decisión
+   explícita de Gonzalo, no un olvido.
+4. **El aviso flotante de cambio de estado es mecanismo aparte de la campana** (§57)
+   y **no se cierra solo**; click en el cuerpo abre la ficha pero no lo cierra.
+5. **"Volver" en la ficha usa `navigate(-1)`** (§58); solo cae a "Volver a
+   Trabajos" si la ficha se abrió sin historial en la app.
+
+### Estado de las migraciones al 07/10 (verificar siempre con SELECT antes de asumir)
+
+- **001–021:** aplicadas (ver §21, §27, §49 y confirmaciones posteriores).
+- **022_quotes.sql y 023_quote_job_conversion.sql:** Gonzalo confirmó en el chat
+  ("ya están ambos SQL") — Presupuestos y su conversión a trabajo funcionan en
+  producción.
+- **024_quotes_price_admin_override.sql:** se le dio el SQL literal para correr;
+  **no hay confirmación explícita** de que lo corrió. Verificación: cargar un
+  valor en un presupuesto con la cuenta de Gonzalo — no debe tirar "Tu rol no
+  tiene permiso para cargar el valor del presupuesto."
+- **025_activity_log_status_flags.sql:** Gonzalo confirmó que lo corrió. Falta
+  **probar el aviso flotante de punta a punta con dos cuentas reales** (nunca se
+  pudo desde acá: no hay login de otra persona). Verificación de publicación:
+  `select tablename from pg_publication_tables where pubname = 'supabase_realtime';`
+  debe listar `notifications` y `activity_log`.
+
+### Diagnóstico sin cambio de código: "Martín no veía Presupuestos"
+
+El gate del Sidebar y de las rutas es `canManageQuotes(role)` (admin/coordinador),
+sin casos especiales por persona; no hay bug de código. Causas probables, en
+orden: (a) pestaña vieja abierta de antes del deploy → recarga fuerte
+(Ctrl+Shift+R) o cerrar y reabrir; (b) su `role` en `profiles` no es `admin`
+(ya pasó con Richard, §38) → `select name, email, role, is_producer from profiles
+where email in ('martin@estudiobonta.com.ar','panchobonta@gmail.com');` debe dar
+`admin` los dos. **No se supo cuál fue la causa real** — Gonzalo no volvió a
+reportarlo.
+
+### Pendientes / tintero vigentes
+
+- Probar el aviso flotante con dos usuarios reales (ver arriba) y confirmar 024.
+- Tintero de siempre sin cambios: base de conocimiento de materiales (próximo
+  gran tema, conviene chat nuevo), Manual de uso, subida real de archivos a
+  Storage, mobile (relevado parcialmente, §27), AFIP (proyecto aparte, §28),
+  `credits_as_assigner` (columna muerta), fix de `handle_new_user()`.
+- Si en algún momento se quiere poder reasignar responsable / editar tipo de
+  trabajo desde la ficha: es feature nueva (ver decisión 1) y habilitaría el
+  confirmar presupuesto con menos campos.
+- Conversión inversa trabajo → presupuesto, eliminar/archivar presupuestos: no
+  pedidos, no existen.
+- `jobs-changes` (Realtime de `jobs`): sigue sin confirmarse si `jobs` está en la
+  publicación `supabase_realtime` (§49/§51) — revisar solo si se reporta que los
+  cambios de otros no aparecen solos en Kanban/Dashboard.
+
+### Técnicas y gotchas de esta sesión (para no redescubrirlos)
+
+- **Bypass de auth local** (`?devpreview=1` + `useStore.setState` en `App.tsx`,
+  nunca commiteado): se usó en todas las rondas; revertir **siempre con Edit
+  puntual**, nunca `git checkout -- src/App.tsx`, y confirmar `git diff --stat
+  src/App.tsx` vacío antes de commitear. `resize_window` con `preset: 'desktop'`
+  **borra** el tamaño custom — para fijar un ancho pasar solo `width`/`height`.
+- Los diálogos nativos (`alert`) están deshabilitados en el navegador integrado:
+  el mensaje aparece en `read_console_messages` como "Page dialog suppressed".
+- Un `.select()` encadenado a un `insert` o `update` también pasa por la policy
+  de SELECT (§50) — usarlo en `quotes` es seguro (policy no depende del usuario),
+  en `notifications` no.
+- Commits de esta sesión: `7dc9788` (conversión presupuesto→trabajo), `2f7172c`
+  (columna Cliente), `b85e94f` (admin carga precio), `9f670bd` (aviso flotante),
+  `8c14474` (campana de asignación), `074700d` (Volver). Todo pusheado a
+  `origin/main`.

@@ -26,7 +26,7 @@ npm run preview
 
 ## Qué incluye esta Fase 1
 
-(Actualizado 22/09/2026 — para el detalle ronda a ronda de todo lo que cambió desde el diseño original, ver `CLAUDE.md`, que es la fuente de verdad viva de este proyecto.)
+(Actualizado 07/10/2026 — para el detalle ronda a ronda de todo lo que cambió desde el diseño original, ver `CLAUDE.md`, que es la fuente de verdad viva de este proyecto.)
 
 - Login real con Supabase Auth (email + contraseña, recuperación por mail) y roles (Admin, Coordinador, Diseño, Producción, Instalación) con permisos aplicados tanto en la interfaz como en la base de datos (Row Level Security + un trigger que protege los campos que solo Coordinador/Admin pueden tocar).
 - Alta de trabajo con **Carga rápida** (una sola pantalla, no un wizard multi-paso — se sacó el wizard original) con detección de información faltante que avisa pero no bloquea.
@@ -37,6 +37,8 @@ npm run preview
 - Ficha de trabajo completa: general (con resumen de "minuta técnica"), detalle (productos/materiales/medidas), control de calidad (recordatorio, no bloqueo), archivos versionados con aprobación, instalación, historial y comentarios con `@menciones` (autocompletado por ID real + menciones por sector/rol).
 - Sistema de bloqueos con motivo obligatorio, y "muestra al cliente" (sin muestra / en producción / enviada, falta OK / aprobada) para trabajos que necesitan aprobación de una prueba antes de producir todo.
 - **Notificaciones in-app reales** (campana en el header): te avisa cuando te asignan un trabajo o te mencionan en un comentario, con actualización en vivo (Supabase Realtime, con un polling de respaldo cada 30s) y marcado de leído/no leído.
+- **Aviso flotante de cambio de estado**: cuando otra persona cambia el estado de un trabajo, a los demás usuarios les aparece una tarjeta apilable (trabajo, estado anterior → nuevo, quién, hora) que no se cierra sola. Es un mecanismo aparte de la campana, no la reemplaza (Realtime sobre el historial de actividad).
+- **Presupuestos** (sección "Ventas", solo admin/coordinador): posibles trabajos que el cliente todavía no confirmó, separados de Trabajos — código interno propio (`PRE-AAAA-NNNNN`, nunca un N° de Copernico), ítems con medidas/unidad/material, valor con IVA incluido o + IVA (lo carga solo un admin, o un coordinador no productor), hoja para imprimir/guardar como PDF (solo con precio cargado) y botón "Confirmar presupuesto", que genera el trabajo real en Pendientes, vinculado en las dos direcciones.
 - Dashboard con KPIs clickeables (escopeados a A mí/Por mí/Todos), widget de carga de diseño por productor, y detección de "trabajos silenciosos" (sin movimiento en 48h).
 - Sección Histórico (solo admin) para consultar/restaurar trabajos archivados o eliminados.
 - Actualización en vivo de trabajos: un cambio que hace un compañero aparece solo, sin recargar (suscripción realtime de Supabase).
@@ -53,7 +55,7 @@ src/
   lib/          Lógica de negocio pura: prioridad, riesgo, fechas, permisos, selectores,
                 cliente de Supabase, mapeo de filas de la base al modelo de la app
   store/        Estado de la aplicación (Zustand) — todas las llamadas a Supabase viven acá
-  components/   UI, organizada por sección (Layout, Dashboard, Jobs, Kanban, JobDetail, QuickJob, Users, Historico, Auth)
+  components/   UI, organizada por sección (Layout, Dashboard, Jobs, Kanban, JobDetail, QuickJob, Quotes, Users, Historico, Auth)
 supabase/       Migraciones SQL (esquema, políticas RLS, catálogos, datos de prueba) — ver README ahí
 ```
 
