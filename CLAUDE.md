@@ -4616,3 +4616,14 @@ Verificado en vivo con el bypass de auth local sembrando 6 avisos: 4 visibles
 ficha. NO se pudo probar el camino real (dos cuentas + Realtime) desde acá —
 Gonzalo tiene que probarlo con dos usuarios reales después de correr la
 migración. `npm run build`/`npm run lint` limpios (mismo warning preexistente).
+
+### Ajuste 07/10 — "Nueva ficha" ya no le llega a los admins ajenos al trabajo
+
+Gonzalo: Martín le asignó un trabajo a Gastón y la campana se lo mostró a él
+(Gonzalo). Causa: `createJob` mandaba además un aviso genérico "Nueva ficha:
+..." a TODOS los admins que no fueran responsable/asignado (pedido original de
+§18.9, 07/09). Se sacó ese segundo envío (`useStore.ts`, `createJob`): ahora la
+campana de la asignación (`Te asignaron el trabajo "X".`) le llega solo al
+responsable y a los asignados, nunca al que la carga. Si en algún momento los
+dueños quieren volver a enterarse de toda ficha nueva, es reponer ese bloque
+(y conviene darle un texto que no se confunda con una asignación).

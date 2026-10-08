@@ -438,14 +438,12 @@ export const useStore = create<StoreState>()((set, get) => ({
     // reasignar después, ver `assignJob` sin call sites), así que este es "el
     // evento real de asignación". Texto explícito ("Te asignaron...") en vez del
     // genérico "Nueva ficha" que tenía antes, para que quede claro que es una
-    // asignación y no solo un aviso de que algo se cargó. Los admins que no son
-    // responsables ni asignados siguen recibiendo el aviso genérico de "Nueva
-    // ficha" (les interesa saber qué entró, pero no es trabajo suyo).
+    // asignación y no solo un aviso de que algo se cargó. Solo le llega a quien
+    // quedó asignado — desde el 07/10 los admins que no son responsables ni
+    // asignados YA NO reciben el aviso genérico "Nueva ficha" (Gonzalo: si Martín
+    // le asigna un trabajo a Gastón, la campana es de Gastón, no de los demás).
     const assignedRecipients = [...new Set([input.responsibleUserId, ...input.assignedUserIds])].filter((id) => id && id !== actorId);
     await insertNotifications(assignedRecipients, jobId, `Te asignaron el trabajo "${input.name}".`);
-    const owners = get().users.filter((u) => u.active && u.role === 'admin').map((u) => u.id);
-    const ownerOnlyRecipients = owners.filter((id) => id !== actorId && !assignedRecipients.includes(id));
-    await insertNotifications(ownerOnlyRecipients, jobId, `Nueva ficha: "${input.name}".`);
 
     const job = await fetchJobById(jobId);
     if (!job) throw new Error('No se pudo leer el trabajo recién creado.');
