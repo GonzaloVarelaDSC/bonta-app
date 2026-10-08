@@ -73,7 +73,7 @@ export function StatusFlags() {
             >
               <span className="block text-base font-display font-bold text-ink-900 leading-snug line-clamp-2 break-words">{f.jobName}</span>
               <span className="flex items-center gap-2 flex-wrap mt-2">
-                <span className="text-xs text-ink-700 line-through decoration-ink-300">{STATUS_LABELS[f.from]}</span>
+                <span className="text-xs text-ink-700">{STATUS_LABELS[f.from]}</span>
                 <ArrowRight size={14} className="text-ink-700 shrink-0" aria-hidden />
                 <StatusBadge status={f.to} />
               </span>

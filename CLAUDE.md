@@ -4752,7 +4752,7 @@ recuadro más para darle más entidad y visibilidad". `Layout/StatusFlags.tsx`:
 - **Más entidad:** tarjeta `max-w-sm` (antes `xs`) con **cabecera teñida con el
   color del estado nuevo** (ícono + "CAMBIO DE ESTADO" + hora + ×), nombre del
   trabajo en `text-base` (2 líneas máx.), "estado anterior → badge nuevo", y un
-  pie separado por línea con "Por {usuario}" y "Ver ficha →". Borde + `shadow-pop`
+  pie separado por línea con "Por {usuario}" y "Ver ficha →". El estado anterior va en gris plano, sin tachar (se probó tachado y Gonzalo pidió sacarlo: "conflictúa la lectura"). Borde + `shadow-pop`
   + ring sutil. Sigue sin cerrarse solo; click en el cuerpo abre la ficha.
 - `StatusAccent` (barra vertical) se reemplazó por `statusSurfaceClasses(status)`
   en `Badges.tsx` (mismas clases borde/fondo/texto que `StatusBadge`).
