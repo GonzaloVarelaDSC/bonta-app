@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
@@ -54,6 +54,10 @@ export function JobDetailPage() {
   const loadJobComments = useStore((s) => s.loadJobComments);
   const loadJobActivity = useStore((s) => s.loadJobActivity);
   const [restoring, setRestoring] = useState(false);
+  const navigate = useNavigate();
+  // `key === 'default'` = esta es la primera pantalla de la sesión (link directo,
+  // recarga, pestaña nueva): no hay "atrás" dentro de la app a donde volver.
+  const canGoBack = useLocation().key !== 'default';
 
   const [tab, setTab] = useState<(typeof TABS)[number]>('General');
   const [showBlock, setShowBlock] = useState(false);
@@ -85,9 +89,18 @@ export function JobDetailPage() {
       <div className="flex-1 min-w-0 overflow-y-auto">
         {/* Cabecera fija */}
         <div className="sticky top-0 z-10 bg-white border-b border-ink-100 px-6 py-4">
-          <Link to="/trabajos" className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-            <ArrowLeft size={13} aria-hidden /> Volver a Trabajos
-          </Link>
+          {/* Vuelve a la pantalla de la que se vino (Dashboard, Kanban, Trabajos,
+              Histórico...), no siempre a Trabajos. Solo si se abrió la ficha
+              directo (sin historial en la app) cae a la lista de Trabajos. */}
+          {canGoBack ? (
+            <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+              <ArrowLeft size={13} aria-hidden /> Volver
+            </button>
+          ) : (
+            <Link to="/trabajos" className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+              <ArrowLeft size={13} aria-hidden /> Volver a Trabajos
+            </Link>
+          )}
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">

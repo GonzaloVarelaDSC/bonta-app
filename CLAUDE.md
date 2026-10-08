@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 07/10/2026 (sección 57).
+la contradiga más arriba**. Última actualización: 07/10/2026 (sección 58).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4627,3 +4627,20 @@ campana de la asignación (`Te asignaron el trabajo "X".`) le llega solo al
 responsable y a los asignados, nunca al que la carga. Si en algún momento los
 dueños quieren volver a enterarse de toda ficha nueva, es reponer ese bloque
 (y conviene darle un texto que no se confunda con una asignación).
+
+---
+
+## 58. Actualización 07/10 (cont.) — "Volver" en la ficha vuelve a donde se vino, no siempre a Trabajos
+
+Gonzalo: entraba a una ficha desde el Dashboard y el botón decía "Volver a
+Trabajos" y lo mandaba a Trabajos (§19.1 lo había dejado fijo a `/trabajos` a
+propósito, a pedido de esa ronda). Ahora (`JobDetailPage.tsx`): si hay historial
+dentro de la app (`useLocation().key !== 'default'`) el botón es **"Volver"** y
+hace `navigate(-1)` — vuelve al Dashboard, Kanban, Trabajos, Histórico, la
+ficha del presupuesto, etc., según de dónde se vino. Si la ficha se abrió directo
+(link, recarga, pestaña nueva — no hay "atrás" dentro de la app) cae al viejo
+link fijo "Volver a Trabajos" para no mandar a una pantalla en blanco/otro sitio.
+**Reemplaza lo dicho en §19.1.** Verificado en vivo (bypass de auth local):
+Dashboard → ficha → "Volver" regresa a `/`; ficha abierta directo muestra
+"Volver a Trabajos" con `href="/trabajos"`. Bypass revertido, `git diff
+src/App.tsx` vacío antes de commitear. Build/lint limpios.
