@@ -65,7 +65,7 @@ export default {
       // Entrada sobria del aviso flotante de cambio de estado — apenas un fade con
       // 6px de desplazamiento, sin rebote (se usa con `motion-safe:`).
       keyframes: {
-        'flag-in': { from: { opacity: '0', transform: 'translateY(-6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        'flag-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
       },
       animation: { 'flag-in': 'flag-in 180ms ease-out' },
     },

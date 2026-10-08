@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 07/10/2026 (sección 59).
+la contradiga más arriba**. Última actualización: 07/10/2026 (sección 60).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4736,3 +4736,28 @@ reportarlo.
   (columna Cliente), `b85e94f` (admin carga precio), `9f670bd` (aviso flotante),
   `8c14474` (campana de asignación), `074700d` (Volver). Todo pusheado a
   `origin/main`.
+
+---
+
+## 60. Actualización 07/10 — aviso flotante de cambio de estado: abajo a la derecha y con más entidad
+
+Gonzalo probó el aviso de §57 y lo prefirió **abajo a la derecha** y con "algún
+recuadro más para darle más entidad y visibilidad". `Layout/StatusFlags.tsx`:
+
+- **Posición:** `fixed bottom-4 right-4` (antes arriba, bajo el Header). Si hay
+  un `Toast` abierto (mismo rincón, z-50), la pila sube a `bottom-24` para no
+  quedar tapada. Pila con el más reciente arriba; la fila "+N avisos más ·
+  Cerrar todos" pasa arriba de todo. La animación de entrada ahora sube desde
+  abajo (`flag-in` en `tailwind.config.js`).
+- **Más entidad:** tarjeta `max-w-sm` (antes `xs`) con **cabecera teñida con el
+  color del estado nuevo** (ícono + "CAMBIO DE ESTADO" + hora + ×), nombre del
+  trabajo en `text-base` (2 líneas máx.), "estado anterior → badge nuevo", y un
+  pie separado por línea con "Por {usuario}" y "Ver ficha →". Borde + `shadow-pop`
+  + ring sutil. Sigue sin cerrarse solo; click en el cuerpo abre la ficha.
+- `StatusAccent` (barra vertical) se reemplazó por `statusSurfaceClasses(status)`
+  en `Badges.tsx` (mismas clases borde/fondo/texto que `StatusBadge`).
+
+Verificado en vivo con el bypass de auth local (2 avisos + toast abierto, se
+ven apilados sin superponerse). Bypass revertido, build/lint limpios. Para no
+chocar con el dev server de otro chat se levantó uno temporal en el puerto 5179
+(config agregada y revertida en `.claude/launch.json`).

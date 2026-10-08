@@ -110,9 +110,9 @@ export function StatusBadge({ status }: { status: JobStatus }) {
   );
 }
 
-/** Barra vertical de acento con el color del estado — mismos tonos que StatusBadge, para tarjetas que marcan un estado sin ser un badge. */
-export function StatusAccent({ status, className }: { status: JobStatus; className?: string }) {
-  return <span aria-hidden className={clsx('block w-1 rounded-full', STATUS_DOT_CLASSES[statusTone(status)], className)} />;
+/** Clases de superficie (borde + fondo + texto) del tono de un estado — para pintar una franja con el color del estado sin ser un badge. */
+export function statusSurfaceClasses(status: JobStatus): string {
+  return STATUS_TONE_CLASSES[statusTone(status)];
 }
 
 /** Select de prioridad con los mismos colores que PriorityBadge — para cambiar la
