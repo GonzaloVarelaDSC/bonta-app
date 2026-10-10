@@ -64,8 +64,8 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
         </span>
         <CountdownBadge iso={job.committedDate} status={job.status} compact />
       </div>
-      <div className="mt-1.5 flex items-start gap-1.5 min-w-0">
-        <span className="text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>
+      <div className="mt-1.5 flex flex-wrap items-start gap-1.5 min-w-0">
+        <span className="flex-1 min-w-[7rem] text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>
         {(job.sampleReview === 'in_production' || job.sampleReview === 'awaiting') && (
           <span
             className={clsx(

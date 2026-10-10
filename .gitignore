@@ -27,3 +27,6 @@ audit-screenshots/
 *.njsproj
 *.sln
 *.sw?
+
+# Video de presentación (MP4 pesado, no va al repo)
+video/*.mp4

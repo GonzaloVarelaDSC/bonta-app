@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 07/10/2026 (sección 60).
+la contradiga más arriba**. Última actualización: 10/10/2026 (sección 61).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4761,3 +4761,33 @@ Verificado en vivo con el bypass de auth local (2 avisos + toast abierto, se
 ven apilados sin superponerse). Bypass revertido, build/lint limpios. Para no
 chocar con el dev server de otro chat se levantó uno temporal en el puerto 5179
 (config agregada y revertida en `.claude/launch.json`).
+
+---
+
+## 61. Actualización 10/10 — video de presentación (MP4) + fix de tarjeta del Kanban
+
+Gonzalo pidió un video mostrando el flujo entero de la app para mandarle al equipo.
+
+- **Resultado:** `video/Estudio-Bonta-recorrido.mp4` (1920x1080, ~4 min 10 s, ~11 MB,
+  sin audio, subtítulos en una franja propia abajo). **Gitignoreado** (`video/*.mp4`),
+  no va al repo. Recorre: login → Dashboard (KPIs, A mí/Por mí/Todos, carga de diseño,
+  fichas) → Carga rápida completa → buscador → ficha (muestra, Detalle, Control de
+  calidad, Archivos, comentario con @mención, Historial) → bloquear → Kanban (señales +
+  arrastre) → campana + toast + avisos flotantes de cambio de estado → mensaje al
+  cliente → Trabajos (Solo bloqueados) → Presupuestos (valor + confirmar → trabajo) →
+  Histórico.
+- **Datos 100% ficticios** (clientes inventados, nombres de pila del equipo); no toca
+  Supabase: Playwright responde `[]` a toda request a `supabase.co` y
+  `video/generador/demo-setup.js` llena el store y reemplaza las acciones por versiones
+  locales vía `import('/src/store/useStore.ts')` desde la página — **no hace falta
+  editar `App.tsx`** (alternativa al bypass `?devpreview=1`, mejor para la próxima).
+- **Cómo regenerarlo:** `video/generador/record.mjs` (`node record.mjs check` saca
+  capturas rápidas en `shots/`; `node record.mjs video` graba con CDP screencast y
+  arma el MP4). Necesita el dev server en 5173, `ffmpeg-static` en `../tools`
+  relativo al script (no es dependencia del proyecto; se instaló en el scratchpad) y
+  una carpeta `fonts/` con `segoeui.ttf`/`segoeuib.ttf` para los subtítulos (libass).
+  Si la UI cambia, los selectores del guion pueden romperse — correr `check` primero.
+- **Fix real encontrado al grabar** (`KanbanPage.tsx`, `CardBody`): con los tags
+  "muestra" + "bloqueado" juntos, el nombre del cliente quedaba aplastado a 1-2
+  letras. La fila ahora es `flex-wrap` y el nombre tiene `min-w-[7rem]`: los tags bajan
+  de línea en vez de comerse el nombre.
