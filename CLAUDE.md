@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 12/10/2026 (sección 62).
+la contradiga más arriba**. Última actualización: 12/10/2026 (sección 63).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4829,3 +4829,29 @@ Gonzalo pidió un video mostrando el flujo entero de la app para mandarle al equ
 
 Verificado con build limpio + preview local (datos de `video/generador/demo-setup.js`
 cargados desde la consola, sin tocar `App.tsx`). Sin migraciones nuevas.
+
+---
+
+## 63. Actualización 12/10 (cont.) — se saca la pestaña Archivos, cubos del Dashboard en una sola fila; arranca el tema "peso" de cada trabajo
+
+1. **Pestaña Archivos eliminada de la ficha** (`JobDetailPage.tsx`: `FilesTab`,
+   `fmtFileSize` y los imports que usaba). Decisión de Gonzalo, cerrada: **no** se
+   implementa la subida real a Storage — los archivos son pesados y solo él y
+   Gastón bajan los archivos del cliente, nadie los subiría ahí. El tintero de
+   "subida real de archivos" (§3, §7.3, §18) **queda descartado**. En el store
+   siguen `addFileVersion`/`approveFileVersion`/`deleteFileVersion` y la tabla
+   `job_files` sin uso.
+2. **Cubos del Dashboard en una sola fila** (no le gustaron las dos filas de §62):
+   las 12 tarjetas en una grilla `xl:grid-cols-12` con `KpiCard compact` (prop
+   nueva: menos padding, número `text-xl`, etiqueta 11px). Mismo orden: los 7 del
+   flujo (Kanban) y después los 5 de atención, con un poco de aire extra antes de
+   "Críticos". Sin títulos de grupo. En pantallas más chicas pasa a 6 o 3 por fila.
+3. **Tema nuevo, en conversación (sin código todavía):** distinguir el "peso" de
+   cada trabajo para repartir la carga de diseño (5 trabajos chicos ≠ 1 grande y
+   tedioso). Se investigó cómo lo resuelven los sistemas de gestión de imprentas
+   (estiman horas por etapa/rol a partir de la categoría del trabajo y lo ajustan
+   con el histórico) y el "t-shirt sizing" (S/M/L con puntos). Propuesta hecha a
+   Gonzalo: un campo "Tamaño" por trabajo (Chico/Mediano/Grande/Muy grande → 1/2/4/8
+   puntos), elegido al asignar y editable, y que "Carga de diseño" sume puntos en
+   vez de contar fichas. Esperando sus respuestas (escala, quién lo define, si se
+   cuenta solo diseño o todo lo asignado) antes de implementar.

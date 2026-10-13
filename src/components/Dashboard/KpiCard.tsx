@@ -7,6 +7,7 @@ interface Props {
   icon: LucideIcon;
   tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'review' | 'site' | 'done' | 'neutral';
   active?: boolean;
+  compact?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -38,25 +39,26 @@ const TONE_ICON_BG: Record<string, string> = {
   review: 'bg-review-bg text-review-text', site: 'bg-site-bg text-site-text', done: 'bg-ink-100 text-ink-700', neutral: 'bg-ink-100 text-ink-700',
 };
 
-export function KpiCard({ label, value, icon: Icon, tone, active, onClick, className }: Props) {
+export function KpiCard({ label, value, icon: Icon, tone, active, compact, onClick, className }: Props) {
   return (
     <button
       onClick={onClick}
       aria-pressed={!!active}
       className={clsx(
-        'text-left bg-white rounded-xl border-2 shadow-card px-4 py-3.5 transition-all',
+        'text-left bg-white rounded-xl border-2 shadow-card transition-all',
+        compact ? 'px-2.5 py-2' : 'px-4 py-3.5',
         TONE_BORDER[tone],
         active && 'ring-2 ring-offset-1 ring-brand-500',
         className
       )}
     >
-      <div className="flex items-center gap-2.5">
-        <span className={clsx('inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0', TONE_ICON_BG[tone])}>
-          <Icon size={15} strokeWidth={2.25} />
+      <div className={clsx('flex items-center', compact ? 'gap-1.5' : 'gap-2.5')}>
+        <span className={clsx('inline-flex items-center justify-center rounded-lg shrink-0', compact ? 'w-6 h-6' : 'w-7 h-7', TONE_ICON_BG[tone])}>
+          <Icon size={compact ? 13 : 15} strokeWidth={2.25} />
         </span>
-        <span className={clsx('text-2xl font-display font-extrabold tabular', TONE_TEXT[tone])}>{value}</span>
+        <span className={clsx(compact ? 'text-xl' : 'text-2xl', 'font-display font-extrabold tabular', TONE_TEXT[tone])}>{value}</span>
       </div>
-      <div className="text-xs text-ink-700 mt-1.5 font-medium">{label}</div>
+      <div className={clsx('text-ink-700 font-medium', compact ? 'text-[11px] leading-tight mt-1' : 'text-xs mt-1.5')}>{label}</div>
     </button>
   );
 }

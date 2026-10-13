@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, UploadCloud, Trash2, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob } from '../../lib/permissions';
@@ -19,7 +19,7 @@ import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog, ConfirmDialog } from '../Common/Modal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
-const TABS = ['General', 'Detalle', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+const TABS = ['General', 'Detalle', 'Instalación', 'Historial', 'Comentarios'] as const;
 
 // Estados en los que el trabajo ya está a disposición del cliente — acá tiene
 // sentido ofrecer el mensaje de "está listo" (Gonzalo, tintero de §19).
@@ -45,9 +45,6 @@ export function JobDetailPage() {
   const toggleProductChecked = useStore((s) => s.toggleProductChecked);
   const blockJob = useStore((s) => s.blockJob);
   const unblockJob = useStore((s) => s.unblockJob);
-  const addFileVersion = useStore((s) => s.addFileVersion);
-  const deleteFileVersion = useStore((s) => s.deleteFileVersion);
-  const approveFileVersion = useStore((s) => s.approveFileVersion);
   const completeInstallation = useStore((s) => s.completeInstallation);
   const restoreJob = useStore((s) => s.restoreJob);
   const loadJobComments = useStore((s) => s.loadJobComments);
@@ -329,15 +326,6 @@ export function JobDetailPage() {
             />
           )}
 
-          {tab === 'Archivos' && (
-            <FilesTab
-              job={job}
-              onUpload={async (file, targetFileId) => { try { await addFileVersion(job.id, file, user.id, targetFileId); } catch (err) { alert(friendlyError(err)); } }}
-              onApprove={async (fid, vid) => { try { await approveFileVersion(job.id, fid, vid, user.id); } catch (err) { alert(friendlyError(err)); } }}
-              onDelete={async (fid, vid) => { try { await deleteFileVersion(job.id, fid, vid, user.id); } catch (err) { alert(friendlyError(err)); } }}
-            />
-          )}
-
           {tab === 'Instalación' && job.installation && (
             <InstallationTab job={job} onComplete={async (notes) => { try { await completeInstallation(job.id, notes, user.id); } catch (err) { alert(friendlyError(err)); } }} />
           )}
@@ -407,98 +395,6 @@ function Field({ label, value, block, highlightMissing }: { label: string; value
       <div className={`text-ink-800 ${block ? 'leading-relaxed whitespace-pre-wrap break-words' : ''} ${highlightMissing ? 'text-wait-text italic' : ''}`}>
         {value || (highlightMissing ? 'Falta completar' : '—')}
       </div>
-    </div>
-  );
-}
-
-function fmtFileSize(kb: number): string {
-  return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
-}
-
-// Cada archivo distinto que se arrastra crea su propio grupo (antes todo se
-// amontonaba como "versión" de un único archivo, sin importar si eran
-// documentos distintos). "+ nueva versión" por grupo sigue existiendo para
-// re-subir la misma pieza corregida, y cada versión se puede borrar.
-function FilesTab({ job, onUpload, onApprove, onDelete }: {
-  job: import('../../types').Job;
-  onUpload: (file: File, targetFileId?: string) => void;
-  onApprove: (fileId: string, versionId: string) => void;
-  onDelete: (fileId: string, versionId: string) => void;
-}) {
-  const users = useStore((s) => s.users);
-  const nameOf = (userId: string) => users.find((u) => u.id === userId)?.name ?? userId;
-  const [dragOver, setDragOver] = useState(false);
-  const [versionTarget, setVersionTarget] = useState<string | undefined>(undefined);
-  const [confirmDelete, setConfirmDelete] = useState<{ fileId: string; versionId: string; fileName: string } | null>(null);
-  const dropInputRef = useRef<HTMLInputElement>(null);
-  const versionInputRef = useRef<HTMLInputElement>(null);
-
-  function handleFiles(fileList: FileList | null, targetFileId?: string) {
-    if (!fileList) return;
-    Array.from(fileList).forEach((f) => onUpload(f, targetFileId));
-  }
-
-  return (
-    <div className="max-w-2xl space-y-4">
-      <input ref={dropInputRef} type="file" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} />
-      <input ref={versionInputRef} type="file" className="hidden" onChange={(e) => { handleFiles(e.target.files, versionTarget); e.target.value = ''; }} />
-      <div
-        onClick={() => dropInputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
-        className={`flex flex-col items-center justify-center gap-1.5 text-center border border-dashed rounded-lg px-4 py-8 cursor-pointer transition-colors ${dragOver ? 'bg-brand-100 border-brand-400' : 'border-brand-300 hover:bg-brand-50'}`}
-      >
-        <UploadCloud size={22} className="text-brand-500" />
-        <span className="text-sm font-medium text-brand-600">Arrastrá archivos acá, o hacé click para elegirlos</span>
-      </div>
-
-      {job.files.length === 0 && <div className="text-sm text-ink-700 text-center">Todavía no se subieron archivos.</div>}
-      {job.files.map((f) => (
-        <div key={f.id} className="bg-white border border-ink-100 rounded-lg overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-ink-100 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-ink-800">{f.logicalName} · {f.kind}</span>
-            <button
-              onClick={() => { setVersionTarget(f.id); versionInputRef.current?.click(); }}
-              className="text-xs font-medium text-brand-600 hover:underline shrink-0"
-            >
-              + Nueva versión
-            </button>
-          </div>
-          <div className="divide-y divide-ink-50">
-            {[...f.versions].reverse().map((v) => (
-              <div key={v.id} className="flex items-center justify-between px-4 py-2.5 gap-2">
-                <div className="min-w-0">
-                  <div className="text-sm text-ink-800 font-medium truncate">{v.fileName} <span className="text-xs text-ink-700">v{v.version}</span></div>
-                  <div className="text-xs text-ink-700">{fmtFileSize(v.sizeKb)} · subido por {nameOf(v.uploadedBy)} · {fmtDate(v.uploadedAt)}</div>
-                </div>
-                <div className="flex items-center gap-2.5 shrink-0">
-                  {v.approved ? (
-                    <span className="text-xs font-semibold text-plan-text bg-plan-bg rounded-md px-2 py-1">✅ Aprobado</span>
-                  ) : (
-                    <button onClick={() => onApprove(f.id, v.id)} className="text-xs font-medium text-brand-600 hover:underline">Marcar aprobado</button>
-                  )}
-                  <button
-                    onClick={() => setConfirmDelete({ fileId: f.id, versionId: v.id, fileName: v.fileName })}
-                    className="text-ink-700 hover:text-crit-text" title="Eliminar archivo" aria-label={`Eliminar ${v.fileName}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      {confirmDelete && (
-        <ConfirmDialog
-          title="Eliminar archivo"
-          message={<>¿Eliminar <strong>"{confirmDelete.fileName}"</strong>?</>}
-          confirmLabel="Eliminar" tone="danger"
-          onConfirm={() => { const c = confirmDelete; setConfirmDelete(null); onDelete(c.fileId, c.versionId); }}
-          onClose={() => setConfirmDelete(null)}
-        />
-      )}
     </div>
   );
 }

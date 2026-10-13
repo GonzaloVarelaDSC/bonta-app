@@ -119,18 +119,14 @@ export function DashboardPage() {
       </div>
       <p className="text-sm text-ink-700 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
-      <h2 className="text-[11px] uppercase tracking-wider font-semibold text-ink-700 mb-1.5">Flujo de trabajo <span aria-hidden>→</span></h2>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
-        {flowCards.map((c) => (
-          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
-            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
-        ))}
-      </div>
-      <h2 className="text-[11px] uppercase tracking-wider font-semibold text-ink-700 mb-1.5">Requieren atención</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
-        {attentionCards.map((c) => (
-          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
-            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
+      {/* Una sola fila (Gonzalo, 12/10: no quería dos filas): primero los 7 del
+          flujo en orden del Kanban, después los 5 de atención, separados por un
+          poco más de aire. Tarjetas compactas para que entren las 12 en `xl`. */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-12 gap-2 mb-5">
+        {cards.map((c, i) => (
+          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone} compact
+            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
+            className={i === flowCards.length ? 'xl:ml-2' : undefined} />
         ))}
       </div>
 
