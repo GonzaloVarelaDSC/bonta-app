@@ -56,12 +56,22 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
   // encima cada uno ahora mismo?"). Se amplía a cualquier trabajo activo
   // (`isActive` — todo menos Entregado/Cancelado, mismo criterio que ya usa el
   // resto del Dashboard) del que sea responsable, sin importar la etapa exacta.
+  //
+  // Gonzalo, 12/10: con eso el widget decía "9" y "2" cuando en diseño no había
+  // ninguno — engañoso para un cuadro que se llama "Carga de diseño". Ahora el
+  // número principal (y la barra) es lo que está de verdad EN DISEÑO, y al lado
+  // va en chico el total asignado activo, así no se pierde ninguna de las dos
+  // lecturas.
   const counts = producers
-    .map((u) => ({
-      user: u,
-      count: jobs.filter((j) => j.responsibleUserId === u.id && isActive(j)).length,
-    }))
-    .sort((a, b) => b.count - a.count);
+    .map((u) => {
+      const mine = jobs.filter((j) => j.responsibleUserId === u.id && isActive(j));
+      return {
+        user: u,
+        count: mine.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO').length,
+        total: mine.length,
+      };
+    })
+    .sort((a, b) => b.count - a.count || b.total - a.total);
 
   const scaleMax = Math.max(SCALE_FLOOR, ...counts.map((c) => c.count));
   const minCount = Math.min(...counts.map((c) => c.count));
@@ -73,14 +83,14 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
         <PenTool size={14} className="text-info-text" aria-hidden />
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
-      <p className="text-xs text-ink-700 mb-3">Para decidir a quién asignar el próximo trabajo sin sobrecargar a nadie.</p>
+      <p className="text-xs text-ink-700 mb-3">Trabajos en diseño de cada uno (y el total que tiene asignado), para repartir el próximo.</p>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        {counts.map(({ user, count }) => {
+        {counts.map(({ user, count, total }) => {
           const isLeast = !allTied && count === minCount;
           return (
             <div
               key={user.id} role="group" className="flex items-center gap-1.5"
-              aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño${isLeast ? ', el que menos tiene' : ''}`}
+              aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño, ${total} asignado${total === 1 ? '' : 's'} en total${isLeast ? ', el que menos tiene' : ''}`}
             >
               <Avatar name={user.name} color={user.avatarColor} size={18} aria-hidden />
               <span className="text-xs font-medium text-ink-800 whitespace-nowrap" aria-hidden>{user.name.split(' ')[0]}</span>
@@ -91,6 +101,7 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
                 />
               </div>
               <span className="text-sm font-semibold text-ink-900 tabular" aria-hidden>{count}</span>
+              <span className="text-[11px] text-ink-700 whitespace-nowrap" aria-hidden>· {total} asignado{total === 1 ? '' : 's'}</span>
             </div>
           );
         })}

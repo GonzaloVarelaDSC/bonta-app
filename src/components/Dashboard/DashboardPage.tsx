@@ -1,15 +1,41 @@
 import { useMemo, useState } from 'react';
-import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox } from 'lucide-react';
+import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox, ClipboardCheck, Wrench, PackageCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { visibleJobs } from '../../lib/permissions';
-import { computeCounts, isOverdue, isDueToday, isMissingInfo, sortByPriority } from '../../lib/selectors';
+import { computeCounts, isOverdue, isDueToday, isMissingInfo, isArchivedJob, sortByPriority } from '../../lib/selectors';
+import { KANBAN_COLUMNS } from '../../data/catalog';
 import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
 import { DesignLoadWidget } from './DesignLoadWidget';
 
-type FilterKey = 'pending' | 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'inDesign' | 'inProduction' | 'readyToDeliver' | 'waitingInfo' | 'silent' | null;
+type AttentionKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'waitingInfo' | 'silent';
+// Cubos de flujo = una columna del Kanban cada uno ('col:<key>'), en el mismo
+// orden que el tablero (Pendiente → … → Entregado). Pedido reiterado de Gonzalo
+// (12/10): que se lean como el recorrido real de una ficha, no por "lo más
+// consultado". Se derivan de KANBAN_COLUMNS para no volver a desalinearse.
+type FilterKey = AttentionKey | `col:${string}` | null;
+type Tone = 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'review' | 'site' | 'done' | 'neutral';
+
+const FLOW_META: Record<string, { label: string; icon: LucideIcon }> = {
+  pendiente: { label: 'Pendientes', icon: Inbox },
+  diseno: { label: 'En diseño', icon: PenTool },
+  produccion: { label: 'En producción', icon: Factory },
+  control_calidad: { label: 'Control de calidad', icon: ClipboardCheck },
+  listo: { label: 'Listos para entregar', icon: CircleCheckBig },
+  instalacion: { label: 'En instalación', icon: Wrench },
+  terminado: { label: 'Entregados', icon: PackageCheck },
+};
+
+// "Entregados" cuenta solo los que todavía no se archivaron (5 días), igual que
+// la columna del Kanban — si no, el número crece para siempre.
+function inFlowColumn(job: Job, colKey: string): boolean {
+  const col = KANBAN_COLUMNS.find((c) => c.key === colKey);
+  if (!col || !col.statuses.includes(job.status)) return false;
+  return colKey !== 'terminado' || !isArchivedJob(job);
+}
 
 // A mí = soy responsable o estoy asignado. Por mí = yo asigné el trabajo (lo
 // cargué). Todos = todo lo que puedo ver. El default se acomoda al perfil:
@@ -60,30 +86,30 @@ export function DashboardPage() {
       case 'urgent': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
       case 'dueToday': base = scoped.filter(isDueToday); break;
       case 'overdue': base = scoped.filter(isOverdue); break;
-      case 'pending': base = scoped.filter((j) => j.status === 'PENDIENTE'); break;
-      case 'inDesign': base = scoped.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO'); break;
-      case 'inProduction': base = scoped.filter((j) => j.status === 'EN_PRODUCCION'); break;
-      case 'readyToDeliver': base = scoped.filter((j) => j.status === 'LISTO_PARA_ENTREGA' || j.status === 'LISTO_PARA_INSTALACION'); break;
       case 'waitingInfo': base = scoped.filter(isMissingInfo); break;
       case 'silent': base = scoped.filter((j) => isSilent(j)); break;
-      default: base = scoped.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO');
+      default:
+        if (filter?.startsWith('col:')) { const key = filter.slice(4); base = scoped.filter((j) => inFlowColumn(j, key)); }
+        else base = scoped.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO');
     }
     return sortByPriority(base);
   }, [scoped, filter]);
 
-  // Orden pedido por Gonzalo: lo más operativo (listos para entregar, en producción)
-  // primero, después el resto por urgencia.
-  const cards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'neutral' }[] = [
-    { key: 'readyToDeliver', label: 'Listos para entregar', value: counts.readyToDeliver, icon: CircleCheckBig, tone: 'plan' },
-    { key: 'inProduction', label: 'En producción', value: counts.inProduction, icon: Factory, tone: 'neutral' },
-    { key: 'inDesign', label: 'En diseño', value: counts.inDesign, icon: PenTool, tone: 'info' },
-    { key: 'pending', label: 'Pendientes', value: counts.pending, icon: Inbox, tone: 'wait' },
+  const flowCards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: Tone }[] = KANBAN_COLUMNS.map((col) => ({
+    key: `col:${col.key}` as const,
+    label: FLOW_META[col.key]?.label ?? col.label,
+    icon: FLOW_META[col.key]?.icon ?? Inbox,
+    tone: col.tone as Tone,
+    value: scoped.filter((j) => inFlowColumn(j, col.key)).length,
+  }));
+  const attentionCards: { key: FilterKey; label: string; value: number; icon: LucideIcon; tone: Tone }[] = [
     { key: 'critical', label: 'Críticos', value: counts.critical, icon: Flame, tone: 'crit' },
     { key: 'urgent', label: 'Urgentes', value: counts.urgent, icon: Zap, tone: 'urg' },
     { key: 'dueToday', label: 'Para hoy', value: counts.dueToday, icon: CalendarClock, tone: 'norm' },
     { key: 'overdue', label: 'Atrasados', value: counts.overdue, icon: TriangleAlert, tone: 'crit' },
     { key: 'waitingInfo', label: 'Esperando información', value: counts.waitingInfo, icon: CircleHelp, tone: 'wait' },
   ];
+  const cards = [...flowCards, ...attentionCards];
 
   return (
     <div className="p-6 max-w-[1800px] mx-auto">
@@ -93,18 +119,18 @@ export function DashboardPage() {
       </div>
       <p className="text-sm text-ink-700 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
-      {/* 9 tarjetas: `xl:grid-cols-9` (divisor exacto de 9, nunca sobra un hueco)
-          reemplaza el `xl:grid-cols-7` original, que dejaba una fila de 2 sueltas
-          con un vacío grande al lado (AUDITORIA_UXUI_2026-09-15.md, 🟢 Bajo,
-          "grilla de KPI asimétrica"). En los dos tiers más chicos (2 y 4
-          columnas) sigue sobrando 1 tarjeta — la última se estira a todo el
-          ancho (`col-span-full`) en vez de quedar sola con un hueco al lado, y
-          vuelve a ocupar una sola columna en `xl` donde ya no sobra nada. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-9 gap-3 mb-4">
-        {cards.map((c, i) => (
+      <h2 className="text-[11px] uppercase tracking-wider font-semibold text-ink-700 mb-1.5">Flujo de trabajo <span aria-hidden>→</span></h2>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
+        {flowCards.map((c) => (
           <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
-            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
-            className={i === cards.length - 1 ? 'col-span-full xl:col-span-1' : undefined} />
+            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
+        ))}
+      </div>
+      <h2 className="text-[11px] uppercase tracking-wider font-semibold text-ink-700 mb-1.5">Requieren atención</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
+        {attentionCards.map((c) => (
+          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone}
+            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)} />
         ))}
       </div>
 

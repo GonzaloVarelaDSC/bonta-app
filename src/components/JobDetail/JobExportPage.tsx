@@ -66,7 +66,7 @@ export function JobExportPage() {
           {client?.name}{client?.company && client.company !== client?.name ? ` — ${client.company}` : ''}
         </p>
 
-        <Section title="Descripción">{job.description || '—'}</Section>
+        <Section title="Descripción"><div className="whitespace-pre-wrap break-words">{job.description || '—'}</div></Section>
 
         {job.products.map((p, i) => (
           <Section key={p.id} title={p.label || `Producto ${i + 1}`}>

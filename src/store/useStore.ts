@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
 import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote } from '../lib/dbMappers';
 import { friendlyError } from '../lib/errors';
-import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, QC_TEMPLATE } from '../data/catalog';
+import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS } from '../data/catalog';
 import type { Client } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
@@ -419,7 +419,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (input.assignedUserIds.length) {
       await supabase.from('job_assigned_users').insert(input.assignedUserIds.map((userId) => ({ job_id: jobId, user_id: userId })));
     }
-    await supabase.from('quality_checks').insert(QC_TEMPLATE.map((q) => ({ job_id: jobId, key: q.key, label: q.label, required: q.required, checked: false })));
+    // El checklist de control de calidad se sacó (Gonzalo, 12/10: "muy específico, nadie lo va a usar") — ya no se siembra.
     if (input.requiresInstallation) {
       await supabase.from('installations').insert({
         job_id: jobId, address: input.installAddress, contact_name: input.contactName,

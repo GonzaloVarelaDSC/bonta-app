@@ -234,8 +234,10 @@ export function QuickJobPage() {
               </div>
             </div>
           </div>
-          <div><label htmlFor="qj-description" className={labelCls}>Descripción — qué hay que producir</label>
-            <textarea id="qj-description" className={inputCls} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div><label htmlFor="qj-description" className={labelCls}>Descripción y conversación con el cliente</label>
+            <p id="qj-description-help" className="text-[11px] text-ink-700 -mt-0.5 mb-1">Qué hay que producir. También podés pegar acá el mail o el chat de WhatsApp con el cliente, tal cual — queda guardado en la ficha.</p>
+            <textarea id="qj-description" aria-describedby="qj-description-help" className={inputCls + ' resize-y'} rows={4} value={description} onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ej.: 3 corpóreos en acrílico para la vidriera… o pegá la conversación completa" /></div>
           <div><label htmlFor="qj-priority" className={labelCls}>Prioridad</label>
             <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => changePriority(e.target.value as Priority)}>
               {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}

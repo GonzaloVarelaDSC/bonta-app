@@ -19,7 +19,7 @@ import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog, ConfirmDialog } from '../Common/Modal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
-const TABS = ['General', 'Detalle', 'Control de calidad', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
+const TABS = ['General', 'Detalle', 'Archivos', 'Instalación', 'Historial', 'Comentarios'] as const;
 
 // Estados en los que el trabajo ya está a disposición del cliente — acá tiene
 // sentido ofrecer el mensaje de "está listo" (Gonzalo, tintero de §19).
@@ -48,7 +48,6 @@ export function JobDetailPage() {
   const addFileVersion = useStore((s) => s.addFileVersion);
   const deleteFileVersion = useStore((s) => s.deleteFileVersion);
   const approveFileVersion = useStore((s) => s.approveFileVersion);
-  const toggleQualityCheck = useStore((s) => s.toggleQualityCheck);
   const completeInstallation = useStore((s) => s.completeInstallation);
   const restoreJob = useStore((s) => s.restoreJob);
   const loadJobComments = useStore((s) => s.loadJobComments);
@@ -77,7 +76,6 @@ export function JobDetailPage() {
 
   const activeBlock = job.blockRecords.find((b) => !b.closedAt);
   const missing = missingFields(job);
-  const requiredPending = job.qualityChecks.filter((q) => q.required && !q.checked);
   const responsible = users.find((u) => u.id === job.responsibleUserId);
   const creator = users.find((u) => u.id === job.createdByUserId);
 
@@ -331,28 +329,6 @@ export function JobDetailPage() {
             />
           )}
 
-          {tab === 'Control de calidad' && (
-            <div className="max-w-2xl space-y-2">
-              {requiredPending.length > 0 && (
-                <div className="text-xs text-wait-text bg-wait-bg rounded-md px-3 py-2 mb-2">
-                  Quedan {requiredPending.length} ítems obligatorios (marcados con *) sin completar — es solo un recordatorio, no impide cambiar el estado del trabajo.
-                </div>
-              )}
-              <div className="bg-white border border-ink-100 rounded-lg divide-y divide-ink-50">
-                {job.qualityChecks.map((q) => (
-                  <label key={q.key} className="flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer hover:bg-ink-50/50">
-                    <input
-                      type="checkbox" checked={q.checked}
-                      onChange={async () => { try { await toggleQualityCheck(job.id, q.key, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                      className="rounded"
-                    />
-                    <span className={q.checked ? 'text-ink-700 line-through decoration-ink-300' : 'text-ink-800'}>{q.label}{q.required && ' *'}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
           {tab === 'Archivos' && (
             <FilesTab
               job={job}
@@ -428,7 +404,7 @@ function Field({ label, value, block, highlightMissing }: { label: string; value
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">{label}</div>
-      <div className={`text-ink-800 ${block ? 'leading-relaxed' : ''} ${highlightMissing ? 'text-wait-text italic' : ''}`}>
+      <div className={`text-ink-800 ${block ? 'leading-relaxed whitespace-pre-wrap break-words' : ''} ${highlightMissing ? 'text-wait-text italic' : ''}`}>
         {value || (highlightMissing ? 'Falta completar' : '—')}
       </div>
     </div>

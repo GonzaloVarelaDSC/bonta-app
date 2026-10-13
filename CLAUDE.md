@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 10/10/2026 (sección 61).
+la contradiga más arriba**. Última actualización: 12/10/2026 (sección 62).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4791,3 +4791,41 @@ Gonzalo pidió un video mostrando el flujo entero de la app para mandarle al equ
   "muestra" + "bloqueado" juntos, el nombre del cliente quedaba aplastado a 1-2
   letras. La fila ahora es `flex-wrap` y el nombre tiene `min-w-[7rem]`: los tags bajan
   de línea en vez de comerse el nombre.
+
+---
+
+## 62. Actualización 12/10 — Carga de diseño cuenta lo que está en diseño, cubos del Dashboard en orden de flujo, descripción admite conversaciones pegadas, se saca el checklist de control de calidad
+
+1. **"Carga de diseño" (`DesignLoadWidget.tsx`):** con el criterio de §45 (todo lo
+   activo asignado) mostraba "9" y "2" sin ningún trabajo en diseño — engañoso.
+   Ahora el número grande y la barra son **lo que está en diseño de verdad**
+   (`EN_DISENO` + `DISENO_LISTO`, como responsable), y al lado va en chico
+   "· N asignados" (total activo). "Menos carga" se calcula sobre lo que está en
+   diseño. Reemplaza lo dicho en §45.1.
+2. **Cubos del Dashboard en orden de flujo** (pedido reiterado): dos filas.
+   **"Flujo de trabajo →"** = un cubo por columna del Kanban, en el mismo orden
+   (Pendientes → En diseño → En producción → Control de calidad → Listos para
+   entregar → En instalación → Entregados), derivados de `KANBAN_COLUMNS` (filtro
+   `col:<key>`, mismos estados que la columna, mismos colores). "Entregados" no
+   cuenta los archivados (5 días), igual que el Kanban. **"Requieren atención"**:
+   Críticos, Urgentes, Para hoy, Atrasados, Esperando información. Reemplaza el
+   orden de §4.12 ("Listos para entregar" primero). `KpiCard` suma los tonos
+   `review`/`site`/`done`.
+3. **Carga rápida:** "Descripción" pasa a **"Descripción y conversación con el
+   cliente"**, con texto de ayuda ("podés pegar acá el mail o el chat de WhatsApp
+   tal cual") y textarea más alto y redimensionable. En la ficha y en la hoja de
+   exportación la descripción respeta los saltos de línea (`whitespace-pre-wrap`).
+4. **Checklist de control de calidad eliminado** (Gonzalo: "muy específico, nadie
+   lo va a usar", y el recordatorio al pasar a Listo molestaba). Se sacó la pestaña
+   de la ficha, el recordatorio en `tryChangeJobStatus` (queda solo el de "avisale
+   al cliente") y la siembra de `QC_TEMPLATE` en `createJob`. **La etapa/columna
+   "Control de calidad" del flujo NO se tocó** — es un estado, no el checklist. La
+   tabla `quality_checks`, `QC_TEMPLATE`, `toggleQualityCheck` y
+   `Job.qualityChecks` quedan sin uso (no se borraron; el generador del video usa
+   `QC_TEMPLATE`).
+5. **Pregunta pendiente de Gonzalo — pestaña Archivos:** se le explicó que hoy
+   solo guarda nombre/tamaño, no el archivo (deuda de §3). Esperando que elija
+   entre implementar la subida real (Supabase Storage) o sacar la pestaña.
+
+Verificado con build limpio + preview local (datos de `video/generador/demo-setup.js`
+cargados desde la consola, sin tocar `App.tsx`). Sin migraciones nuevas.
