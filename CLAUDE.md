@@ -4869,7 +4869,7 @@ para retomar después de esta ronda con otra idea.
 Prepara y exporta una planilla de control de producción para imprimir y completar
 a mano en el taller. No toca Carga rápida, Dashboard, estados ni permisos.
 
-- **Datos — migración `026_job_production_config.sql` (hay que correrla):**
+- **Datos — migración `026_job_production_config.sql` (confirmada corrida por Gonzalo el 12/10):**
   columna `jobs.production_config jsonb` (`{"items": []}` por defecto), aparte de
   `products`. Tipo `ProductionConfig`/`ProductionItem` en `types/index.ts`. Los
   componentes de la OT **no se copian**: cada ítem `source:'job'` guarda solo
