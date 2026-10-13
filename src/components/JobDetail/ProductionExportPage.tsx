@@ -112,16 +112,24 @@ export function ProductionExportPage() {
             {rows.length === 0 && (
               <tr><td colSpan={totalCols} className={`${td} text-center text-ink-700`}>La OT no tiene componentes cargados.</td></tr>
             )}
-            {rows.map(({ item, label, quantities, sizes, material, notes }) => {
+            {/* Una fila por cada medida cargada (Gonzalo, 12/10): un producto con
+                "1 de 50×35" y "2 de 85×40" son piezas distintas en el taller y
+                cada una necesita sus propios casilleros. Los procesos son los del
+                producto, iguales en todas sus filas. */}
+            {rows.flatMap((row) => {
+              const n = Math.max(1, row.sizes.length);
+              return Array.from({ length: n }, (_, k) => ({ row, k, n }));
+            }).map(({ row: { item, label, quantities, sizes, material, notes }, k, n }) => {
               const indications = [material, notes, item.note].map((t) => t.trim()).filter(Boolean).join(' · ');
               return (
-                <tr key={item.id} className="prod-row">
+                <tr key={`${item.id}-${k}`} className="prod-row">
                   <td className={td}>
-                    <div className="font-semibold prod-clamp break-words">{label || '—'}</div>
+                    <div className="font-semibold prod-clamp break-words">{label || (item.source === 'job' ? 'Producto sin nombre' : '—')}</div>
+                    {n > 1 && <div className="text-[8pt] text-ink-700 mt-0.5">Medida {k + 1} de {n}</div>}
                     {item.source === 'extra' && <div className="text-[8pt] text-ink-700 mt-0.5">Agregado para producción</div>}
                   </td>
-                  <td className={td}>{quantities.length ? quantities.map((q, i) => <div key={i}>{q || '—'}</div>) : '—'}</td>
-                  <td className={td}>{sizes.length ? sizes.map((s, i) => <div key={i} className="break-words">{s || '—'}</div>) : '—'}</td>
+                  <td className={td}>{quantities[k] || '—'}</td>
+                  <td className={`${td} break-words`}>{sizes[k] || '—'}</td>
                   <td className={td}><div className="prod-clamp break-words">{indications || '—'}</div></td>
                   {processes.map((p) => (
                     <td key={p.id} className={`${td} text-center align-middle`}>

@@ -108,7 +108,7 @@ export function ProductionTab({ job }: { job: Job }) {
                   placeholder="Nombre del componente" aria-label={`Nombre del componente ${idx + 1}`}
                   className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-ink-900 placeholder:font-normal placeholder:text-ink-400 focus:outline-none" />
               ) : (
-                <span className="flex-1 min-w-0 text-sm font-semibold text-ink-900 truncate">{label || `Componente ${idx + 1}`}</span>
+                <span className="flex-1 min-w-0 text-sm font-semibold text-ink-900 truncate">{label || 'Producto sin nombre'}</span>
               )}
               {extra && <span className="text-[11px] font-semibold text-review-text bg-review-bg rounded-full px-2 py-0.5 shrink-0">Agregado para producción</span>}
               {extra && (
@@ -127,7 +127,10 @@ export function ProductionTab({ job }: { job: Job }) {
                 </div>
               ) : (
                 <div className="text-xs text-ink-700 flex flex-wrap gap-x-4 gap-y-1">
-                  <span><span className="font-medium text-ink-800">Medidas:</span> {sizes.length ? sizes.map((s, i) => `${quantities[i] ? quantities[i] + ' × ' : ''}${s || '—'}`).join(' · ') : '—'}</span>
+                  <span className="basis-full">
+                    <span className="font-medium text-ink-800">Medidas{sizes.length > 1 ? ` (${sizes.length} — en la planilla sale un renglón por cada una)` : ''}:</span>{' '}
+                    {sizes.length ? sizes.map((s, i) => `${quantities[i] ? quantities[i] + ' u. de ' : ''}${s || '—'}`).join(' · ') : '—'}
+                  </span>
                   {material && <span><span className="font-medium text-ink-800">Material:</span> {material}</span>}
                   {notes && <span className="basis-full"><span className="font-medium text-ink-800">Notas:</span> {notes}</span>}
                 </div>

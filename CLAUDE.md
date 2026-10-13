@@ -4911,3 +4911,15 @@ bug de dos clicks seguidos que se pisaban); y PDFs reales generados con Chromium
 N° de Copérnico + sin instalación, y 27 componentes con los 7 procesos (4 páginas,
 encabezado y títulos repetidos, responsables solo al final). Script de prueba en el
 scratchpad de la sesión (no está en el repo).
+
+### Ajuste 12/10 — un renglón por medida en la planilla
+
+Gonzalo probó con un producto que tenía 2 medidas (1 u. de 50×35 y 2 u. de 85×40)
+y la planilla lo mostraba en un solo renglón con todo junto. Ahora
+`ProductionExportPage` imprime **una fila por cada medida** del producto
+("Medida 1 de 2", "Medida 2 de 2"), cada una con su cantidad, su medida y sus
+propios casilleros; los procesos son los del producto (iguales en todas sus
+filas, se siguen eligiendo por producto en la pestaña). Un producto sin nombre
+sale como "Producto sin nombre" (mismo texto que la pestaña Detalle). La pestaña
+Producción avisa "en la planilla sale un renglón por cada una" cuando hay más de
+una medida. Verificado con PDF real (Playwright).
