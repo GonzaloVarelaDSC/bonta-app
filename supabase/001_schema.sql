@@ -113,6 +113,8 @@ create table if not exists jobs (
   -- Muestra/prueba al cliente antes de producir todo (ver 016).
   sample_review text not null default 'none' check (sample_review in ('none','in_production','awaiting','approved')),
   sample_review_at timestamptz,
+  -- Pestaña "Producción" de la ficha: planilla de taller, aparte de products (ver 026).
+  production_config jsonb not null default '{"items": []}'::jsonb,
 
   last_activity_at timestamptz not null default now()
 );

@@ -175,6 +175,29 @@ export interface SizeItem {
  * adivinando reglas del rubro. Si con el uso real se ve un patrón que conviene
  * estructurar, se agrega después.
  */
+// Configuración de la pestaña "Producción" de la ficha (12/10) — vive aparte de
+// `products` (jsonb propio, `jobs.production_config`) para que preparar la
+// planilla de taller nunca toque la carga original del trabajo. Los productos de
+// la OT NO se copian: se referencian por `productId` y sus datos (nombre,
+// medidas, material) se leen siempre en vivo de `job.products`; acá solo se
+// guarda lo propio de producción (procesos e indicación extra). Los componentes
+// que no están en la OT (`source: 'extra'`) sí guardan sus datos completos.
+export type ProductionProcessId = string;
+export interface ProductionItem {
+  id: string;
+  source: 'job' | 'extra';
+  productId?: string; // solo source='job'
+  processes: ProductionProcessId[];
+  note: string; // indicación para el taller, ej. "montar sobre PVC 3mm"
+  // Solo source='extra' (texto libre, igual que SizeItem):
+  label?: string;
+  quantity?: string;
+  size?: string;
+}
+export interface ProductionConfig {
+  items: ProductionItem[];
+}
+
 export interface Product {
   id: string;
   label: string; // ej. "Corpóreo 3D", "Corpóreo en acrílico"
@@ -216,6 +239,7 @@ export interface Job {
   // más abajo), acá queda el vínculo inverso — permite ir del trabajo de vuelta
   // al presupuesto de origen. `undefined` para cualquier trabajo cargado normal.
   sourceQuoteId?: string;
+  productionConfig: ProductionConfig;
 
   jobTypeId: JobTypeId;
   description: string;

@@ -116,6 +116,21 @@ export const KANBAN_COLUMNS: { key: string; label: string; statuses: JobStatus[]
   { key: 'terminado', label: 'Entregado', statuses: ['TERMINADO'], tone: 'done' },
 ];
 
+// Procesos de taller que se pueden marcar por componente en la pestaña
+// "Producción" de la ficha (12/10). Para sumar uno nuevo alcanza con agregarlo
+// acá: la pestaña y la planilla PDF se arman solas a partir de esta lista. El
+// `id` se guarda en la base (`jobs.production_config`) — no cambiarlo una vez
+// usado; `short` es el título de la columna en la planilla.
+export const PRODUCTION_PROCESSES: { id: string; label: string; short: string }[] = [
+  { id: 'impresion', label: 'Impresión', short: 'Impresión' },
+  { id: 'corte_filo', label: 'Corte a filo (a mano)', short: 'Corte a filo' },
+  { id: 'polyfan', label: 'Polyfan', short: 'Polyfan' },
+  { id: 'aoke', label: 'AOKE', short: 'AOKE' },
+  { id: 'roland', label: 'Roland', short: 'Roland' },
+  { id: 'laser', label: 'Láser', short: 'Láser' },
+  { id: 'montado', label: 'Montado', short: 'Montado' },
+];
+
 // Gente del taller / instaladores que NO tienen cuenta en la app pero a los que
 // se les puede "asignar también" un trabajo desde Carga rápida (Gonzalo, 08/09).
 // Es una lista fija de nombres (no perfiles) — se guarda en `jobs.assigned_names`.

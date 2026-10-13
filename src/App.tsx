@@ -8,6 +8,7 @@ import { ClientsPage } from './components/Jobs/ClientsPage';
 import { KanbanPage } from './components/Kanban/KanbanPage';
 import { JobDetailPage } from './components/JobDetail/JobDetailPage';
 import { JobExportPage } from './components/JobDetail/JobExportPage';
+import { ProductionExportPage } from './components/JobDetail/ProductionExportPage';
 import { QuickJobPage } from './components/QuickJob/QuickJobPage';
 import { UsersPage } from './components/Users/UsersPage';
 import { ConfigPage } from './components/Common/ConfigPage';
@@ -44,6 +45,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/trabajos/:id/exportar" element={<JobExportPage />} />
+        <Route path="/trabajos/:id/produccion/exportar" element={<ProductionExportPage />} />
         <Route path="/presupuestos/:id/exportar" element={<QuoteExportPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />

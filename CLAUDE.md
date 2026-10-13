@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 12/10/2026 (sección 63).
+la contradiga más arriba**. Última actualización: 12/10/2026 (sección 64).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4855,3 +4855,59 @@ cargados desde la consola, sin tocar `App.tsx`). Sin migraciones nuevas.
    puntos), elegido al asignar y editable, y que "Carga de diseño" sume puntos en
    vez de contar fichas. Esperando sus respuestas (escala, quién lo define, si se
    cuenta solo diseño o todo lo asignado) antes de implementar.
+
+---
+
+## 64. Actualización 12/10 (cont.) — pestaña "Producción" en la ficha + planilla PDF de taller; el "peso" de los trabajos vuelve al tintero
+
+**Tintero:** a Gonzalo no le gustó la propuesta de puntos/talles de §63.3. El tema
+"distinguir trabajos chicos de grandes para repartir la carga" queda pendiente,
+para retomar después de esta ronda con otra idea.
+
+### Pestaña "Producción" (nueva, entre Detalle e Instalación)
+
+Prepara y exporta una planilla de control de producción para imprimir y completar
+a mano en el taller. No toca Carga rápida, Dashboard, estados ni permisos.
+
+- **Datos — migración `026_job_production_config.sql` (hay que correrla):**
+  columna `jobs.production_config jsonb` (`{"items": []}` por defecto), aparte de
+  `products`. Tipo `ProductionConfig`/`ProductionItem` en `types/index.ts`. Los
+  componentes de la OT **no se copian**: cada ítem `source:'job'` guarda solo
+  `productId` + procesos + indicación; nombre, medidas y material se leen siempre
+  en vivo de `job.products` (`lib/production.ts`, `productionRows`), así no se
+  duplican al reentrar y una nueva exportación refleja la OT actual. Los
+  componentes `source:'extra'` ("Agregado para producción") guardan nombre,
+  cantidad y medida propios. Solo se persisten ítems con algo propio
+  (`configFromRows`); si se borra un producto de la OT, su configuración se ignora.
+- **Procesos:** `PRODUCTION_PROCESSES` en `data/catalog.ts` (Impresión, Corte a
+  filo (a mano), Polyfan, AOKE, Roland, Láser, Montado). Para sumar uno, agregarlo
+  ahí; el `id` queda guardado en la base, no cambiarlo.
+- **Pestaña** (`JobDetail/ProductionTab.tsx`): borrador local + "Guardar cambios"
+  (aparece solo si hay cambios) + "Exportar PDF de producción" (si hay cambios sin
+  guardar, guarda primero). Componentes de la OT de solo lectura; chips de proceso
+  por componente; campo "Indicaciones para el taller" (ej. "montar sobre PVC 3 mm").
+  Acción del store `saveProductionConfig` (solo escribe `production_config` +
+  historial "Actualizó la configuración de producción."). Cualquiera que ve la OT
+  puede guardarla (columna no protegida por `jobs_update_guard`).
+- **Planilla** (`JobDetail/ProductionExportPage.tsx`, ruta
+  `/trabajos/:id/produccion/exportar`, abre en pestaña nueva y lanza el diálogo de
+  impresión → "Guardar como PDF", mismo mecanismo que las otras hojas). A4
+  apaisado por `@page` (márgenes 8 mm). Una sola tabla: el encabezado de la OT
+  (logo, nombre, cliente, N° Copérnico = `job.code` o "—", dirección de instalación
+  o "No lleva instalación", fecha/hora de exportación) y los títulos van en el
+  `<thead>` y se repiten en cada página; las filas no se parten. Columnas:
+  Componente, Cant., Medida, Material/indicaciones (material + notas del producto
+  + indicación de producción, recortado a 4 líneas) y una columna por proceso usado
+  por al menos un componente (17–19 mm, casillero de 6 mm; "—" donde no
+  corresponde). Al final, una sola línea de responsable por proceso, alineada bajo
+  su columna. No guarda el PDF en el sistema (la pestaña Archivos se sacó en §63).
+- **Limitación:** la app no tiene un "número de OT" distinto del N° de Copérnico
+  (`job.code`), así que la planilla muestra ese único número.
+
+**Verificado:** build/lint limpios; en el navegador local, la pestaña (marcar
+procesos, agregar componente, guardar, salir y volver → se conserva; se corrigió un
+bug de dos clicks seguidos que se pisaban); y PDFs reales generados con Chromium
+(Playwright, datos ficticios, sin Supabase): varios procesos, sin procesos + sin
+N° de Copérnico + sin instalación, y 27 componentes con los 7 procesos (4 páginas,
+encabezado y títulos repetidos, responsables solo al final). Script de prueba en el
+scratchpad de la sesión (no está en el repo).

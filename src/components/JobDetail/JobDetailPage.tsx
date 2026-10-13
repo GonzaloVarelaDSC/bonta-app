@@ -17,9 +17,10 @@ import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
 import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog, ConfirmDialog } from '../Common/Modal';
+import { ProductionTab } from './ProductionTab';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
-const TABS = ['General', 'Detalle', 'Instalación', 'Historial', 'Comentarios'] as const;
+const TABS = ['General', 'Detalle', 'Producción', 'Instalación', 'Historial', 'Comentarios'] as const;
 
 // Estados en los que el trabajo ya está a disposición del cliente — acá tiene
 // sentido ofrecer el mensaje de "está listo" (Gonzalo, tintero de §19).
@@ -325,6 +326,8 @@ export function JobDetailPage() {
               onToggle={async (productId) => { try { await toggleProductChecked(job.id, productId, user.id); } catch (err) { alert(friendlyError(err)); } }}
             />
           )}
+
+          {tab === 'Producción' && <ProductionTab key={job.id} job={job} />}
 
           {tab === 'Instalación' && job.installation && (
             <InstallationTab job={job} onComplete={async (notes) => { try { await completeInstallation(job.id, notes, user.id); } catch (err) { alert(friendlyError(err)); } }} />

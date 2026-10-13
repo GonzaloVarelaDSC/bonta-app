@@ -8,7 +8,7 @@ import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
 import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote } from '../lib/dbMappers';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS } from '../data/catalog';
-import type { Client } from '../types';
+import type { Client, ProductionConfig } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
 // libre, no autonumérico) — sin tildes/espacios, y con un sufijo numérico si ya
@@ -75,6 +75,7 @@ interface StoreState {
   updateCommittedDate: (jobId: string, committedDate: string, byUserId: string) => Promise<void>;
   updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
   toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
+  saveProductionConfig: (jobId: string, config: ProductionConfig, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -553,6 +554,15 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) throw error;
     await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó el detalle del trabajo.');
     await refreshJob(set, jobId);
+  },
+
+  // Pestaña "Producción": guarda solo jobs.production_config, nunca products ni
+  // ningún otro campo de la OT (ver ProductionConfig en types/index.ts).
+  saveProductionConfig: async (jobId, config, byUserId) => {
+    const { error } = await supabase.from('jobs').update({ production_config: config, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, productionConfig: config } : j) }));
+    await insertActivity(set, jobId, byUserId, 'produccion', 'Actualizó la configuración de producción.');
   },
 
   // Tildar un producto es informativo, nunca bloquea nada — por eso es una

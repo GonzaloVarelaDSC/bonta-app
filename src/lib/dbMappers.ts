@@ -102,6 +102,7 @@ export function mapJob(row: any): Job {
     measurements: row.measurements ?? '', sizeItems: (row.size_items ?? []) as SizeItem[],
     materialIds: (row.material_ids ?? []) as MaterialId[],
     products: (row.products ?? []) as Product[],
+    productionConfig: { items: Array.isArray(row.production_config?.items) ? row.production_config.items : [] },
     technique: row.technique ?? '', finish: row.finish ?? '', color: row.color ?? '',
     observations: row.observations ?? '', specialRequirements: row.special_requirements ?? '',
     status: row.status,
