@@ -76,6 +76,7 @@ interface StoreState {
   updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
   toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
   saveProductionConfig: (jobId: string, config: ProductionConfig, byUserId: string) => Promise<void>;
+  updateJobHeader: (jobId: string, fields: { name: string; clientName: string }, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -543,6 +544,29 @@ export const useStore = create<StoreState>()((set, get) => ({
       throw error;
     }
     await insertActivity(set, jobId, byUserId, 'fecha', 'Cambió la fecha de entrega comprometida.');
+    await refreshJob(set, jobId);
+  },
+
+  // Corregir cliente y nombre de un trabajo ya creado (Gonzalo, 17/10). El
+  // cliente se resuelve igual que en Carga rápida (findOrCreateClient): si el
+  // nombre ya existe se reusa, si no se crea. client_id está protegido por
+  // jobs_update_guard (solo admin/coordinador), igual que en la UI.
+  updateJobHeader: async (jobId, fields, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const name = fields.name.trim();
+    if (!name) throw new Error('Falta el nombre del trabajo.');
+    const clientId = await get().findOrCreateClient(fields.clientName);
+    const { error } = await supabase.from('jobs').update({ name, client_id: clientId, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
+    const changes: string[] = [];
+    if (name !== job.name) changes.push(`nombre: "${job.name}" → "${name}"`);
+    if (clientId !== job.clientId) {
+      const before = get().clients.find((c) => c.id === job.clientId)?.name ?? '—';
+      const after = get().clients.find((c) => c.id === clientId)?.name ?? '—';
+      changes.push(`cliente: ${before} → ${after}`);
+    }
+    if (changes.length) await insertActivity(set, jobId, byUserId, 'datos', `Corrigió ${changes.join(' · ')}.`);
     await refreshJob(set, jobId);
   },
 

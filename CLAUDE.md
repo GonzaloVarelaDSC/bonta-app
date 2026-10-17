@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 12/10/2026 (sección 64).
+la contradiga más arriba**. Última actualización: 17/10/2026 (sección 65).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4923,3 +4923,26 @@ filas, se siguen eligiendo por producto en la pestaña). Un producto sin nombre
 sale como "Producto sin nombre" (mismo texto que la pestaña Detalle). La pestaña
 Producción avisa "en la planilla sale un renglón por cada una" cuando hay más de
 una medida. Verificado con PDF real (Playwright).
+
+---
+
+## 65. Actualización 17/10 — alta de Claudia (acceso total) + editar cliente y nombre de un trabajo ya creado
+
+1. **Claudia** (madre de Pancho y Martín), `claudia@estudiobonta.com.ar`: mismo
+   perfil que los dueños — `role='admin'`, `is_producer=false`, `sector='Dirección'`.
+   Se le dieron a Gonzalo los pasos (crear el usuario en Authentication → Users y
+   después el UPDATE de `profiles`) y el SELECT de verificación. **No confirmado
+   todavía que lo haya corrido** — verificar con
+   `select name, email, role, is_producer, sector from profiles where email = 'claudia@estudiobonta.com.ar';`.
+   Se le advirtió que la contraseña que eligió es débil.
+2. **Editar cliente y nombre del trabajo desde la ficha** (antes solo se podían
+   editar los productos). Lápiz al lado del nombre en la cabecera de la ficha
+   (solo `canEditAnyJob` = admin/coordinador, igual que `jobs_update_guard`, que
+   ya protege `client_id` en la base) → `JobDetail/EditJobHeaderModal.tsx`:
+   cliente con autocompletado + aviso de casi-duplicado ("¿Quisiste decir X?",
+   mismo criterio que Carga rápida) y nombre del trabajo. Acción nueva del store
+   `updateJobHeader` (reusa `findOrCreateClient`, registra en el Historial qué
+   cambió: "Corrigió nombre: … → … · cliente: … → …"). `ModalShell` de
+   `Common/Modal.tsx` pasó a exportarse para reusarlo. Sin migraciones.
+   Verificado en el navegador local con datos ficticios (modal, sugerencia de
+   cliente existente, guardado y cabecera actualizada); build/lint limpios.

@@ -18,6 +18,7 @@ import { BlockModal } from './BlockModal';
 import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog, ConfirmDialog } from '../Common/Modal';
 import { ProductionTab } from './ProductionTab';
+import { EditJobHeaderModal } from './EditJobHeaderModal';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Detalle', 'Producción', 'Instalación', 'Historial', 'Comentarios'] as const;
@@ -51,6 +52,7 @@ export function JobDetailPage() {
   const loadJobComments = useStore((s) => s.loadJobComments);
   const loadJobActivity = useStore((s) => s.loadJobActivity);
   const [restoring, setRestoring] = useState(false);
+  const [editingHeader, setEditingHeader] = useState(false);
   const navigate = useNavigate();
   // `key === 'default'` = esta es la primera pantalla de la sesión (link directo,
   // recarga, pestaña nueva): no hay "atrás" dentro de la app a donde volver.
@@ -107,7 +109,15 @@ export function JobDetailPage() {
                   </Link>
                 )}
               </div>
-              <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
+              <div className="flex items-start gap-1.5">
+                <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
+                {canEditAnyJob(user.role) && (
+                  <button onClick={() => setEditingHeader(true)} aria-label="Editar cliente y nombre del trabajo" title="Editar cliente y nombre"
+                    className="mt-1 p-1 rounded text-ink-700 hover:text-ink-900 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <Pencil size={13} aria-hidden />
+                  </button>
+                )}
+              </div>
               <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
               {(creator || responsible) && (
                 <div
@@ -372,6 +382,7 @@ export function JobDetailPage() {
           }}
         />
       )}
+      {editingHeader && <EditJobHeaderModal job={job} onClose={() => setEditingHeader(false)} />}
       {showClientMsg && (
         <ClientMessageModal job={job} client={client} onClose={() => setShowClientMsg(false)} />
       )}

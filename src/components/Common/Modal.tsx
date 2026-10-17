@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
  * confirmar/cancelar (ver CLAUDE.md §25, hallazgo 2). Mismo patrón visual que
  * BlockModal.tsx (backdrop, Escape para cerrar, dialog con aria-modal).
  */
-function ModalShell({ titleId, onClose, children }: { titleId: string; onClose: () => void; children: React.ReactNode }) {
+export function ModalShell({ titleId, onClose, children }: { titleId: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div
       className="fixed inset-0 bg-ink-950/40 flex items-center justify-center z-50 p-4" onClick={onClose}
