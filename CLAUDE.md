@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 17/10/2026 (sección 65).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 66).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4946,3 +4946,25 @@ una medida. Verificado con PDF real (Playwright).
    `Common/Modal.tsx` pasó a exportarse para reusarlo. Sin migraciones.
    Verificado en el navegador local con datos ficticios (modal, sugerencia de
    cliente existente, guardado y cabecera actualizada); build/lint limpios.
+
+---
+
+## 66. Actualización 18/10 — Enter salta al casillero siguiente en las medidas; propuesta "Avisar a" (pendiente de decisión)
+
+1. **Enter en Cantidad/Ancho/Alto** (`Common/SizeItemsEditor.tsx`, sirve en Carga
+   rápida, Detalle de la ficha y Presupuestos): Enter pasa al casillero siguiente
+   (Cant. → Ancho → Alto → Cant. del renglón de abajo). En el Alto del último
+   renglón, si tiene algo cargado, agrega un renglón nuevo y pone el foco en su
+   Cantidad. Nunca envía el formulario. Verificado en el navegador local
+   (2 → Enter → 50 → Enter → 35 → Enter → queda en el renglón nuevo).
+2. **Pedido en conversación, sin código:** Gonzalo creó una ficha (muestra
+   tercerizada que le pidió Pancho), se la asignó a sí mismo, y quería que le
+   avisara a Pancho — solo en ese caso puntual, sin avisar a nadie siempre y sin
+   complicar la carga. Hoy ya existe una vía sin tocar nada: mencionar **@Pancho**
+   en un comentario de la ficha (le llega a la campana). Propuesta hecha: en Carga
+   rápida, una fila opcional y chica **"Avisar a (opcional)"** con chips de los
+   usuarios de la app; la persona marcada recibe en la campana "Gonzalo te avisó de
+   una ficha nueva" y queda "siguiendo" la ficha (le llegan también los cambios de
+   estado). Lo mismo desde la ficha ya creada. Requiere migración (lista de
+   seguidores por trabajo). **Esperando que Gonzalo elija** entre: (a) solo el aviso
+   al crear, (b) aviso + seguir la ficha, (c) nada nuevo y usar @mención.

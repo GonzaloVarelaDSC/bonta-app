@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { SizeItem } from '../../types';
 
@@ -11,6 +12,32 @@ const GRID_COLS = 'grid grid-cols-[56px_1fr_1fr_28px] gap-2';
  * lista prolija en vez de inputs sueltos flotando.
  */
 export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChange: (items: SizeItem[]) => void }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<string | null>(null);
+
+  function focusCell(key: string) {
+    boxRef.current?.querySelector<HTMLInputElement>(`[data-cell="${key}"]`)?.focus();
+  }
+  // Un renglón recién agregado con Enter recién existe en el próximo render.
+  useEffect(() => {
+    if (pendingFocus.current) { focusCell(pendingFocus.current); pendingFocus.current = null; }
+  }, [items.length]);
+
+  // Enter pasa al casillero siguiente (Cant. → Ancho → Alto → próximo renglón),
+  // como en una planilla (Gonzalo, 18/10). En el Alto del último renglón, si ya
+  // tiene algo cargado, agrega un renglón nuevo; nunca envía el formulario.
+  function onEnter(e: React.KeyboardEvent<HTMLInputElement>, row: number, col: number) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (col < 2) return focusCell(`${row}-${col + 1}`);
+    if (row < items.length - 1) return focusCell(`${row + 1}-0`);
+    const it = items[row];
+    if (it.quantity.trim() || it.width.trim() || it.height.trim()) {
+      pendingFocus.current = `${row + 1}-0`;
+      add();
+    }
+  }
+
   function update(i: number, patch: Partial<SizeItem>) {
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }
@@ -22,7 +49,7 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
   }
 
   return (
-    <div className="bg-white border border-ink-100 rounded-lg overflow-hidden">
+    <div ref={boxRef} className="bg-white border border-ink-100 rounded-lg overflow-hidden">
       <div className={`${GRID_COLS} px-3 py-1.5 bg-ink-50 text-[10px] uppercase tracking-wide text-ink-700 font-medium`}>
         <span>Cant.</span><span>Ancho</span><span>Alto</span><span />
       </div>
@@ -30,9 +57,9 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
         {items.length === 0 && <div className="px-3 py-4 text-sm text-ink-700 italic text-center">Sin renglones todavía — agregá uno abajo.</div>}
         {items.map((item, i) => (
           <div key={i} className={`${GRID_COLS} items-center px-3 py-2`}>
-            <input aria-label="Cantidad" value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
-            <input aria-label="Ancho" value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
-            <input aria-label="Alto" value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <input aria-label="Cantidad" data-cell={`${i}-0`} onKeyDown={(e) => onEnter(e, i, 0)} value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
+            <input aria-label="Ancho" data-cell={`${i}-1`} onKeyDown={(e) => onEnter(e, i, 1)} value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <input aria-label="Alto" data-cell={`${i}-2`} onKeyDown={(e) => onEnter(e, i, 2)} value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
             <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-1 justify-self-center">
               <X size={15} />
             </button>
