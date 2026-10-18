@@ -5201,3 +5201,9 @@ lleva estado (confirmado / aproximado / a confirmar).
 
 Verificado en el navegador local con datos ficticios (página y aviso de V7000 +
 dato de MDF). Sin migraciones.
+
+### Ajuste 18/10 — Metalex confirmado + ícono
+Gonzalo confirmó que la veta del Metalex va **siempre paralela al lado largo** (no es
+aleatoria): la regla pasa a "confirmado" y el aviso al cargar lo dice así. El formato
+120 × 60 cm sigue aproximado. El ícono del menú "Materiales y máquinas" pasa a un
+martillo (`Hammer`).

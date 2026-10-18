@@ -25,7 +25,7 @@ export const MATERIAL_FORMATS: MaterialFormat[] = [
   { material: 'MDF', thickness: '15 mm', length: '', width: '', status: 'pendiente' },
   { material: 'PVC', thickness: '3 mm', length: '', width: '', status: 'pendiente' },
   { material: 'Polyfan', thickness: '20 mm', length: '', width: '', status: 'pendiente' },
-  { material: 'Metalex', thickness: '', length: '120 cm', width: '60 cm', status: 'aproximado', note: 'Formato aproximado; confirmar con una placa o el proveedor.' },
+  { material: 'Metalex', thickness: '', length: '120 cm', width: '60 cm', status: 'aproximado', note: 'Formato aproximado; confirmar con una placa o el proveedor. Veta paralela al lado largo (confirmado).' },
   { material: 'PAI', thickness: '1 mm', length: '', width: '', status: 'pendiente' },
 ];
 
@@ -59,8 +59,8 @@ export const PRODUCTION_RULES: ProductionRule[] = [
     points: ['No agregar demasía.', 'El PVC se refila directamente.'],
   },
   {
-    title: 'Metalex', status: 'aproximado',
-    points: ['La placa tiene veta: respetar su orientación.', 'La veta es paralela al borde más largo.', 'Formato aproximado 120 × 60 cm (a confirmar).'],
+    title: 'Metalex', status: 'confirmado',
+    points: ['La placa tiene veta: la orientación no es aleatoria.', 'La veta va siempre paralela al lado más largo de la placa.', 'Al ubicar las piezas, respetar ese sentido.'],
   },
 ];
 
@@ -71,7 +71,7 @@ export const PENDING_DATA: string[] = [
   'Formato comercial de PAI de 1 mm.',
   'Confirmar los anchos de vinilo (60, 100, 120 y 150 cm).',
   'Confirmar el límite de 119 cm del plotter Roland.',
-  'Confirmar el formato de Metalex y la orientación de la veta.',
+  'Confirmar el formato de Metalex (120 × 60 cm).',
   'Área útil máxima de corte del láser.',
   'Criterio exacto de demasía en MDF (5 u 8 mm según el tamaño).',
 ];
@@ -87,7 +87,7 @@ export function materialHints(materialLabels: string[]): string[] {
   const hints: string[] = [];
   if (has('mdf')) hints.push('Si la impresión va montada en MDF: demasía de 5 a 8 mm por lado, según el tamaño de la visual.');
   if (has('pvc')) hints.push('Si la impresión va montada en PVC: sin demasía, se refila directo.');
-  if (has('metalex')) hints.push('Metalex: respetá la veta, que va paralela al borde más largo (placa aprox. 120 × 60 cm, a confirmar).');
+  if (has('metalex')) hints.push('Metalex: la veta va paralela al lado largo de la placa, no es aleatoria — ubicá las piezas respetando ese sentido.');
   if (has('vinilo')) hints.push('Vinilo: rollos de 60, 100, 120 y 150 cm (a confirmar). El plotter Roland corta hasta 119 cm de ancho (a confirmar).');
   return hints;
 }

@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive, Receipt, Layers,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive, Receipt, Hammer,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canManageUsers, canCreateJobs, canViewHistorico, canManageQuotes } from '../../lib/permissions';
@@ -15,7 +15,7 @@ const ITEMS = [
   { to: '/kanban', label: 'Kanban', icon: Kanban },
   { to: '/chequeo-archivos', label: 'Chequeo de archivos', icon: FileCheck2 },
   { to: '/manual', label: 'Manual de uso', icon: BookOpen },
-  { to: '/materiales', label: 'Materiales y máquinas', icon: Layers },
+  { to: '/materiales', label: 'Materiales y máquinas', icon: Hammer },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
