@@ -5085,3 +5085,14 @@ de Realtime (cambios de otros que aparezcan solos en Kanban/Dashboard).
 — esperando capturas de su pantalla de carga · (5) celular · (4) manual · (2)
 cuando junte la info. Orden confirmado por Gonzalo: contact sheet → Copérnico →
 celular → manual.
+
+### Ajuste 18/10 — contact sheet: JPG chicos se suben tal cual
+Gonzalo aclaró que los contact sheet salen de Photoshop **siempre en JPG, RGB, baja
+resolución**. `shrinkImage` ahora devuelve el archivo original sin recomprimir si ya
+es JPEG ≤ 1.5 MB y ≤ 2400 px (solo achica lo que viene grande o en otro formato).
+Dudas que se le aclararon en el chat: (1) el aviso "Potential issue detected /
+destructive operations" del SQL Editor al correr la 027 lo dispara el
+`drop policy if exists` (borra y vuelve a crear las reglas de acceso, no toca
+datos) — es seguro, "Run query"; (2) `can_view_job` = admin y coordinador ven
+todo, que hoy es el equipo entero; solo un rol `produccion`/`instalacion` (hoy no
+hay nadie) quedaría limitado a sus fichas, igual que en el resto de la app.

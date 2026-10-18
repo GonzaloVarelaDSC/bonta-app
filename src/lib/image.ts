@@ -7,6 +7,9 @@
 export async function shrinkImage(file: Blob, maxSide = 2400, quality = 0.85): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  // Los contact sheet del estudio ya salen de Photoshop en JPG RGB liviano: si
+  // ya es chico, se sube tal cual para no recomprimirlo y perder calidad.
+  if (scale === 1 && file.type === 'image/jpeg' && file.size <= 1.5 * 1024 * 1024) { bitmap.close(); return file; }
   const w = Math.round(bitmap.width * scale);
   const h = Math.round(bitmap.height * scale);
   const canvas = document.createElement('canvas');
