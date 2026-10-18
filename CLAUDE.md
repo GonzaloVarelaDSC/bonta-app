@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 69).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 70).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5138,3 +5138,33 @@ hay nadie) quedaría limitado a sus fichas, igual que en el resto de la app.
 ### Estado del plan maestro (§67)
 (3) ✅ · (9) ✅ · (11) ✅ (027 confirmada) · (5) ✅ primera pasada completa · siguen:
 (7) Copérnico — esperando capturas del 19/10 · (4) manual · (2) cuando junte la info.
+
+---
+
+## 70. Actualización 18/10 (cont.) — punto (4) del plan: Manual de uso con capturas; recordatorio al celular
+
+- **Manual de uso armado** (`Manual/ManualPage.tsx` + `Manual/manualContent.ts`),
+  con el índice que aprobó Gonzalo: 1 Entrar y conocer la pantalla · 2 Cargar un
+  trabajo · 3 Encontrar un trabajo · 4 La ficha · 5 Cambiar el estado · 6 Avisarle a
+  alguien (@mención, campana, aviso flotante) · 7 Bloquear o cancelar · 8 Muestra y
+  mensaje al cliente · 9 Planilla de producción y contact sheet · 10 Presupuestos ·
+  11 Celular. Cada tema: capturas reales con **marcas rojas numeradas** + pasos con
+  el mismo número, textos cortos sin palabras técnicas, letra más grande que el
+  resto de la app, y un "consejo" en ámbar donde aporta. La imagen se abre en
+  grande con un click. Reemplaza las secciones vacías que había.
+- **Capturas**: `public/manual/*.jpg` (21, ~2 MB en total, datos 100% ficticios).
+  Se regeneran con **`video/generador/manual.mjs`** (Playwright, no toca Supabase;
+  `BASE=http://localhost:5179 node manual.mjs [prefijo]` para otro puerto o una
+  sola). Si cambia la UI, regenerar y revisar que las marcas sigan cayendo donde
+  corresponde (cada marca que no encuentra se avisa con "! marca N no encontrada").
+- **Mantener sincronizado**: cuando se cambie una pantalla que aparece en el
+  manual, actualizar el texto de `manualContent.ts` y volver a sacar esa captura.
+- **Recordatorio de Copérnico**: Gonzalo pidió que le llegue al celular desde su
+  cuenta de Claude. Se activó el ajuste "Connect new sessions to Remote Control"
+  (las sesiones nuevas, incluida la del recordatorio, quedan conectadas para poder
+  mandarle notificaciones al teléfono). Para recibirla necesita la app de Claude
+  en el celular con su cuenta y las notificaciones permitidas.
+
+### Estado del plan maestro (§67)
+(3) ✅ · (9) ✅ · (11) ✅ · (5) ✅ · (4) ✅ primera versión · siguen: (7) Copérnico —
+capturas el 19/10 · (2) materiales cuando Gonzalo junte la info.
