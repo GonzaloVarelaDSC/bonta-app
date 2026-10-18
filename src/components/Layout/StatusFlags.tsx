@@ -47,7 +47,9 @@ export function StatusFlags() {
         </div>
       )}
       {visible.map((f) => {
-        const time = format(new Date(f.at), 'HH:mm');
+        // Los que llegaron con la app cerrada pueden ser de otro día: ahí va la fecha también.
+        const d = new Date(f.at);
+        const time = format(d, d.toDateString() === new Date().toDateString() ? 'HH:mm' : 'dd/MM HH:mm');
         const open = () => navigate(`/trabajos/${f.jobId}`);
         return (
           <div

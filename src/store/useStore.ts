@@ -77,6 +77,7 @@ interface StoreState {
   toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
   saveProductionConfig: (jobId: string, config: ProductionConfig, byUserId: string) => Promise<void>;
   updateJobHeader: (jobId: string, fields: { name: string; clientName: string }, byUserId: string) => Promise<void>;
+  changeResponsible: (jobId: string, newUserId: string, byUserId: string) => Promise<void>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -183,6 +184,55 @@ async function insertActivity(
   return entry;
 }
 
+// --- Avisos de cambio de estado que pasaron mientras la app estaba cerrada ---
+// (Gonzalo, 18/10: con la PC apagada se perdía todo lo que cambiaban los demás.)
+// Se guarda en el navegador hasta cuándo ya se vieron los avisos y cuáles se
+// cerraron sueltos; al abrir la app se traen del Historial los cambios de estado
+// de otros posteriores a esa marca (tope 7 días / 50). Al cerrar todos, la marca
+// avanza a "ahora". La primera vez no muestra nada viejo, arranca desde hoy.
+const FLAGS_KEY = (uid: string) => `bonta-flags-${uid}`;
+type FlagsSeen = { seenUntil: string; dismissed: string[] };
+
+function readFlagsSeen(uid: string): FlagsSeen | null {
+  try { const raw = localStorage.getItem(FLAGS_KEY(uid)); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+function writeFlagsSeen(uid: string, v: FlagsSeen) {
+  try { localStorage.setItem(FLAGS_KEY(uid), JSON.stringify(v)); } catch { /* sin storage: solo se pierde el recordatorio */ }
+}
+/** `dismissedId` null = no queda ninguno abierto: la marca pasa a ahora. */
+function markFlagsSeen(uid: string, dismissedId: string | null) {
+  if (dismissedId === null) return writeFlagsSeen(uid, { seenUntil: new Date().toISOString(), dismissed: [] });
+  const cur = readFlagsSeen(uid) ?? { seenUntil: new Date().toISOString(), dismissed: [] };
+  writeFlagsSeen(uid, { ...cur, dismissed: [...cur.dismissed, dismissedId].slice(-200) });
+}
+
+async function loadMissedStatusFlags(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState) {
+  const me = get().currentUser;
+  if (!me) return;
+  const seen = readFlagsSeen(me.id);
+  if (!seen) { writeFlagsSeen(me.id, { seenUntil: new Date().toISOString(), dismissed: [] }); return; }
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const since = seen.seenUntil > weekAgo ? seen.seenUntil : weekAgo;
+  const { data, error } = await supabase.from('activity_log').select('*')
+    .eq('action', 'estado').neq('user_id', me.id).gt('created_at', since)
+    .not('from_status', 'is', null).order('created_at', { ascending: false }).limit(50);
+  if (error) { console.warn('[avisos de estado] no se pudieron traer los pendientes, se ignora:', error); return; }
+  const flags: StatusFlag[] = [];
+  for (const row of (data ?? []) as any[]) {
+    if (seen.dismissed.includes(row.id)) continue;
+    const job = get().jobs.find((j) => j.id === row.job_id);
+    if (!job || job.deletedAt) continue;
+    const author = get().users.find((u) => u.id === row.user_id);
+    flags.push({ id: row.id, jobId: job.id, jobName: job.name, from: row.from_status, to: row.to_status, userName: author ? author.name.split(' ')[0] : 'Alguien', at: row.created_at });
+  }
+  if (flags.length === 0) return;
+  set((s) => {
+    const known = new Set(s.statusFlags.map((f) => f.id));
+    const merged = [...s.statusFlags, ...flags.filter((f) => !known.has(f.id))].sort((a, b) => b.at.localeCompare(a.at));
+    return { statusFlags: merged.slice(0, 50) };
+  });
+}
+
 async function insertNotifications(userIds: string[], jobId: string, text: string): Promise<void> {
   const rows = userIds.filter((id, i, arr) => arr.indexOf(id) === i).map((userId) => ({ user_id: userId, job_id: jobId, text }));
   if (rows.length === 0) return;
@@ -231,8 +281,17 @@ export const useStore = create<StoreState>()((set, get) => ({
   statusFlags: [],
 
   clearToast: () => set(() => ({ toast: null })),
-  dismissStatusFlag: (id) => set((s) => ({ statusFlags: s.statusFlags.filter((f) => f.id !== id) })),
-  dismissAllStatusFlags: () => set(() => ({ statusFlags: [] })),
+  dismissStatusFlag: (id) => {
+    const rest = get().statusFlags.filter((f) => f.id !== id);
+    set({ statusFlags: rest });
+    const me = get().currentUser;
+    if (me) markFlagsSeen(me.id, rest.length === 0 ? null : id);
+  },
+  dismissAllStatusFlags: () => {
+    set({ statusFlags: [] });
+    const me = get().currentUser;
+    if (me) markFlagsSeen(me.id, null);
+  },
 
   init: async () => {
     // En dev, React StrictMode invoca el efecto de init() dos veces — sin este
@@ -245,6 +304,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (sessionData.session) {
       await loadCurrentUser(set);
       await get_loadAll(set, get);
+      await loadMissedStatusFlags(set, get);
     }
     set({ authReady: true });
 
@@ -252,6 +312,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       if (!session) { set({ currentUser: null }); return; }
       await loadCurrentUser(set);
       await get_loadAll(set, get);
+      await loadMissedStatusFlags(set, get);
     });
 
     // Actualización en vivo: cualquier cambio en "jobs" (propio o de otro usuario) refresca esa ficha.
@@ -567,6 +628,23 @@ export const useStore = create<StoreState>()((set, get) => ({
       changes.push(`cliente: ${before} → ${after}`);
     }
     if (changes.length) await insertActivity(set, jobId, byUserId, 'datos', `Corrigió ${changes.join(' · ')}.`);
+    await refreshJob(set, jobId);
+  },
+
+  // Pasar un trabajo a otro responsable desde la ficha (Gonzalo, 18/10). Queda
+  // en el Historial con el "de quién a quién" y le llega la campana al nuevo
+  // responsable (y al anterior, para que sepa que ya no lo tiene).
+  changeResponsible: async (jobId, newUserId, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job || job.responsibleUserId === newUserId) return;
+    const { error } = await supabase.from('jobs').update({ responsible_user_id: newUserId, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
+    const nameOf = (id: string) => get().users.find((u) => u.id === id)?.name ?? '—';
+    await insertActivity(set, jobId, byUserId, 'responsable', `Cambió el responsable: ${nameOf(job.responsibleUserId)} → ${nameOf(newUserId)}.`);
+    if (newUserId !== byUserId) await insertNotifications([newUserId], jobId, `Te asignaron el trabajo "${jobLabel(job)}".`);
+    if (job.responsibleUserId && job.responsibleUserId !== byUserId && job.responsibleUserId !== newUserId) {
+      await insertNotifications([job.responsibleUserId], jobId, `El trabajo "${jobLabel(job)}" pasó a ${nameOf(newUserId)}.`);
+    }
     await refreshJob(set, jobId);
   },
 

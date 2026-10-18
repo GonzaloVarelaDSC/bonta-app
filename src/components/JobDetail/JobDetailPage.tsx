@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-route
 import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
-import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob } from '../../lib/permissions';
+import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob, canAssign } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
@@ -53,6 +53,7 @@ export function JobDetailPage() {
   const loadJobActivity = useStore((s) => s.loadJobActivity);
   const [restoring, setRestoring] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
+  const changeResponsible = useStore((s) => s.changeResponsible);
   const navigate = useNavigate();
   // `key === 'default'` = esta es la primera pantalla de la sesión (link directo,
   // recarga, pestaña nueva): no hay "atrás" dentro de la app a donde volver.
@@ -78,6 +79,13 @@ export function JobDetailPage() {
   const missing = missingFields(job);
   const responsible = users.find((u) => u.id === job.responsibleUserId);
   const creator = users.find((u) => u.id === job.createdByUserId);
+
+  // El último pase de responsable, sacado del Historial (que la ficha ya carga),
+  // para que se vea ahí mismo de quién venía y quién lo cambió.
+  const handover = activityLog.find((a) => a.action === 'responsable');
+  const lastHandover = handover
+    ? `${handover.detail.replace(/^Cambió el responsable: (.*) → (.*)\.$/, 'Pasó de $1 a $2')} · por ${users.find((u) => u.id === handover.userId)?.name.split(' ')[0] ?? 'alguien'}, ${fmtDateTime(handover.createdAt)}`
+    : null;
 
   const visibleTabs = TABS.filter((t) => t !== 'Instalación' || job.requiresInstallation);
   const desktopOnlyTab = (t: string) => t !== 'Comentarios';
@@ -279,7 +287,25 @@ export function JobDetailPage() {
                 <Field label="Cliente" value={client?.name} />
                 <Field label="Contacto" value={job.contactPhone ? `${job.contactName} · ${job.contactPhone}` : job.contactName} />
                 <Field label="Generado por" value={creator?.name ?? '—'} />
-                <Field label="Responsable interno" value={responsible?.name} />
+                {canAssign(user.role) ? (
+                  <div>
+                    <label htmlFor="job-responsible" className="block text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Responsable interno</label>
+                    <select
+                      id="job-responsible" value={job.responsibleUserId}
+                      onChange={async (e) => { try { await changeResponsible(job.id, e.target.value, user.id); } catch (err) { alert(friendlyError(err)); } }}
+                      className="border border-ink-200 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      {!users.some((u) => u.id === job.responsibleUserId && u.isProducer && u.active) && <option value={job.responsibleUserId}>{responsible?.name ?? '—'}</option>}
+                      {users.filter((u) => u.isProducer && u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                    {lastHandover && <div className="text-[11px] text-ink-700 mt-1">{lastHandover}</div>}
+                  </div>
+                ) : (
+                  <div>
+                    <Field label="Responsable interno" value={responsible?.name} />
+                    {lastHandover && <div className="text-[11px] text-ink-700 mt-1">{lastHandover}</div>}
+                  </div>
+                )}
                 <Field label="Asignados" value={[...job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean), ...job.assignedNames].join(', ') || '—'} />
                 <Field label="Fecha de creación" value={fmtDate(job.createdAt)} />
                 <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />

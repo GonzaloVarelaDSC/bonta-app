@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 66).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 67).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -4968,3 +4968,84 @@ una medida. Verificado con PDF real (Playwright).
    estado). Lo mismo desde la ficha ya creada. Requiere migración (lista de
    seguidores por trabajo). **Esperando que Gonzalo elija** entre: (a) solo el aviso
    al crear, (b) aviso + seguir la ficha, (c) nada nuevo y usar @mención.
+
+---
+
+## 67. Actualización 18/10 (cont.) — PLAN DE TRABAJO VIGENTE (lista maestra de Gonzalo) + primeros 2 puntos hechos
+
+Gonzalo pidió explícitamente **no perder ningún punto** y avanzar por etapas. Esta
+es la lista maestra; cada sesión nueva tiene que arrancar desde acá y marcar lo
+que cierre. Numeración = la de su mensaje del 18/10.
+
+### Decisiones cerradas en esta ronda
+- **"Avisar a" en Carga rápida: NO se hace** (opción C). Para avisar a alguien en
+  un caso puntual se usa @mención en un comentario de la ficha. Cerrado.
+- **(1) "Peso" de cada trabajo: DESCARTADO** por ahora.
+- **(6) Facturación AFIP: DESCARTADA** (se factura en Copérnico). Reemplaza §28.
+- **(8) Claudia:** cuenta creada y verificada por Gonzalo. Cerrado.
+- **Archivos / subida real (§63):** sigue descartado como "pestaña Archivos", pero
+  vuelve con un alcance distinto, ver punto 11.
+
+### Estado de cada punto
+- **(3) Cambiar el responsable de un trabajo — HECHO (este commit).** En la pestaña
+  General de la ficha, "Responsable interno" pasa a ser un select (solo
+  `canAssign` = admin/coordinador; opciones = productores activos). Acción nueva
+  del store `changeResponsible`: actualiza `responsible_user_id`, registra en el
+  Historial (`action: 'responsable'`, "Cambió el responsable: A → B."), campana al
+  nuevo responsable y aviso al anterior. Debajo del campo se ve el último pase
+  ("Pasó de A a B · por X, fecha"), sacado del Historial. `assignJob` (viejo, sin
+  uso) no se tocó. Sin migraciones (`jobs_update_guard` ya permite
+  `responsible_user_id` a admin/coordinador). Verificado en preview local.
+- **(9) Avisos de cambio de estado con la PC apagada — HECHO (este commit).**
+  `loadMissedStatusFlags` en `useStore.ts`: al abrir la app (y al loguearse) trae
+  del `activity_log` los cambios de estado de otros posteriores a la última vez
+  que se vieron (marca en `localStorage` por usuario: `bonta-flags-<uid>` con
+  `seenUntil` + ids cerrados sueltos; tope 7 días / 50). Cerrar todos los avisos
+  mueve la marca a "ahora"; cerrar uno suelto lo recuerda para no repetirlo. La
+  primera vez en un navegador no muestra nada viejo. Los avisos que no son de hoy
+  muestran fecha + hora (`StatusFlags.tsx`). Limitación: la marca es por
+  navegador (si entra desde otra compu, ve los pendientes de nuevo ahí). No se
+  pudo probar con datos reales (necesita dos cuentas); revisado por código.
+- **(2) Base de materiales y medidas — EN ESPERA de Gonzalo.** Él no conoce toda
+  la info; tiene que juntarla con el equipo. Puede ir dictando lo que recuerde.
+  Cuando la tenga: extender el patrón de sugerencia descartable de
+  `ProductsEditor` (Corpóreo → plantilla) a reglas material → recordatorio.
+- **(4) Manual de uso — PENDIENTE (lo arma Claude).** Gonzalo pidió que lo haga
+  Claude, estilo video: capturas reales de la app (con datos ficticios del
+  generador `video/generador/demo-setup.js`), textos muy cortos, flechas y
+  marcas. Lenguaje simple, paso a paso, letra grande, una tarea por pantalla
+  ("Cómo cargar un trabajo", "Cómo cambiar el estado", etc.). Va dentro de
+  `ManualPage.tsx` (estructura ya existe). Plan: armar las capturas con
+  Playwright + anotaciones, proponerle el índice de tareas antes de producir todo.
+- **(5) Versión celular — PENDIENTE (Claude decide).** Relevar a 375 px lo que
+  quedó sin revisar en §27.5 (Trabajos/tabla, Usuarios, Configuración, campana,
+  buscador, menú hamburguesa, comentarios, Presupuestos, pestaña Producción) y
+  arreglar lo que se rompa.
+- **(7) Pasar lo cargado en la app a Copérnico — PENDIENTE, requiere info.**
+  Copérnico no acepta archivos. Ideas: (a) botón "Copiar para Copérnico" en la
+  ficha que arma un texto ordenado en el mismo orden que los campos de Copérnico,
+  para pegar campo por campo o de una; (b) una vista "modo carga" con cada dato y
+  su botón Copiar al lado; (c) automatizar el tipeo (extensión/macro del
+  navegador) — más frágil, solo si (a)/(b) no alcanzan. **Falta que Gonzalo pase
+  capturas de la pantalla de carga de Copérnico** (qué campos pide y en qué
+  orden) para armar (a)/(b) a medida.
+- **(10) Trabajar por etapas sin perder puntos** — este plan es eso.
+- **(11) Imagen de "contact sheet" de Copérnico en la ficha y en la planilla de
+  producción — PENDIENTE, requiere decisión.** Gonzalo quiere subir esa imagen
+  (una sola, liviana) a la ficha y que salga impresa en la planilla de la pestaña
+  Producción para previsualizar las partes. Necesita Supabase Storage (bucket +
+  policies, SQL que corre Gonzalo) y una columna en `jobs` para la ruta. Sugerencias
+  a confirmar: subir desde la pestaña Producción (pegar con Ctrl+V o arrastrar),
+  achicar la imagen en el navegador antes de subir, y en la planilla mostrarla
+  en una franja arriba de la tabla o en una página propia según tamaño.
+
+### Orden propuesto (a confirmar con Gonzalo)
+1. (3) y (9) — hechos. 2. (11) contact sheet. 3. (7) Copérnico, apenas pase las
+capturas. 4. (5) celular. 5. (4) manual (al final, cuando la app esté más
+estable, así las capturas no quedan viejas). (2) cuando junte la información.
+
+### Arreglos internos pendientes (no visibles para el usuario)
+Backport de `handle_new_user()` a `001_schema.sql`; limpieza de lo sin uso
+(`job_files`/`file_versions` y acciones del store, `quality_checks`/`QC_TEMPLATE`,
+`job_stages`, `credits_as_assigner`); confirmar si `jobs` está en la publicación
+de Realtime (cambios de otros que aparezcan solos en Kanban/Dashboard).
