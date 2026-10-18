@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 70).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 71).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5168,3 +5168,36 @@ hay nadie) quedaría limitado a sus fichas, igual que en el resto de la app.
 ### Estado del plan maestro (§67)
 (3) ✅ · (9) ✅ · (11) ✅ · (5) ✅ · (4) ✅ primera versión · siguen: (7) Copérnico —
 capturas el 19/10 · (2) materiales cuando Gonzalo junte la info.
+
+---
+
+## 71. Actualización 18/10 (cont.) — punto (2) del plan: base de materiales y máquinas (primera versión)
+
+Gonzalo pasó su documento "Estudio Bonta — Materiales, formatos y especificaciones de
+producción". Regla del documento: **no completar medidas por suposición** — cada dato
+lleva estado (confirmado / aproximado / a confirmar).
+
+1. **`src/data/materialsKnowledge.ts`** (nuevo) — es la fuente para corregir o sumar
+   datos (se edita el archivo, no hay pantalla de edición): `MATERIAL_FORMATS`,
+   `MACHINES`, `PRODUCTION_RULES`, `PENDING_DATA`, más `materialHints()` y
+   `sizeWarnings()`.
+2. **Página "Materiales y máquinas"** (`Manual/MaterialsPage.tsx`, ruta `/materiales`,
+   en el menú debajo de "Manual de uso", visible para todos): tablas de formatos,
+   máquinas, reglas y lista de datos que faltan, con chip de estado
+   (verde confirmado, ámbar aproximado, gris a confirmar).
+3. **Ayudas al cargar un producto** (`ProductsEditor.tsx`, componente `ProductHints`,
+   vale para Carga rápida, Detalle y presupuestos que lo usen): solo informativas,
+   nunca bloquean.
+   - Aviso ámbar si una medida no entra: tipo V7000 > 250×125 cm, tipo S40 lado chico
+     > 161,6 cm, vinilo con "corte" en el nombre lado chico > 119 cm (Roland, a
+     confirmar). Lee "cm"/"mm"; sin unidad toma cm.
+   - Dato azul según material: MDF (demasía 5–8 mm), PVC (sin demasía), Metalex
+     (veta paralela al borde largo), Vinilo (anchos de rollo).
+   - Los materiales se reconocen **por nombre**; Metalex, Polyfan y PAI no existen en
+     el catálogo actual → hay que agregarlos desde Configuración para que aparezcan.
+4. Pendientes del documento (en `PENDING_DATA`): formatos de MDF/PVC/Polyfan/PAI,
+   anchos de vinilo, límite del Roland, Metalex, área del láser, criterio exacto de
+   demasía en MDF.
+
+Verificado en el navegador local con datos ficticios (página y aviso de V7000 +
+dato de MDF). Sin migraciones.

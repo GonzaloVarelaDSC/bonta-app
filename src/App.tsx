@@ -14,6 +14,7 @@ import { UsersPage } from './components/Users/UsersPage';
 import { ConfigPage } from './components/Common/ConfigPage';
 import { ChequeoArchivosPage } from './components/Herramientas/ChequeoArchivosPage';
 import { ManualPage } from './components/Manual/ManualPage';
+import { MaterialsPage } from './components/Manual/MaterialsPage';
 import { HistoricoPage } from './components/Historico/HistoricoPage';
 import { QuotesPage } from './components/Quotes/QuotesPage';
 import { QuoteFormPage } from './components/Quotes/QuoteFormPage';
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/kanban" element={<KanbanPage />} />
           <Route path="/chequeo-archivos" element={<ChequeoArchivosPage />} />
           <Route path="/manual" element={<ManualPage />} />
+          <Route path="/materiales" element={<MaterialsPage />} />
           <Route path="/clientes" element={<ClientsPage />} />
           <Route path="/presupuestos" element={<RequireRole allow={canManageQuotes}><QuotesPage /></RequireRole>} />
           <Route path="/presupuestos/nuevo" element={<RequireRole allow={canManageQuotes}><QuoteFormPage /></RequireRole>} />

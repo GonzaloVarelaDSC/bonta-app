@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Lightbulb, Plus, X, Truck, Check } from 'lucide-react';
+import { Lightbulb, Plus, X, Truck, Check, Info, AlertTriangle } from 'lucide-react';
+import { materialHints, sizeWarnings } from '../../data/materialsKnowledge';
 import { SizeItemsEditor, SizeItemsView } from './SizeItemsEditor';
 import { useStore } from '../../store/useStore';
 import type { JobTypeId, MaterialId, Product } from '../../types';
@@ -116,6 +117,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
                 className={inputCls}
               />
             </div>
+            <ProductHints product={product} jobTypeId={jobTypeId} materialLabels={product.materialIds.map((id) => materials.find((m) => m.id === id)?.label ?? '')} />
           </div>
         </div>
       ))}
@@ -214,6 +216,29 @@ export function ProductsView({ products, onToggle }: { products: Product[]; onTo
             </div>
           </label>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// Ayudas de la base de materiales (data/materialsKnowledge.ts, 18/10): datos
+// útiles según el material elegido y avisos si una medida no entra en la máquina.
+// Solo informan, nunca bloquean nada.
+function ProductHints({ product, jobTypeId, materialLabels }: { product: Product; jobTypeId?: JobTypeId; materialLabels: string[] }) {
+  const hints = materialHints(materialLabels);
+  const warnings = sizeWarnings(jobTypeId, materialLabels, product.label, product.sizeItems);
+  if (hints.length === 0 && warnings.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      {warnings.map((w) => (
+        <p key={w} className="flex items-start gap-2 text-xs text-urg-text bg-urg-bg rounded-lg px-3 py-2">
+          <AlertTriangle size={14} aria-hidden className="shrink-0 mt-px" /> <span>{w}</span>
+        </p>
+      ))}
+      {hints.map((h) => (
+        <p key={h} className="flex items-start gap-2 text-xs text-info-text bg-info-bg rounded-lg px-3 py-2">
+          <Info size={14} aria-hidden className="shrink-0 mt-px" /> <span>{h}</span>
+        </p>
       ))}
     </div>
   );
