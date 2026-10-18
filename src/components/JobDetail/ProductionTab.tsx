@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { PRODUCTION_PROCESSES } from '../../data/catalog';
 import { productionRows, configFromRows } from '../../lib/production';
 import { friendlyError } from '../../lib/errors';
+import { ContactSheetSection } from './ContactSheetSection';
 
 const inputCls = 'w-full border border-ink-200 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500';
 
@@ -93,6 +94,8 @@ export function ProductionTab({ job }: { job: Job }) {
           </button>
         </div>
       </div>
+
+      <ContactSheetSection job={job} />
 
       {rows.length === 0 && (
         <p className="text-sm text-ink-700 italic">La OT todavía no tiene componentes cargados. Podés cargarlos en Detalle o agregar uno solo para producción.</p>

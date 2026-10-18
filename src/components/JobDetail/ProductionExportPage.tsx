@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -30,12 +30,24 @@ export function ProductionExportPage() {
   const client = useStore((s) => s.clients).find((c) => c.id === job?.clientId);
   const materials = useStore((s) => s.materials);
 
-  // Abre el diálogo de impresión solo, para que "Exportar PDF" sea un solo paso.
+  const contactSheetUrl = useStore((s) => s.contactSheetUrl);
+  // Contact sheet (18/10): link firmado temporal; 'none' = el trabajo no tiene,
+  // 'error' = no se pudo traer (la planilla sale igual, sin imagen).
+  const [fetched, setSheet] = useState<'loading' | 'error' | { url: string; loaded: boolean }>('loading');
+  const sheet = job && !job.contactSheetPath ? 'none' : fetched;
   useEffect(() => {
-    if (!job) return;
+    if (!job?.contactSheetPath) return;
+    contactSheetUrl(job.contactSheetPath).then((url) => setSheet({ url, loaded: false })).catch(() => setSheet('error'));
+  }, [job?.contactSheetPath]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Abre el diálogo de impresión solo, para que "Exportar PDF" sea un solo paso
+  // — recién cuando la imagen del contact sheet terminó de cargar (si hay).
+  const readyToPrint = sheet === 'none' || sheet === 'error' || (typeof sheet === 'object' && sheet.loaded);
+  useEffect(() => {
+    if (!job || !readyToPrint) return;
     const t = setTimeout(() => window.print(), 400);
     return () => clearTimeout(t);
-  }, [job?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [job?.id, readyToPrint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return <Navigate to="/login" replace />;
   if (!job) return <Navigate to="/trabajos" replace />;
@@ -109,6 +121,21 @@ export function ProductionExportPage() {
             </tr>
           </thead>
           <tbody>
+            {/* Contact sheet: primera fila, a lo ancho, sin partirse entre hojas. Se
+                limita en alto para que en la primera hoja todavía entren renglones. */}
+            {typeof sheet === 'object' && (
+              <tr className="prod-row">
+                <td colSpan={totalCols} className="border border-ink-400 p-2 text-center">
+                  <div className="text-[8pt] uppercase tracking-wide text-ink-700 text-left mb-1">Contact sheet</div>
+                  <img
+                    src={sheet.url} alt="Contact sheet del trabajo"
+                    onLoad={() => setSheet((s) => (typeof s === 'object' ? { ...s, loaded: true } : s))}
+                    onError={() => setSheet('error')}
+                    className="inline-block max-h-[75mm] max-w-full w-auto object-contain"
+                  />
+                </td>
+              </tr>
+            )}
             {rows.length === 0 && (
               <tr><td colSpan={totalCols} className={`${td} text-center text-ink-700`}>La OT no tiene componentes cargados.</td></tr>
             )}

@@ -115,6 +115,8 @@ create table if not exists jobs (
   sample_review_at timestamptz,
   -- Pestaña "Producción" de la ficha: planilla de taller, aparte de products (ver 026).
   production_config jsonb not null default '{"items": []}'::jsonb,
+  -- Imagen de contact sheet (ruta en el bucket privado job-images, ver 027).
+  contact_sheet_path text,
 
   last_activity_at timestamptz not null default now()
 );

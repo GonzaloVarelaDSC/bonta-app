@@ -78,6 +78,9 @@ interface StoreState {
   saveProductionConfig: (jobId: string, config: ProductionConfig, byUserId: string) => Promise<void>;
   updateJobHeader: (jobId: string, fields: { name: string; clientName: string }, byUserId: string) => Promise<void>;
   changeResponsible: (jobId: string, newUserId: string, byUserId: string) => Promise<void>;
+  uploadContactSheet: (jobId: string, image: Blob, byUserId: string) => Promise<void>;
+  removeContactSheet: (jobId: string, byUserId: string) => Promise<void>;
+  contactSheetUrl: (path: string) => Promise<string>;
   assignJob: (jobId: string, assignedUserIds: string[], responsibleUserId: string, byUserId: string) => Promise<void>;
   addComment: (jobId: string, userId: string, text: string, mentions: string[]) => Promise<void>;
   blockJob: (jobId: string, reason: BlockReason, description: string, byUserId: string) => Promise<void>;
@@ -629,6 +632,39 @@ export const useStore = create<StoreState>()((set, get) => ({
     }
     if (changes.length) await insertActivity(set, jobId, byUserId, 'datos', `Corrigió ${changes.join(' · ')}.`);
     await refreshJob(set, jobId);
+  },
+
+  // Contact sheet (18/10): una imagen por OT en el bucket privado job-images.
+  // Se sube con nombre nuevo cada vez (así nunca queda una versión vieja en caché)
+  // y recién después de guardar la ruta nueva se borra la anterior.
+  uploadContactSheet: async (jobId, image, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const ext = image.type === 'image/png' ? 'png' : 'jpg';
+    const path = `${jobId}/${crypto.randomUUID()}.${ext}`;
+    const up = await supabase.storage.from('job-images').upload(path, image, { contentType: image.type, upsert: false });
+    if (up.error) throw up.error;
+    const { error } = await supabase.from('jobs').update({ contact_sheet_path: path, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) { await supabase.storage.from('job-images').remove([path]); throw error; }
+    if (job.contactSheetPath) await supabase.storage.from('job-images').remove([job.contactSheetPath]);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, contactSheetPath: path } : j) }));
+    await insertActivity(set, jobId, byUserId, 'contact_sheet', job.contactSheetPath ? 'Reemplazó la imagen del contact sheet.' : 'Subió la imagen del contact sheet.');
+  },
+
+  removeContactSheet: async (jobId, byUserId) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job?.contactSheetPath) return;
+    const { error } = await supabase.from('jobs').update({ contact_sheet_path: null }).eq('id', jobId);
+    if (error) throw error;
+    await supabase.storage.from('job-images').remove([job.contactSheetPath]);
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, contactSheetPath: null } : j) }));
+    await insertActivity(set, jobId, byUserId, 'contact_sheet', 'Quitó la imagen del contact sheet.');
+  },
+
+  contactSheetUrl: async (path) => {
+    const { data, error } = await supabase.storage.from('job-images').createSignedUrl(path, 60 * 60);
+    if (error) throw error;
+    return data.signedUrl;
   },
 
   // Pasar un trabajo a otro responsable desde la ficha (Gonzalo, 18/10). Queda

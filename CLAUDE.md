@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 67).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 68).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5049,3 +5049,39 @@ Backport de `handle_new_user()` a `001_schema.sql`; limpieza de lo sin uso
 (`job_files`/`file_versions` y acciones del store, `quality_checks`/`QC_TEMPLATE`,
 `job_stages`, `credits_as_assigner`); confirmar si `jobs` está en la publicación
 de Realtime (cambios de otros que aparezcan solos en Kanban/Dashboard).
+
+---
+
+## 68. Actualización 18/10 (cont.) — punto 11 del plan: imagen de contact sheet en la ficha y en la planilla de producción
+
+- **Migración `027_job_contact_sheet.sql` — HAY QUE CORRERLA** (pendiente de
+  confirmación): columna `jobs.contact_sheet_path text`, bucket de Storage
+  **privado** `job-images` (5 MB, solo JPG/PNG/WEBP) y 4 policies sobre
+  `storage.objects` (select/insert/update/delete) con el mismo criterio que la OT:
+  `can_view_job(<primera carpeta de la ruta>::uuid)`. Ruta de cada archivo:
+  `<job_id>/<uuid>.jpg`. Sumada también a `001_schema.sql` (solo la columna; el
+  bucket/policies viven en la 027). Sin la migración, subir tira error de columna
+  o de bucket (traducido por `friendlyError`).
+- **`lib/image.ts` → `shrinkImage()`**: achica en el navegador a 2400 px de lado
+  mayor, JPEG 0.85, fondo blanco (prueba: PNG de 3600 px / 181 KB → 52 KB).
+- **Store**: `uploadContactSheet` (sube con nombre nuevo, guarda la ruta y recién
+  después borra la anterior; Historial "Subió/Reemplazó la imagen del contact
+  sheet"), `removeContactSheet`, `contactSheetUrl` (link firmado de 1 hora).
+- **UI** (`JobDetail/ContactSheetSection.tsx`, arriba de todo en la pestaña
+  Producción): zona para arrastrar o hacer click, o **pegar con Ctrl+V** mientras la
+  pestaña está abierta; vista previa, "Reemplazar" y "Quitar" (con confirmación).
+- **Planilla** (`ProductionExportPage.tsx`): si hay imagen, va como primera fila de
+  la tabla, a lo ancho, alto máx. 75 mm (con 95 mm las líneas de responsables se
+  iban solas a una hoja 2), sin partirse. El diálogo de imprimir se abre recién
+  cuando la imagen terminó de cargar; si falla, la planilla sale igual sin imagen.
+- **Verificado**: pegar una imagen en la pestaña (preview local con datos
+  ficticios, acciones del store reemplazadas por versiones locales) y PDFs reales
+  con Playwright: trabajo chico con imagen → 1 hoja completa; 27 componentes con
+  imagen → 5 hojas, encabezado repetido. **No probado contra Supabase real**
+  (bucket/policies) — lo prueba Gonzalo después de correr la 027.
+
+### Estado del plan maestro (§67)
+(3) ✅ · (9) ✅ · (11) ✅ código, falta correr 027 y probar · siguen: (7) Copérnico
+— esperando capturas de su pantalla de carga · (5) celular · (4) manual · (2)
+cuando junte la info. Orden confirmado por Gonzalo: contact sheet → Copérnico →
+celular → manual.

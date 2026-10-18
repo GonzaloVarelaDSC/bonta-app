@@ -240,6 +240,8 @@ export interface Job {
   // al presupuesto de origen. `undefined` para cualquier trabajo cargado normal.
   sourceQuoteId?: string;
   productionConfig: ProductionConfig;
+  // Ruta de la imagen de contact sheet en el bucket privado `job-images` (027).
+  contactSheetPath?: string | null;
 
   jobTypeId: JobTypeId;
   description: string;
