@@ -109,7 +109,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-ink-700 shrink-0">
+        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap text-xs text-ink-700 min-w-0">
           {(job.contactName || job.contactPhone) && (
             <div className="flex items-center gap-1.5">
               <Phone size={12} className="text-ink-700 shrink-0" />

@@ -6,7 +6,7 @@ import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canDeleteJob } from '../../lib/permissions';
 import { PriorityBadge, StatusSelect, CountdownBadge, Avatar, BlockedBadge } from '../Common/Badges';
-import { fmtShort } from '../../lib/dates';
+import { fmtShort, fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { isBlocked } from '../../lib/selectors';
 import { BLOCK_REASON_LABELS } from '../../data/catalog';
@@ -43,6 +43,40 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
 
   return (
     <>
+      {/* Celular (18/10): la tabla de 9 columnas obligaba a deslizar de costado
+          para ver hasta el nombre del trabajo. Debajo de md cada trabajo es una
+          tarjeta con lo mismo, apilado; la tabla queda para pantallas anchas. */}
+      <ul className="md:hidden divide-y divide-ink-100">
+        {jobs.map((j) => {
+          const client = clients.find((c) => c.id === j.clientId);
+          const resp = users.find((u) => u.id === j.responsibleUserId);
+          return (
+            <li key={j.id} className="px-4 py-3 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <PriorityBadge priority={effectivePriority(j)} size="sm" />
+                <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
+                {isClosedStatus(j.status)
+                  ? <span className="text-xs text-ink-700 ml-auto">{fmtDate(j.committedDate)}</span>
+                  : <span className="ml-auto"><CountdownBadge iso={j.committedDate} status={j.status} compact /></span>}
+              </div>
+              <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+                <span className="block text-sm font-semibold text-ink-900 break-words">{client?.name ?? '—'}</span>
+                <span className="block text-sm text-ink-700 break-words">{j.name}{isSilent(j) && <span className="ml-1.5" title="Más de 48h sin movimiento">💤</span>}</span>
+              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <StatusSelect status={j.status} options={statusOptionsFor(j)} onChange={(st) => tryChangeJobStatus(j, st, setStatus, currentUser!.id)} />
+                {isBlocked(j) && <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[j.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />}
+                {resp && <span className="flex items-center gap-1.5 text-xs text-ink-700"><Avatar name={resp.name} color={resp.avatarColor} size={20} />{resp.name.split(' ')[0]}</span>}
+                <span className="ml-auto flex items-center gap-3">
+                  <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} aria-label={`Ver ficha de ${j.name}`} className="text-ink-700 hover:text-brand-600 p-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><ArrowRight size={16} /></button>
+                  {canDelete && <button type="button" onClick={() => setConfirmDelete(j)} aria-label={`Eliminar ${j.name}`} className="text-crit hover:text-crit-text p-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Trash2 size={16} /></button>}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden md:block">
       <ScrollFadeX className="overflow-x-auto">
         <table className="w-full text-sm">
         <thead>
@@ -133,6 +167,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
         </tbody>
       </table>
     </ScrollFadeX>
+      </div>
     {confirmDelete && (
       <ConfirmDialog
         title="Eliminar trabajo"

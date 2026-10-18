@@ -4,8 +4,15 @@ import { Search, Bell, LogOut, ChevronDown, Menu } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Avatar } from '../Common/Badges';
 import { fmtShort } from '../../lib/dates';
-import { ROLES } from '../../data/catalog';
+import { ROLES, STATUS_LABELS } from '../../data/catalog';
+import type { JobStatus } from '../../types';
 import { visibleJobs } from '../../lib/permissions';
+
+// Las notificaciones viejas de cambio de estado guardaban el código interno
+// ("pasó a LISTO_PARA_ENTREGA"); se muestran con el nombre que ve todo el mundo.
+function readableNotification(text: string): string {
+  return text.replace(/[A-Z_]{5,}/g, (code) => (code in STATUS_LABELS ? `"${STATUS_LABELS[code as JobStatus]}"` : code));
+}
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const navigate = useNavigate();
@@ -105,7 +112,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           )}
         </button>
         {showNotifs && (
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">
+          <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-ink-100">
               <span className="text-sm font-semibold text-ink-900">Notificaciones</span>
               {unread > 0 && (
@@ -122,7 +129,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 >
                   <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${!n.read ? 'bg-brand-500' : 'bg-transparent'}`} />
                   <div>
-                    <div className="text-sm text-ink-800">{n.text}</div>
+                    <div className="text-sm text-ink-800">{readableNotification(n.text)}</div>
                     <div className="text-xs text-ink-700 mt-0.5">{fmtShort(n.createdAt)}</div>
                   </div>
                 </button>

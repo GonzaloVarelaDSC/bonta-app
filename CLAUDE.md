@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 68).
+la contradiga más arriba**. Última actualización: 18/10/2026 (sección 69).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5096,3 +5096,45 @@ destructive operations" del SQL Editor al correr la 027 lo dispara el
 datos) — es seguro, "Run query"; (2) `can_view_job` = admin y coordinador ven
 todo, que hoy es el equipo entero; solo un rol `produccion`/`instalacion` (hoy no
 hay nadie) quedaría limitado a sus fichas, igual que en el resto de la app.
+
+---
+
+## 69. Actualización 18/10 (cont.) — 027 confirmada; recordatorio de Copérnico; punto (5) del plan: versión celular
+
+- **027 corrida y probada por Gonzalo** ("anda bien"): contact sheet funcionando en
+  producción.
+- **Recordatorio programado** (tarea `recordatorio-capturas-copernico`, 19/10 10:30,
+  notificación al celular): sacarle capturas a la pantalla de carga de Copérnico para
+  el punto (7). Corre solo si la app de Claude está abierta (si no, al abrirla).
+- **(5) Celular — relevado completo a 390 px** con Playwright (script en el
+  scratchpad, datos ficticios de `video/generador/demo-setup.js`; ojo: después de
+  editar `useStore.ts` hay que reiniciar el dev server antes de inyectar datos desde
+  afuera, porque Vite sirve el módulo con otra URL y el `import()` agarra otra
+  instancia del store). Arreglos:
+  1. **Trabajos** (`JobsTable.tsx`): debajo de `md` la tabla de 9 columnas se
+     reemplaza por **tarjetas apiladas** (prioridad, N°, contador, cliente, trabajo,
+     select de estado, bloqueado, responsable, ver/eliminar). Arriba de `md`, la
+     tabla de siempre. Fecha de cerrados en `fmtDate` (sin hora).
+  2. **Presupuestos** (`QuotesPage.tsx`): mismo criterio, tarjetas en celular (la
+     tabla estaba en un contenedor `overflow-hidden` y cortaba Trabajo/Estado/Valor
+     sin poder deslizar); en escritorio la tabla con `overflow-x-auto`.
+  3. **Dashboard** (`DashboardJobCard`): la fila contacto + "asigna → responsable"
+     se salía de la tarjeta → `flex-wrap`.
+  4. **Ficha**: el select de prioridad (opciones largas) se salía → `max-w-full`.
+     La pestaña Comentarios en celular pasa a `h-[70vh] min-h-[380px]` (antes
+     `calc(100vh-260px)`, con la cabecera alta de celular el cuadro de escribir
+     quedaba muy abajo).
+  5. **Presupuesto (ficha)**: botones de la cabecera con `flex-wrap`.
+  6. **Campana** (`Header.tsx`): en celular el desplegable se salía por la izquierda
+     → `fixed` a lo ancho bajo el header (en `sm+` sigue como antes).
+  7. **Texto de notificaciones de estado**: `setStatus` notificaba "pasó a
+     LISTO_PARA_ENTREGA" (código interno) → ahora "pasó a "Listo para entregar"".
+     Las viejas ya guardadas se muestran traducidas en la campana
+     (`readableNotification`).
+  Revisado y sin problemas: Carga rápida, Usuarios, Configuración, Histórico,
+  Kanban (columnas que se deslizan, como Trello), menú lateral, pestañas de la
+  ficha (deslizan), Producción, Historial.
+
+### Estado del plan maestro (§67)
+(3) ✅ · (9) ✅ · (11) ✅ (027 confirmada) · (5) ✅ primera pasada completa · siguen:
+(7) Copérnico — esperando capturas del 19/10 · (4) manual · (2) cuando junte la info.

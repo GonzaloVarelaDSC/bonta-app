@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
 import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote } from '../lib/dbMappers';
 import { friendlyError } from '../lib/errors';
-import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS } from '../data/catalog';
+import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/catalog';
 import type { Client, ProductionConfig } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
@@ -547,7 +547,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       set, jobId, byUserId, 'estado', `Cambió el estado a ${status}.`,
       before && before.status !== status ? { from: before.status, to: status } : undefined
     );
-    if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)} pasó a ${status}.`);
+    if (before) await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `${jobLabel(before)} pasó a "${STATUS_LABELS[status]}".`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
   },

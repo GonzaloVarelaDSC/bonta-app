@@ -86,7 +86,7 @@ export function QuoteDetailPage() {
           <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{quote.name}</h1>
           <div className="text-sm text-ink-700 mt-0.5">{client?.name}</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {quote.price !== null ? (
             <a
               href={`/presupuestos/${quote.id}/exportar`} target="_blank" rel="noopener noreferrer"

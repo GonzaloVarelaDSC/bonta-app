@@ -85,6 +85,32 @@ export function QuotesPage() {
             {quotesLoaded ? 'No hay presupuestos que coincidan con este filtro.' : 'Cargando...'}
           </div>
         ) : (
+          <>
+          {/* Celular (18/10): tarjetas apiladas en vez de la tabla, que en una
+              pantalla angosta cortaba Trabajo/Estado/Valor sin poder verlos. */}
+          <ul className="md:hidden divide-y divide-ink-100">
+            {filtered.map((q) => {
+              const client = clients.find((c) => c.id === q.clientId);
+              return (
+                <li key={q.id}>
+                  <button type="button" onClick={() => navigate(`/presupuestos/${q.id}`)}
+                    className="w-full text-left px-4 py-3 space-y-1.5 hover:bg-ink-50/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500">
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs text-ink-700 font-mono">{q.code}</span>
+                      <span className="ml-auto"><QuoteStatusBadge status={q.status} /></span>
+                    </span>
+                    <span className="block text-sm font-semibold text-ink-900 break-words">{client?.name ?? '—'}</span>
+                    <span className="block text-sm text-ink-700 break-words">{q.name}</span>
+                    <span className="flex items-center justify-between text-xs text-ink-700">
+                      <span>{formatPrice(q.price, q.priceIncludesIva)}</span>
+                      <ArrowRight size={15} aria-hidden />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-ink-700 border-b border-ink-100">
@@ -120,6 +146,8 @@ export function QuotesPage() {
               })}
             </tbody>
           </table>
+          </div>
+          </>
         )}
       </div>
     </div>

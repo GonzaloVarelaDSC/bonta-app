@@ -208,7 +208,7 @@ export function JobDetailPage() {
               <select
                 value={effectivePriority(job)}
                 onChange={async (e) => { try { await setPriority(job.id, e.target.value as Priority, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
+                className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white max-w-full"
               >
                 {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
               </select>
@@ -370,7 +370,7 @@ export function JobDetailPage() {
           )}
 
           {tab === 'Comentarios' && (
-            <div className="lg:hidden -mx-6 -mb-6 h-[calc(100vh-260px)] border-t border-ink-100">
+            <div className="lg:hidden -mx-6 -mb-6 h-[70vh] min-h-[380px] border-t border-ink-100">
               <CommentsPanel job={job} />
             </div>
           )}
