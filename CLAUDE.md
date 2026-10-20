@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 18/10/2026 (sección 71).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 72 — LEER PRIMERO al retomar).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5207,3 +5207,68 @@ Gonzalo confirmó que la veta del Metalex va **siempre paralela al lado largo** 
 aleatoria): la regla pasa a "confirmado" y el aviso al cargar lo dice así. El formato
 120 × 60 cm sigue aproximado. El ícono del menú "Materiales y máquinas" pasa a un
 martillo (`Hammer`).
+
+---
+
+## 72. CIERRE DE SESIÓN 19/10 — estado completo para retomar en una conversación nueva
+
+**Leer esto primero.** Resume dónde quedó todo al cerrar la sesión larga del
+12/10–19/10 (secciones 62–71). Todo está commiteado y pusheado a `origin/main`
+(último commit `16096d3`); working tree limpio.
+
+### Plan maestro de Gonzalo (§67) — estado final
+| # | Punto | Estado |
+|---|---|---|
+| 1 | "Peso" de cada trabajo | DESCARTADO |
+| 2 | Base de materiales y máquinas | ✅ primera versión (§71). Faltan datos (ver abajo) |
+| 3 | Cambiar responsable desde la ficha | ✅ (§67) |
+| 4 | Manual de uso con capturas | ✅ (§70) |
+| 5 | Versión celular | ✅ primera pasada (§69) |
+| 6 | Facturación AFIP | DESCARTADO (se factura en Copérnico) |
+| 7 | Pasar datos de la app a Copérnico | **PRÓXIMO**. Esperando capturas de la pantalla de carga de Copérnico (recordatorio programado para el lunes 19/10 10:30) |
+| 8 | Cuenta de Claudia | ✅ creada y verificada |
+| 9 | Avisos de estado con la PC apagada | ✅ (§67) |
+| 10 | Trabajar por etapas sin perder puntos | Es este plan |
+| 11 | Contact sheet en ficha + planilla | ✅ (§68, migración 027 confirmada) |
+
+"Avisar a" en Carga rápida: descartado (opción C, se usa @mención).
+
+### (7) Copérnico — cómo arrancar
+Copérnico no acepta archivos. Idea acordada: botón **"Copiar para Copérnico"** en la
+ficha que muestre cada dato en el mismo orden que los campos de Copérnico, con un
+botón "Copiar" al lado de cada uno (y opción de copiar todo junto). Armarlo recién
+con las capturas de Gonzalo (qué campos pide Copérnico y en qué orden). Automatizar
+el tipeo (extensión/macro) solo si eso no alcanza.
+
+### (2) Materiales — datos pendientes (los junta Gonzalo con el equipo)
+Están en `PENDING_DATA` (`src/data/materialsKnowledge.ts`): formatos de placa de
+MDF 3/5/9/15 mm, PVC 3 mm, Polyfan 20 mm, PAI 1 mm; confirmar anchos de vinilo
+(60/100/120/150 cm), límite de 119 cm del Roland, formato de Metalex (120×60
+aprox.), área del láser, criterio exacto de demasía en MDF (5–8 mm). Cuando pase un
+dato: editar ese archivo y cambiar el estado a `confirmado`. **Nunca inventar
+medidas.** Ya confirmado: V7000 250×125, S40 162,6/161,6, PVC sin demasía, veta
+del Metalex paralela al lado largo. Le sugerí agregar Metalex, Polyfan y PAI como
+materiales en Configuración (las ayudas reconocen el material por nombre).
+
+### Migraciones
+001–027 aplicadas y confirmadas. No hay SQL pendiente.
+
+### Arreglos internos pendientes (no visibles)
+Backport de `handle_new_user()` a `001_schema.sql`; limpiar lo sin uso
+(`job_files`/acciones de archivos, `quality_checks`/`QC_TEMPLATE`/`toggleQualityCheck`,
+`job_stages`, `credits_as_assigner`); confirmar si `jobs` está en la publicación de
+Realtime.
+
+### Forma de trabajar (recordatorio)
+- Chat con Gonzalo: corto, en rioplatense, **sin narrar el proceso** — solo resultado
+  o decisión puntual (§6).
+- Cada ronda: `npm run build` + `npm run lint`, commit con
+  `git -c user.name="Gonzalo Varela" -c user.email="gonzaa.gd@gmail.com" commit`,
+  push a `main`, y sección nueva acá.
+- Verificación visual sin login: preview temporal en el puerto 5179 (config
+  `bonta-dev-tmp` agregada a `.claude/launch.json` y revertida con
+  `git checkout -- .claude/launch.json`) + datos de `video/generador/demo-setup.js`
+  cargados con `import('/video/generador/demo-setup.js?raw')` desde la consola.
+  Después de editar `useStore.ts`, reiniciar el dev server antes de inyectar datos.
+- Si cambia una pantalla que sale en el Manual: actualizar `manualContent.ts` y
+  regenerar la captura con `video/generador/manual.mjs`.
