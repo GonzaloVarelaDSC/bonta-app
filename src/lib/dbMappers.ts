@@ -4,7 +4,7 @@
 import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobFile, BlockRecord,
   QualityCheckItem, InstallationInfo, MaterialId, SizeItem, Product, JobType, Material,
-  Quote, QuoteItem, MetricGoal,
+  Quote, QuoteItem, MetricGoal, JobPrice,
 } from '../types';
 import type { StatusEvent } from './metrics';
 
@@ -130,5 +130,13 @@ export function mapMetricGoal(row: any): MetricGoal {
     targetValue: Number(row.target_value), startDate: row.start_date, endDate: row.end_date,
     ownerUserId: row.owner_user_id ?? null, notes: row.notes ?? '', createdBy: row.created_by,
     createdAt: row.created_at, archivedAt: row.archived_at ?? null,
+  };
+}
+
+export function mapJobPrice(row: any): JobPrice {
+  return {
+    jobId: row.job_id, amountNet: Number(row.amount_net), enteredAmount: Number(row.entered_amount),
+    enteredWithIva: !!row.entered_with_iva, ivaRate: Number(row.iva_rate ?? 0.21), note: row.note ?? '',
+    updatedBy: row.updated_by, updatedAt: row.updated_at,
   };
 }

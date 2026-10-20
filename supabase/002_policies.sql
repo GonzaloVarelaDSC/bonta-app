@@ -238,7 +238,7 @@ begin
   return query
     select a.id, a.job_id, a.user_id, a.action, a.detail, a.from_status, a.to_status, a.created_at
     from activity_log a
-    where a.action in ('crear', 'estado', 'instalacion')
+    where a.action in ('crear', 'estado', 'instalacion', 'fecha', 'responsable')
     order by a.created_at, a.id;
 end;
 $$;
@@ -252,3 +252,14 @@ drop policy if exists metric_goals_insert on metric_goals;
 create policy metric_goals_insert on metric_goals for insert to authenticated with check (public.my_role() = 'admin' and created_by = auth.uid());
 drop policy if exists metric_goals_update on metric_goals;
 create policy metric_goals_update on metric_goals for update to authenticated using (public.my_role() = 'admin');
+
+-- ============ Importe final (029): mismo criterio que el valor de un presupuesto ============
+alter table job_prices enable row level security;
+drop policy if exists job_prices_select on job_prices;
+create policy job_prices_select on job_prices for select to authenticated using (public.can_set_quote_price());
+drop policy if exists job_prices_insert on job_prices;
+create policy job_prices_insert on job_prices for insert to authenticated with check (public.can_set_quote_price() and updated_by = auth.uid());
+drop policy if exists job_prices_update on job_prices;
+create policy job_prices_update on job_prices for update to authenticated using (public.can_set_quote_price()) with check (updated_by = auth.uid());
+drop policy if exists job_prices_delete on job_prices;
+create policy job_prices_delete on job_prices for delete to authenticated using (public.can_set_quote_price());

@@ -307,3 +307,15 @@ create table if not exists metric_goals (
   archived_at timestamptz
 );
 create index if not exists activity_log_action_created_idx on activity_log (action, created_at);
+
+-- Importe final del trabajo (029) — tabla aparte para poder restringir quién lo ve
+create table if not exists job_prices (
+  job_id uuid primary key references jobs(id) on delete cascade,
+  amount_net numeric not null check (amount_net >= 0), -- importe sin IVA: es el que usan las métricas
+  entered_amount numeric not null,                     -- lo que se tipeó, tal cual
+  entered_with_iva boolean not null default false,     -- si lo tipeado incluía IVA
+  iva_rate numeric not null default 0.21,              -- tasa usada para pasarlo a neto
+  note text not null default '',
+  updated_by uuid not null references profiles(id),
+  updated_at timestamptz not null default now()
+);

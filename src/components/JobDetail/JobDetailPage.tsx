@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-route
 import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
-import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob, canAssign } from '../../lib/permissions';
+import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob, canAssign, canSetQuoteValue } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
@@ -19,6 +19,7 @@ import { ClientMessageModal } from './ClientMessageModal';
 import { PromptDialog, ConfirmDialog } from '../Common/Modal';
 import { ProductionTab } from './ProductionTab';
 import { EditJobHeaderModal } from './EditJobHeaderModal';
+import { JobPriceSection } from './JobPriceSection';
 import type { BlockReason, JobStatus, Priority, Product, SampleReview } from '../../types';
 
 const TABS = ['General', 'Detalle', 'Producción', 'Instalación', 'Historial', 'Comentarios'] as const;
@@ -330,6 +331,8 @@ export function JobDetailPage() {
                   <Field label="Descripción" value={job.description} block />
                 </div>
               </div>
+
+              {canSetQuoteValue(user) && <JobPriceSection job={job} />}
 
               {/* Minuta técnica visible apenas se entra a la ficha (pestaña General,
                   la que abre por defecto) — antes había que ir a la pestaña Detalle

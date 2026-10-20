@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 73 — módulo Métricas; la 72 sigue siendo el resumen de estado general).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 74 — importes y análisis nuevos en Métricas; la 72 sigue siendo el resumen de estado general).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5372,3 +5372,65 @@ actual con la misma definición, evolución, aviso si cambió la mezcla de tipos
   motivo cuando un trabajo vuelve atrás (retrabajo), fecha de confirmación de
   presupuesto, facturación/costos (hoy en Copérnico), horas por etapa.
 - `fetchAllJobs` no pagina: si algún día pasan de 1000 trabajos, paginarlo.
+
+---
+
+## 74. Actualización 19/10 (cont.) — 028 confirmada; importe final del trabajo + análisis nuevos en Métricas
+
+- **028 corrida y verificada por Gonzalo** ("todo perfecto"): Métricas anda con
+  datos reales, los 4 admin la ven y los coordinadores no.
+
+### Importe final del trabajo (pedido de Gonzalo)
+- **No va en Carga rápida** (casi nunca hay precio al crear la ficha). Se carga
+  en la ficha, pestaña General, bloque "Importe final"
+  (`JobDetail/JobPriceSection.tsx`), o en lote desde Métricas → Importes →
+  "Entregados sin importe".
+- Quién: `canSetQuoteValue` (cualquier admin + coordinador no productor = mismo
+  criterio que el valor de un presupuesto). Gastón no lo ve.
+- **Tabla aparte `job_prices` (migración 029)**, no columna en `jobs`: RLS es por
+  fila, así que una columna en `jobs` la vería cualquiera que vea la ficha. RLS con
+  `can_set_quote_price()`. El Historial registra "Cargó/Actualizó/Quitó el importe
+  final." **sin el monto** (el Historial lo ve cualquiera que vea el trabajo).
+- Se guarda siempre `amount_net` (sin IVA). Si se tipea con IVA se divide por
+  1,21 (tasa guardada en `iva_rate`) y queda lo tipeado en `entered_amount`. Si el
+  trabajo vino de un presupuesto, el formulario ofrece "Usar el del presupuesto".
+- Store: `jobPrices`, `jobPricesLoaded`, `jobPricesError`, `loadJobPrices`,
+  `setJobPrice`, `clearJobPrice`. `loadMetrics` los carga sin frenar el resto si
+  falla (ej. 029 sin correr).
+
+### Métricas — agregado
+- **Pestaña "Importes"** (`RevenueView.tsx`): importe de lo entregado (por fecha de
+  entrega, sin IVA), cobertura "X de Y entregados con importe" (aviso si < 80%: los
+  totales son parciales y no se comparan con el período anterior), promedio y
+  mediana, evolución, por cliente (con % del total) y por tipo, presupuesto vs
+  importe final (presupuesto "IVA incluido" → /1,21; sin aclarar IVA → afuera), y
+  lista para cargar importes faltantes. Explícito: no es facturado (Copérnico), ni
+  cobrado, ni rentabilidad (no hay costos).
+- **Producción → "Qué características acompañan a los atrasos"**
+  (`FlowExtras.tsx`, `factorStats`): entregados del período por instalación sí/no,
+  muestra sí/no, tercerizado sí/no, plazo dado al tomarlo (≤3, 4-7, 8-14, 15+
+  días entre alta y fecha comprometida) y fecha reprogramada sí/no → a tiempo y
+  mediana. Descriptivo, no causal (lo dice la ayuda).
+- **Vueltas para atrás** (`reworkStats`): pasos a una etapa anterior según el
+  Historial (indicio de retrabajo; la app no guarda el motivo).
+- **Reprogramaciones** (`rescheduleStats`): eventos `fecha` del Historial. El
+  Historial no guarda la fecha anterior, así que no se mide cuánto se corrió.
+  Nota: "a tiempo" se mide contra la fecha comprometida actual.
+- `metrics_status_events()` ahora también trae `fecha` y `responsable`
+  (en la 029). `buildFacts` suma `price`, `reschedules`, `responsibleChanges`,
+  `backMoves`, `leadDays`.
+- Explorador: columna Importe, filtro con/sin importe y chips para los filtros que
+  llegan de estos análisis (instalación, muestra, tercerizado, plazo dado,
+  vueltas, reprogramación).
+
+### Verificación
+`metrics-demo.js` ampliado (importes, presupuesto con IVA, una vuelta para atrás,
+reprogramaciones): **20/20 comprobaciones OK**. Probado en pantalla: pestaña
+Importes, carga rápida de un importe con IVA (121.000 → 100.000 sin IVA, la lista
+baja de 11 a 10), bloque en la ficha con "Usar el del presupuesto", y un
+coordinador productor simulado no ve el bloque. Build y lint limpios. No probado
+con datos reales: falta correr la 029.
+
+### SQL pendiente
+**`029_job_prices.sql` — pendiente de que Gonzalo la corra** (se le pasó en el
+chat). Verificación: `select count(*) from pg_policies where tablename = 'job_prices';` → 4.

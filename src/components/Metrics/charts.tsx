@@ -32,6 +32,7 @@ export function LineChart({ labels, series, height = 200, unit, onPick, pickHint
   const x = (i: number) => pad.l + (n <= 1 ? iw / 2 : (i / (n - 1)) * iw);
   const y = (v: number) => pad.t + ih - (v / max) * ih;
   const ticks = [0, max / 2, max];
+  const tick = (t: number) => (max >= 10000 ? (t >= 1e6 ? `${fmtNum(t / 1e6, 1)} M` : `${fmtNum(t / 1000, 0)} mil`) : fmtNum(t, 0));
   const labelEvery = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(iw / 56))));
 
   return (
@@ -60,7 +61,7 @@ export function LineChart({ labels, series, height = 200, unit, onPick, pickHint
           {ticks.map((t) => (
             <g key={t}>
               <line x1={pad.l} x2={w - pad.r} y1={y(t)} y2={y(t)} className="stroke-ink-200" strokeWidth={1} />
-              <text x={pad.l - 6} y={y(t)} dy="0.32em" textAnchor="end" className="fill-ink-600 text-[10px]">{fmtNum(t, 0)}</text>
+              <text x={pad.l - 6} y={y(t)} dy="0.32em" textAnchor="end" className="fill-ink-600 text-[10px]">{tick(t)}</text>
             </g>
           ))}
           {labels.map((l, i) => i % labelEvery === 0 && (

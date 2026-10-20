@@ -124,9 +124,17 @@ export interface JobFacts {
   firstReadyAt: string | null; // primera llegada a Listo/Instalación/Entregado (del historial)
   open: boolean;
   overdueOpen: boolean; // mismo criterio que el Dashboard (isOverdue)
+  price: number | null; // importe final sin IVA (job_prices), null = no cargado
+  reschedules: string[]; // fechas en que se cambió la fecha comprometida (evento 'fecha')
+  responsibleChanges: number;
+  /** Pasos para atrás en el flujo (ej. Control de calidad → Producción): indicio de retrabajo. */
+  backMoves: { from: StageKey; to: StageKey; at: string }[];
+  leadDays: number; // días corridos entre el alta y la fecha comprometida (plazo que se dio)
 }
 
-export function buildFacts(jobs: Job[], events: StatusEvent[]): JobFacts[] {
+const STAGE_ORDER: Record<string, number> = { pendiente: 0, diseno: 1, produccion: 2, control_calidad: 3, listo: 4, instalacion: 5, terminado: 6 };
+
+export function buildFacts(jobs: Job[], events: StatusEvent[], prices: Record<string, { amountNet: number }> = {}): JobFacts[] {
   const byJob = new Map<string, StatusEvent[]>();
   for (const e of events) {
     const arr = byJob.get(e.jobId);
@@ -158,7 +166,16 @@ export function buildFacts(jobs: Job[], events: StatusEvent[]): JobFacts[] {
     const cancelledAt = job.status === 'CANCELADO' && last.stage === 'cancelado' ? last.start : null;
     const deliveredAt = job.status === 'TERMINADO' && job.finishedAt ? job.finishedAt : null;
     const open = job.status !== 'TERMINADO' && job.status !== 'CANCELADO';
+    const backMoves = segments.slice(1).flatMap((sg, i) => {
+      const prevSt = segments[i].stage;
+      return sg.stage !== 'cancelado' && prevSt !== 'cancelado' && STAGE_ORDER[sg.stage] < STAGE_ORDER[prevSt] ? [{ from: prevSt, to: sg.stage, at: sg.start }] : [];
+    });
     return {
+      price: prices[job.id]?.amountNet ?? null,
+      reschedules: evs.filter((e) => e.action === 'fecha').map((e) => e.at),
+      responsibleChanges: evs.filter((e) => e.action === 'responsable').length,
+      backMoves,
+      leadDays: differenceInCalendarDays(new Date(job.committedDate), new Date(job.createdAt)),
       job, stage, priority: effectivePriority(job), segments, historyComplete,
       deliveredAt, cancelledAt, firstReadyAt: firstReady?.start ?? null, open,
       overdueOpen: isOverdue(job),
@@ -398,10 +415,17 @@ export interface ExplorerFilters {
   typeId: string;
   priority: Priority | '';
   responsibleId: string;
+  price: '' | 'with' | 'without';
+  installation: '' | 'yes' | 'no';
+  sample: '' | 'yes' | 'no';
+  outsourced: '' | 'yes' | 'no';
+  lead: '' | LeadBucket;
+  rework: '' | 'yes';
+  rescheduled: '' | 'yes' | 'no';
   q: string;
 }
 export const EMPTY_FILTERS: ExplorerFilters = {
-  dateField: 'none', state: 'all', deadline: 'all', stage: '', exitedStage: '', clientId: '', typeId: '', priority: '', responsibleId: '', q: '',
+  dateField: 'none', state: 'all', deadline: 'all', stage: '', exitedStage: '', clientId: '', typeId: '', priority: '', responsibleId: '', price: '', installation: '', sample: '', outsourced: '', lead: '', rework: '', rescheduled: '', q: '',
 };
 
 export function deadlineOf(f: JobFacts): 'on_time' | 'late' | 'overdue_open' | 'no_data' | 'open_ok' {
@@ -428,6 +452,14 @@ export function applyFilters(facts: JobFacts[], fl: ExplorerFilters, p: Period, 
     if (fl.typeId && j.jobTypeId !== fl.typeId) return false;
     if (fl.priority && f.priority !== fl.priority) return false;
     if (fl.responsibleId && j.responsibleUserId !== fl.responsibleId) return false;
+    if (fl.price === 'with' && f.price === null) return false;
+    if (fl.price === 'without' && f.price !== null) return false;
+    if (fl.installation && (fl.installation === 'yes') !== j.requiresInstallation) return false;
+    if (fl.sample && (fl.sample === 'yes') !== hasSample(f)) return false;
+    if (fl.outsourced && (fl.outsourced === 'yes') !== hasOutsourced(f)) return false;
+    if (fl.lead && leadBucket(f) !== fl.lead) return false;
+    if (fl.rework && f.backMoves.length === 0) return false;
+    if (fl.rescheduled && (fl.rescheduled === 'yes') !== f.reschedules.length > 0) return false;
     if (q && !((j.code ?? '').toLowerCase().includes(q) || j.name.toLowerCase().includes(q) || clientName(j.clientId).toLowerCase().includes(q))) return false;
     return true;
   });
@@ -574,4 +606,100 @@ export function findings(facts: JobFacts[], p: Period, mode: DaysMode, typeLabel
     out.push({ id: 'data-history', kind: 'datos', title: `${incomplete} de ${del.length} entregas del período tienen el historial de estados incompleto`, evidence: 'El historial no reproduce el estado final del trabajo.', comparison: '—', limitation: 'Esos trabajos no cuentan para los tiempos por etapa. Suele pasar si alguien cambió el estado y falló el registro del historial.', drill: { dateField: 'delivered', state: 'delivered' } });
   }
   return out;
+}
+
+// ---------------------------------------------------------------- importes (029)
+
+export const hasSample = (f: JobFacts) => f.job.sampleReview !== 'none';
+export const hasOutsourced = (f: JobFacts) => f.job.products.some((p) => p.outsourced);
+export type LeadBucket = '0-3' | '4-7' | '8-14' | '15+';
+export const LEAD_LABEL: Record<LeadBucket, string> = { '0-3': '3 días o menos', '4-7': '4 a 7 días', '8-14': '8 a 14 días', '15+': '15 días o más' };
+export function leadBucket(f: JobFacts): LeadBucket {
+  return f.leadDays <= 3 ? '0-3' : f.leadDays <= 7 ? '4-7' : f.leadDays <= 14 ? '8-14' : '15+';
+}
+
+export interface RevenueSummary { delivered: number; withPrice: number; total: number; avg: number | null; median: number | null; coverage: number | null }
+/** Importe (sin IVA) de los trabajos ENTREGADOS en el período que tienen importe cargado. */
+export function revenue(facts: JobFacts[], p: Period): RevenueSummary {
+  const del = facts.filter((f) => inP(f.deliveredAt, p));
+  const priced = del.map((f) => f.price).filter((x): x is number => x !== null);
+  const total = priced.reduce((a, b) => a + b, 0);
+  return { delivered: del.length, withPrice: priced.length, total, avg: mean(priced), median: median(priced), coverage: del.length ? (priced.length / del.length) * 100 : null };
+}
+export function revenueSeries(facts: JobFacts[], p: Period): { bucket: Bucket; total: number; n: number }[] {
+  return buckets(p).map((b) => { const r = revenue(facts, { from: b.start, to: b.end }); return { bucket: b, total: r.total, n: r.withPrice }; });
+}
+export function revenueBy(facts: JobFacts[], p: Period, keyOf: (f: JobFacts) => string): { key: string; total: number; n: number }[] {
+  const m = new Map<string, { total: number; n: number }>();
+  for (const f of facts) {
+    if (!inP(f.deliveredAt, p) || f.price === null) continue;
+    const k = keyOf(f); const cur = m.get(k) ?? { total: 0, n: 0 };
+    cur.total += f.price; cur.n++; m.set(k, cur);
+  }
+  return [...m.entries()].map(([key, v]) => ({ key, ...v })).sort((a, b) => b.total - a.total);
+}
+
+export interface QuoteDiff { facts: JobFacts; quoteNet: number; finalNet: number; diffPct: number }
+/**
+ * Presupuesto contra importe final, para trabajos entregados en el período que
+ * nacieron de un presupuesto con importe y aclaración de IVA. Si el presupuesto
+ * decía "IVA incluido" se pasa a neto con 21%; si no aclaraba IVA, se excluye.
+ */
+export function quoteVsFinal(facts: JobFacts[], quotes: Quote[], p: Period): { rows: QuoteDiff[]; excluded: number } {
+  const rows: QuoteDiff[] = []; let excluded = 0;
+  for (const f of facts) {
+    if (!inP(f.deliveredAt, p) || !f.job.sourceQuoteId || f.price === null) continue;
+    const q = quotes.find((x) => x.id === f.job.sourceQuoteId);
+    if (!q || q.price === null || q.priceIncludesIva === null || q.price === 0) { excluded++; continue; }
+    const quoteNet = q.priceIncludesIva ? q.price / 1.21 : q.price;
+    rows.push({ facts: f, quoteNet, finalNet: f.price, diffPct: ((f.price - quoteNet) / quoteNet) * 100 });
+  }
+  return { rows, excluded };
+}
+
+// ---------------------------------------------------------------- características asociadas a los plazos
+
+export interface FactorRow { factor: string; label: string; drill: Partial<ExplorerFilters>; n: number; onTime: number | null; cycleMedian: number | null }
+/**
+ * Entregados del período partidos por características que la app ya registra.
+ * Es una comparación descriptiva: que un grupo se atrase más no prueba que esa
+ * característica sea la causa (puede haber otras diferencias entre los grupos).
+ */
+export function factorStats(facts: JobFacts[], p: Period, mode: DaysMode): FactorRow[] {
+  const del = facts.filter((f) => inP(f.deliveredAt, p));
+  const row = (factor: string, label: string, drill: Partial<ExplorerFilters>, test: (f: JobFacts) => boolean): FactorRow => {
+    const fs = del.filter(test);
+    const s = summarize(fs, p, mode);
+    return { factor, label, drill: { ...drill, dateField: 'delivered', state: 'delivered' }, n: fs.length, onTime: s.onTimeRate.value, cycleMedian: s.cycleMedian.value };
+  };
+  return [
+    row('Instalación', 'Con instalación', { installation: 'yes' }, (f) => f.job.requiresInstallation),
+    row('Instalación', 'Sin instalación', { installation: 'no' }, (f) => !f.job.requiresInstallation),
+    row('Muestra al cliente', 'Hubo muestra', { sample: 'yes' }, hasSample),
+    row('Muestra al cliente', 'Sin muestra', { sample: 'no' }, (f) => !hasSample(f)),
+    row('Piezas tercerizadas', 'Con tercerizado', { outsourced: 'yes' }, hasOutsourced),
+    row('Piezas tercerizadas', 'Todo hecho acá', { outsourced: 'no' }, (f) => !hasOutsourced(f)),
+    ...(Object.keys(LEAD_LABEL) as LeadBucket[]).map((b) => row('Plazo dado al tomarlo', LEAD_LABEL[b], { lead: b }, (f) => leadBucket(f) === b)),
+    row('Fecha comprometida', 'Se reprogramó', { rescheduled: 'yes' }, (f) => f.reschedules.length > 0),
+    row('Fecha comprometida', 'Nunca se cambió', { rescheduled: 'no' }, (f) => f.reschedules.length === 0),
+  ];
+}
+
+export interface ReworkSummary { moves: number; jobs: number; byPath: { path: string; n: number }[]; deliveredWithRework: number; delivered: number }
+/** Vueltas para atrás en el flujo ocurridas en el período (solo historiales completos). */
+export function reworkStats(facts: JobFacts[], p: Period): ReworkSummary {
+  const moves = facts.filter((f) => f.historyComplete).flatMap((f) => f.backMoves.filter((m) => inP(m.at, p)).map((m) => ({ ...m, job: f.job.id })));
+  const paths = new Map<string, number>();
+  for (const m of moves) { const k = STAGE_LABEL[m.from] + " → " + STAGE_LABEL[m.to]; paths.set(k, (paths.get(k) ?? 0) + 1); }
+  const del = facts.filter((f) => f.historyComplete && inP(f.deliveredAt, p));
+  return {
+    moves: moves.length, jobs: new Set(moves.map((m) => m.job)).size,
+    byPath: [...paths.entries()].map(([path, n]) => ({ path, n })).sort((a, b) => b.n - a.n),
+    deliveredWithRework: del.filter((f) => f.backMoves.length > 0).length, delivered: del.length,
+  };
+}
+export function rescheduleStats(facts: JobFacts[], p: Period): { events: number; jobs: number; deliveredRescheduled: number; delivered: number } {
+  const ev = facts.flatMap((f) => f.reschedules.filter((at) => inP(at, p)).map(() => f.job.id));
+  const del = facts.filter((f) => inP(f.deliveredAt, p));
+  return { events: ev.length, jobs: new Set(ev).size, deliveredRescheduled: del.filter((f) => f.reschedules.length > 0).length, delivered: del.length };
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Download, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { applyFilters, deadlineOf, deliveryLateDays, cycleDays, ageDays, EMPTY_FILTERS, FLOW_STAGES, STAGE_LABEL, STAGE_TONE, type ExplorerFilters, type JobFacts } from '../../lib/metrics';
+import { applyFilters, deadlineOf, deliveryLateDays, cycleDays, ageDays, EMPTY_FILTERS, LEAD_LABEL, FLOW_STAGES, STAGE_LABEL, STAGE_TONE, type ExplorerFilters, type JobFacts } from '../../lib/metrics';
 import { PRIORITY_META } from '../../lib/priority';
 import { useStore } from '../../store/useStore';
 import { visibleJobTypes } from '../../data/catalog';
@@ -18,7 +18,7 @@ const td = 'px-2.5 py-2 text-[13px] text-ink-900 whitespace-nowrap';
 const sel = 'text-sm border border-ink-200 rounded-lg px-2 py-1.5 bg-white text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-500';
 const d = (iso: string | null | undefined) => (iso ? format(new Date(iso), 'dd/MM/yy') : '—');
 
-type ColKey = 'code' | 'name' | 'client' | 'type' | 'stage' | 'priority' | 'resp' | 'created' | 'committed' | 'delivered' | 'cycle' | 'deadline';
+type ColKey = 'code' | 'name' | 'client' | 'type' | 'stage' | 'priority' | 'resp' | 'created' | 'committed' | 'delivered' | 'cycle' | 'deadline' | 'price';
 
 export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; filters: ExplorerFilters; setFilters: (f: ExplorerFilters) => void }) {
   const users = useStore((s) => s.users);
@@ -46,6 +46,7 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
       case 'delivered': return f.deliveredAt ?? '';
       case 'cycle': return cycleDays(f, ctx.mode) ?? ageDays(f, ctx.mode, ctx.now) ?? -1;
       case 'deadline': return deliveryLateDays(f) ?? (f.overdueOpen ? 999 : -999);
+      case 'price': return f.price ?? -1;
     }
   };
   const sorted = useMemo(() => [...rows].sort((a, b) => {
@@ -59,11 +60,11 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
   const active = (Object.keys(EMPTY_FILTERS) as (keyof ExplorerFilters)[]).filter((k) => filters[k] !== EMPTY_FILTERS[k]).length;
 
   function downloadCsv() {
-    const head = ['N°', 'Trabajo', 'Cliente', 'Tipo', 'Etapa', 'Prioridad', 'Responsable', 'Alta', 'Comprometida', 'Entregado', `Ingreso a entrega (${ctx.unit})`, 'Plazo', 'Historial completo'];
+    const head = ['N°', 'Trabajo', 'Cliente', 'Tipo', 'Etapa', 'Prioridad', 'Responsable', 'Alta', 'Comprometida', 'Entregado', `Ingreso a entrega (${ctx.unit})`, 'Plazo', 'Importe sin IVA', 'Historial completo'];
     const lines = sorted.map((f) => [
       f.job.code ?? '', f.job.name, ctx.clientName(f.job.clientId), ctx.typeLabel(f.job.jobTypeId), f.stage ? STAGE_LABEL[f.stage] : '', PRIORITY_META[f.priority].label,
       ctx.userName(f.job.responsibleUserId), d(f.job.createdAt), d(f.job.committedDate), d(f.deliveredAt),
-      cycleDays(f, ctx.mode)?.toFixed(1).replace('.', ',') ?? '', deadlineText(f), f.historyComplete ? 'sí' : 'no',
+      cycleDays(f, ctx.mode)?.toFixed(1).replace('.', ',') ?? '', deadlineText(f), f.price !== null ? String(f.price).replace('.', ',') : '', f.historyComplete ? 'sí' : 'no',
     ]);
     const csv = [head, ...lines].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
@@ -108,8 +109,17 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
           <select aria-label="Responsable" className={sel} value={filters.responsibleId} onChange={(e) => set('responsibleId', e.target.value)}>
             <option value="">Todo responsable</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
+          <select aria-label="Importe" className={sel} value={filters.price} onChange={(e) => set('price', e.target.value as ExplorerFilters['price'])}>
+            <option value="">Con o sin importe</option><option value="with">Con importe</option><option value="without">Sin importe</option>
+          </select>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          {specialChips(filters).map((c) => (
+            <span key={c.key} className="inline-flex items-center gap-1 rounded-full bg-info-bg text-info-text border border-info/30 px-2 py-0.5">
+              {c.label}
+              <button type="button" aria-label={`Quitar filtro: ${c.label}`} onClick={() => set(c.key, '' as never)}><X size={12} /></button>
+            </span>
+          ))}
           {filters.exitedStage && (
             <span className="inline-flex items-center gap-1 rounded-full bg-info-bg text-info-text border border-info/30 px-2 py-0.5">
               Salieron de {STAGE_LABEL[filters.exitedStage]} en el período
@@ -129,11 +139,11 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
             <tr>
               <H {...hp} k="code">N°</H><H {...hp} k="name">Trabajo</H><H {...hp} k="client">Cliente</H><H {...hp} k="type">Tipo</H><H {...hp} k="stage">Etapa</H><H {...hp} k="priority">Prioridad</H><H {...hp} k="resp">Responsable</H>
               <H {...hp} k="created">Alta</H><H {...hp} k="committed">Comprometida</H><H {...hp} k="delivered">Entregado</H>
-              <H {...hp} k="cycle" title="Entregados: ingreso → entrega. Abiertos: antigüedad hasta hoy.">Días</H><H {...hp} k="deadline">Plazo</H>
+              <H {...hp} k="cycle" title="Entregados: ingreso → entrega. Abiertos: antigüedad hasta hoy.">Días</H><H {...hp} k="deadline">Plazo</H><H {...hp} k="price" title="Importe final sin IVA, si está cargado">Importe</H>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-100">
-            {pageRows.length === 0 && <tr><td colSpan={12} className="px-3 py-10 text-center text-sm text-ink-700">Ningún trabajo cumple estos filtros en el período.</td></tr>}
+            {pageRows.length === 0 && <tr><td colSpan={13} className="px-3 py-10 text-center text-sm text-ink-700">Ningún trabajo cumple estos filtros en el período.</td></tr>}
             {pageRows.map((f) => {
               const cyc = cycleDays(f, ctx.mode); const age = ageDays(f, ctx.mode, ctx.now);
               return (
@@ -150,6 +160,7 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
                   <td className={td}>{d(f.deliveredAt)}</td>
                   <td className={clsx(td, 'tabular-nums')}>{cyc !== null ? fmtNum(cyc, 1) : age !== null ? <span className="text-ink-600" title="Abierto: antigüedad hasta hoy">{fmtNum(age, 1)} (abierto)</span> : '—'}</td>
                   <td className={td}><DeadlinePill f={f} /></td>
+                  <td className={clsx(td, 'tabular-nums text-right')}>{f.price !== null ? `${fmtNum(f.price, 0)}` : <span className="text-ink-500">—</span>}</td>
                 </tr>
               );
             })}
@@ -173,6 +184,18 @@ function H({ k, children, title, sort, onSort }: { k: ColKey; children: string; 
       <button type="button" className="uppercase hover:text-ink-900" onClick={() => onSort(k)}>{children}{sort.key === k ? (sort.desc ? ' ↓' : ' ↑') : ''}</button>
     </th>
   );
+}
+
+const LEAD_TXT: Record<string, string> = LEAD_LABEL;
+function specialChips(f: ExplorerFilters): { key: keyof ExplorerFilters; label: string }[] {
+  const out: { key: keyof ExplorerFilters; label: string }[] = [];
+  if (f.installation) out.push({ key: 'installation', label: f.installation === 'yes' ? 'Con instalación' : 'Sin instalación' });
+  if (f.sample) out.push({ key: 'sample', label: f.sample === 'yes' ? 'Hubo muestra' : 'Sin muestra' });
+  if (f.outsourced) out.push({ key: 'outsourced', label: f.outsourced === 'yes' ? 'Con tercerizado' : 'Todo hecho acá' });
+  if (f.lead) out.push({ key: 'lead', label: `Plazo dado: ${LEAD_TXT[f.lead]}` });
+  if (f.rework) out.push({ key: 'rework', label: 'Volvió para atrás alguna vez' });
+  if (f.rescheduled) out.push({ key: 'rescheduled', label: f.rescheduled === 'yes' ? 'Fecha reprogramada' : 'Fecha nunca cambiada' });
+  return out;
 }
 
 function deadlineText(f: JobFacts): string {

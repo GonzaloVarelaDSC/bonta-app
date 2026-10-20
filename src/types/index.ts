@@ -376,3 +376,18 @@ export interface MetricGoal {
   createdAt: string;
   archivedAt: string | null;
 }
+
+// Importe final del trabajo (029) — lo que se le cobra al cliente. Tabla aparte
+// de `jobs` para que solo lo vean/carguen admin y administración (mismo criterio
+// que el valor de un presupuesto, canSetQuoteValue). Las métricas usan siempre
+// `amountNet` (sin IVA) para no mezclar importes con y sin IVA.
+export interface JobPrice {
+  jobId: string;
+  amountNet: number;
+  enteredAmount: number;
+  enteredWithIva: boolean;
+  ivaRate: number;
+  note: string;
+  updatedBy: string;
+  updatedAt: string;
+}

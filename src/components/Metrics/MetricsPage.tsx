@@ -13,6 +13,7 @@ import { ProductionView } from './ProductionView';
 import { ClientsView } from './ClientsView';
 import { ExplorerView } from './ExplorerView';
 import { GoalsView } from './GoalsView';
+import { RevenueView } from './RevenueView';
 import { LimitNote } from './ui';
 
 // Métricas (19/10, CLAUDE.md §73) — solo admin (ruta con RequireRole + la base
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'resumen', label: 'Resumen' },
   { key: 'produccion', label: 'Producción y tiempos' },
   { key: 'clientes', label: 'Clientes' },
+  { key: 'facturacion', label: 'Importes' },
   { key: 'explorador', label: 'Explorador de trabajos' },
   { key: 'objetivos', label: 'Objetivos' },
 ] as const;
@@ -44,6 +46,7 @@ export function MetricsPage() {
   const clients = useStore((s) => s.clients);
   const jobTypes = useStore((s) => s.jobTypes);
   const events = useStore((s) => s.metricsEvents);
+  const prices = useStore((s) => s.jobPrices);
   const loadedAt = useStore((s) => s.metricsLoadedAt);
   const loadMetrics = useStore((s) => s.loadMetrics);
   const quotesLoaded = useStore((s) => s.quotesLoaded);
@@ -68,7 +71,7 @@ export function MetricsPage() {
   const mode: DaysMode = params.get('days') === 'business' ? 'business' : 'calendar';
   const now = useMemo(() => new Date(), [loadedAt, jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const facts = useMemo(() => buildFacts(jobs, events), [jobs, events]);
+  const facts = useMemo(() => buildFacts(jobs, events, prices), [jobs, events, prices]);
   const dataSince = useMemo(() => facts.length ? startOfDay(new Date(facts.reduce((m, f) => (f.job.createdAt < m ? f.job.createdAt : m), facts[0].job.createdAt))) : null, [facts]);
 
   const period: Period = useMemo(() => {
@@ -181,10 +184,11 @@ export function MetricsPage() {
           {tab === 'resumen' && <SummaryView ctx={ctx} />}
           {tab === 'produccion' && <ProductionView ctx={ctx} />}
           {tab === 'clientes' && <ClientsView ctx={ctx} />}
+          {tab === 'facturacion' && <RevenueView ctx={ctx} />}
           {tab === 'explorador' && <ExplorerView ctx={ctx} filters={filters} setFilters={setFilters} />}
           {tab === 'objetivos' && <GoalsView ctx={ctx} />}
           <div className="mt-6"><LimitNote>
-            Qué no puede medir la app hoy: horas trabajadas (los tiempos son de calendario, incluyen esperas), costos y facturación (no hay rentabilidad),
+            Qué no puede medir la app hoy: horas trabajadas (los tiempos son de calendario, incluyen esperas), costos (no hay rentabilidad), facturación real (los importes se cargan a mano en cada ficha),
             fecha real de entrega distinta del día en que se marca "Entregado", retrabajos, y la fecha de confirmación de un presupuesto. Los trabajos eliminados no cuentan.
           </LimitNote></div>
         </div>

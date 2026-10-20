@@ -8,6 +8,7 @@ import { fmtNum, fmtPct, fmtDays } from './fmt';
 import { AgingChart, BarList } from './charts';
 import { TONE_BG } from './fmt';
 import clsx from 'clsx';
+import { FlowExtras } from './FlowExtras';
 
 const th = 'px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-700';
 const td = 'px-3 py-2 text-sm text-ink-900 tabular-nums';
@@ -156,6 +157,8 @@ export function ProductionView({ ctx }: { ctx: MetricsCtx }) {
           </div>
         </Card>
       </div>
+
+      <FlowExtras ctx={ctx} />
     </div>
   );
 }

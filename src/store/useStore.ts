@@ -5,11 +5,11 @@ import type {
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
-import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote, mapStatusEvent, mapMetricGoal } from '../lib/dbMappers';
+import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote, mapStatusEvent, mapMetricGoal, mapJobPrice } from '../lib/dbMappers';
 import type { StatusEvent } from '../lib/metrics';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/catalog';
-import type { Client, ProductionConfig, MetricGoal } from '../types';
+import type { Client, ProductionConfig, MetricGoal, JobPrice } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
 // libre, no autonumérico) — sin tildes/espacios, y con un sufijo numérico si ya
@@ -120,6 +120,14 @@ interface StoreState {
   loadMetrics: () => Promise<void>;
   saveGoal: (goal: Omit<MetricGoal, 'id' | 'createdAt' | 'archivedAt' | 'createdBy'>) => Promise<void>;
   archiveGoal: (goalId: string) => Promise<void>;
+
+  // Importe final (029) — solo admin y administración (canSetQuoteValue); la base lo exige.
+  jobPrices: Record<string, JobPrice>;
+  jobPricesLoaded: boolean;
+  jobPricesError: string | null;
+  loadJobPrices: () => Promise<void>;
+  setJobPrice: (jobId: string, input: { enteredAmount: number; withIva: boolean; note: string }) => Promise<void>;
+  clearJobPrice: (jobId: string) => Promise<void>;
 }
 
 export interface JobSpecs {
@@ -292,6 +300,9 @@ export const useStore = create<StoreState>()((set, get) => ({
   metricsEvents: [],
   metricsLoadedAt: null,
   goals: [],
+  jobPrices: {},
+  jobPricesLoaded: false,
+  jobPricesError: null,
   toast: null,
   statusFlags: [],
 
@@ -421,7 +432,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [], metricsEvents: [], metricsLoadedAt: null, goals: [] });
+    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [], metricsEvents: [], metricsLoadedAt: null, goals: [], jobPrices: {}, jobPricesLoaded: false });
   },
 
   // Busca un cliente por nombre (tal cual está tipeado, sin distinguir mayúsculas/espacios)
@@ -941,7 +952,48 @@ export const useStore = create<StoreState>()((set, get) => ({
     }
     const { data: goals, error: gErr } = await supabase.from('metric_goals').select('*').order('created_at', { ascending: false });
     if (gErr) throw gErr;
+    // Los importes no frenan el resto de Métricas (ej. si falta correr la 029).
+    try { await get().loadJobPrices(); set({ jobPricesError: null }); }
+    catch (e) { console.warn('[métricas] no se pudieron leer los importes:', e); set({ jobPricesError: friendlyError(e) }); }
     set({ metricsEvents: rows.map(mapStatusEvent), goals: (goals ?? []).map(mapMetricGoal), metricsLoadedAt: new Date().toISOString() });
+  },
+
+  loadJobPrices: async () => {
+    const PAGE = 1000;
+    const rows: any[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase.from('job_prices').select('*').range(from, from + PAGE - 1);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+      if (!data || data.length < PAGE) break;
+    }
+    set({ jobPrices: Object.fromEntries(rows.map((r) => [r.job_id, mapJobPrice(r)])), jobPricesLoaded: true });
+  },
+
+  // El historial solo dice que se cargó, nunca el monto: el Historial de la ficha
+  // lo ve cualquiera que vea el trabajo, el importe no.
+  setJobPrice: async (jobId, { enteredAmount, withIva, note }) => {
+    const me = get().currentUser;
+    if (!me) throw new Error('Tenés que iniciar sesión.');
+    if (!Number.isFinite(enteredAmount) || enteredAmount < 0) throw new Error('El importe tiene que ser un número positivo.');
+    const ivaRate = 0.21;
+    const had = !!get().jobPrices[jobId];
+    const { data, error } = await supabase.from('job_prices').upsert({
+      job_id: jobId, amount_net: withIva ? Math.round((enteredAmount / (1 + ivaRate)) * 100) / 100 : enteredAmount,
+      entered_amount: enteredAmount, entered_with_iva: withIva, iva_rate: ivaRate, note, updated_by: me.id, updated_at: new Date().toISOString(),
+    }).select().single();
+    if (error) throw error;
+    set((s) => ({ jobPrices: { ...s.jobPrices, [jobId]: mapJobPrice(data) } }));
+    await insertActivity(set, jobId, me.id, 'importe', had ? 'Actualizó el importe final.' : 'Cargó el importe final.');
+  },
+
+  clearJobPrice: async (jobId) => {
+    const me = get().currentUser;
+    if (!me) throw new Error('Tenés que iniciar sesión.');
+    const { error } = await supabase.from('job_prices').delete().eq('job_id', jobId);
+    if (error) throw error;
+    set((s) => { const next = { ...s.jobPrices }; delete next[jobId]; return { jobPrices: next }; });
+    await insertActivity(set, jobId, me.id, 'importe', 'Quitó el importe final.');
   },
 
   saveGoal: async (g) => {
