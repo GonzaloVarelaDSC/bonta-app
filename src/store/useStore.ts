@@ -77,6 +77,7 @@ interface StoreState {
   updateJobSpecs: (jobId: string, specs: JobSpecs, byUserId: string) => Promise<void>;
   toggleProductChecked: (jobId: string, productId: string, byUserId: string) => Promise<void>;
   saveProductionConfig: (jobId: string, config: ProductionConfig, byUserId: string) => Promise<void>;
+  saveAssemblyProgress: (jobId: string, assemblyId: string, progress: { assembled: number; ready: Record<string, number> }, byUserId: string, detail: string) => Promise<void>;
   updateJobHeader: (jobId: string, fields: { name: string; clientName: string }, byUserId: string) => Promise<void>;
   changeResponsible: (jobId: string, newUserId: string, byUserId: string) => Promise<void>;
   uploadContactSheet: (jobId: string, image: Blob, byUserId: string) => Promise<void>;
@@ -724,6 +725,23 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) throw error;
     set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, productionConfig: config } : j) }));
     await insertActivity(set, jobId, byUserId, 'produccion', 'Actualizó la configuración de producción.');
+  },
+
+  // Avance de armado (§75): solo toca los contadores de UNA composición, sobre la
+  // configuración vigente en el store (no sobre un borrador), así no pisa cambios
+  // de composición sin guardar. Queda en el Historial con el detalle del conteo.
+  saveAssemblyProgress: async (jobId, assemblyId, progress, byUserId, detail) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) throw new Error('No se encontró el trabajo.');
+    const assemblies = (job.productionConfig.assemblies ?? []).map((a) => a.id !== assemblyId ? a : {
+      ...a, assembled: progress.assembled,
+      components: a.components.map((c) => ({ ...c, ready: progress.ready[c.pieceKey] ?? c.ready })),
+    });
+    const config = { ...job.productionConfig, assemblies };
+    const { error } = await supabase.from('jobs').update({ production_config: config, last_activity_at: new Date().toISOString() }).eq('id', jobId);
+    if (error) throw error;
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, productionConfig: config } : j) }));
+    await insertActivity(set, jobId, byUserId, 'armado', detail);
   },
 
   // Tildar un producto es informativo, nunca bloquea nada — por eso es una

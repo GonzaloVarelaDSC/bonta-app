@@ -4,6 +4,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { fmtDateTime } from '../../lib/dates';
 import { productionRows, usedProcesses } from '../../lib/production';
+import { piecesFromRows, pieceKeyOf, assemblyStatus } from '../../lib/assembly';
 
 // Planilla de control de producción (pestaña "Producción" de la ficha, 12/10):
 // se imprime y se completa a mano en el taller. Mismo mecanismo que las otras
@@ -54,6 +55,9 @@ export function ProductionExportPage() {
 
   const rows = productionRows(job, job.productionConfig, materials);
   const processes = usedProcesses(rows);
+  const pieces = piecesFromRows(rows);
+  const refOf = (itemId: string, k: number) => pieces.find((p) => p.key === pieceKeyOf(itemId, k))?.ref ?? '';
+  const assemblies = (job.productionConfig.assemblies ?? []).filter((a) => a.components.length > 0);
   const exportedAt = fmtDateTime(new Date().toISOString());
   const address = job.requiresInstallation ? (job.installation?.address.trim() || '—') : 'No lleva instalación';
   const totalCols = 4 + processes.length;
@@ -151,7 +155,10 @@ export function ProductionExportPage() {
               return (
                 <tr key={`${item.id}-${k}`} className="prod-row">
                   <td className={td}>
-                    <div className="font-semibold prod-clamp break-words">{label || (item.source === 'job' ? 'Producto sin nombre' : '—')}</div>
+                    <div className="font-semibold prod-clamp break-words">
+                      <span className="inline-block min-w-[5mm] text-center mr-1.5 px-1 rounded-sm bg-ink-900 text-white text-[9pt] font-bold">{refOf(item.id, k)}</span>
+                      {label || (item.source === 'job' ? 'Producto sin nombre' : '—')}
+                    </div>
                     {n > 1 && <div className="text-[8pt] text-ink-700 mt-0.5">Medida {k + 1} de {n}</div>}
                     {item.source === 'extra' && <div className="text-[8pt] text-ink-700 mt-0.5">Agregado para producción</div>}
                   </td>
@@ -191,6 +198,59 @@ export function ProductionExportPage() {
           </table>
         ) : (
           <p className="mt-4 text-[9pt] text-ink-700">Todavía no se eligieron procesos para ningún componente de esta OT (pestaña Producción de la ficha).</p>
+        )}
+
+        {/* Composición y armado (§75): solo si la OT tiene productos terminados
+            definidos en la pestaña Producción. Usa las MISMAS letras que la tabla
+            de arriba, así quien arma reconoce las piezas aunque se hayan cortado
+            todas juntas. Los casilleros de unidades son para marcar a mano. */}
+        {assemblies.length > 0 && (
+          <div className="mt-6 prod-row">
+            <div className="text-[11pt] font-bold text-ink-900 border-b-2 border-ink-900 pb-1 mb-2">Composición y armado</div>
+            {assemblies.map((a) => {
+              const st = assemblyStatus(a, pieces);
+              return (
+                <div key={a.id} className="mb-4 prod-row">
+                  <div className="flex items-baseline justify-between gap-3 mb-1">
+                    <div className="text-[11pt] font-semibold text-ink-900">{a.label || 'Producto terminado'} — {a.units} unidad{a.units === 1 ? '' : 'es'}</div>
+                    <div className="text-[9pt] text-ink-700">1 unidad = {st.components.map((c) => `${c.perUnit} × ${c.piece?.ref ?? '?'}`).join(' + ')}</div>
+                  </div>
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className={`${th} w-[12mm] text-center`}>Ref.</th>
+                        <th className={th}>Pieza</th>
+                        <th className={`${th} w-[34mm]`}>Medida</th>
+                        <th className={`${th} w-[22mm] text-center`}>Por unidad</th>
+                        <th className={`${th} w-[22mm] text-center`}>Total OT</th>
+                        <th className={`${th} w-[30mm] text-center`}>Hechas (anotar)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {st.components.map((c) => (
+                        <tr key={c.pieceKey}>
+                          <td className={`${td} text-center font-bold`}>{c.piece?.ref ?? '?'}</td>
+                          <td className={td}>{c.piece ? [c.piece.label, c.piece.material].filter(Boolean).join(' · ') : 'Pieza que ya no está en la OT'}</td>
+                          <td className={td}>{c.piece?.size || '—'}</td>
+                          <td className={`${td} text-center`}>{c.perUnit}</td>
+                          <td className={`${td} text-center font-bold`}>{c.total}</td>
+                          <td className={td} />
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[9pt] text-ink-800">
+                    <span className="mr-1">Unidades armadas:</span>
+                    {a.units <= 40
+                      ? Array.from({ length: a.units }, (_, i) => (
+                        <span key={i} className="inline-flex items-center gap-0.5"><span className="inline-block w-[5mm] h-[5mm] border-2 border-ink-900 rounded-[1px]" /><span className="text-[8pt] text-ink-700">{i + 1}</span></span>
+                      ))
+                      : <span className="inline-block w-[30mm] border-b border-ink-900">&nbsp;</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

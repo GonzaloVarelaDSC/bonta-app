@@ -104,7 +104,10 @@ export function mapJob(row: any): Job {
     materialIds: (row.material_ids ?? []) as MaterialId[],
     products: (row.products ?? []) as Product[],
     contactSheetPath: row.contact_sheet_path ?? null,
-    productionConfig: { items: Array.isArray(row.production_config?.items) ? row.production_config.items : [] },
+    productionConfig: {
+      items: Array.isArray(row.production_config?.items) ? row.production_config.items : [],
+      assemblies: Array.isArray(row.production_config?.assemblies) ? row.production_config.assemblies : [],
+    },
     technique: row.technique ?? '', finish: row.finish ?? '', color: row.color ?? '',
     observations: row.observations ?? '', specialRequirements: row.special_requirements ?? '',
     status: row.status,

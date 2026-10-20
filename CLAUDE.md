@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 74 — importes y análisis nuevos en Métricas; la 72 sigue siendo el resumen de estado general).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 75 — composición y armado en Producción; la 72 sigue siendo el resumen de estado general).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5434,3 +5434,69 @@ con datos reales: falta correr la 029.
 ### SQL pendiente
 **`029_job_prices.sql` — pendiente de que Gonzalo la corra** (se le pasó en el
 chat). Verificación: `select count(*) from pg_policies where tablename = 'job_prices';` → 4.
+
+---
+
+## 75. Actualización 19/10 (cont.) — Composición y armado (trazabilidad de piezas hasta el producto terminado)
+
+Gonzalo confirmó la 029 corrida ("quedó perfecto"); Richard/Nancy/Alejandra ya
+podían cargar importes (coordinadores no productores) — sin cambios.
+
+**Problema:** una OT con productos hechos de varias piezas (ej. 3 corpóreos de
+polifan = 2 piezas de polifan + 1 frente de PAI cada uno). El corte se hace por
+lotes y en el armado no queda claro qué forma cada unidad, cuánto hace falta y qué
+falta.
+
+**Solución (sin migración — todo dentro de `jobs.production_config`, jsonb):**
+- **Piezas = renglones de la planilla** (un ítem de producción × una medida). Cada
+  una recibe una **letra** (A, B, C…, `piecesFromRows` en `lib/assembly.ts`) en el
+  mismo orden que la planilla; la letra sale ahora también en la planilla, al lado
+  del nombre de cada componente. Es un código de referencia, **no obliga a marcar
+  piezas**. `pieceKey` = `${itemId}#${índiceMedida}` (los ítems de la OT tienen id
+  estable `job-<productId>`).
+- **`ProductionConfig.assemblies?: Assembly[]`** (types): `{ id, label, units,
+  components: [{ pieceKey, perUnit, ready }], assembled }`. Las piezas se
+  referencian, no se copian; el total (por unidad × unidades) se calcula, nunca se
+  guarda. Patrón BOM de ERP ("cantidad por" × unidades, armables = mínimo de
+  hechas ÷ por unidad).
+- **`lib/assembly.ts`** (puro): `assemblyStatus` (totales, faltantes, armables,
+  armadas con tope = lo que alcanza y ≤ unidades pedidas, piezas que frenan la
+  próxima unidad; si una pieza ya no está en la OT, falta cantidad o no hay
+  piezas → `invalidReason` y no se puede registrar armado) y
+  `quantityMismatches` (avisa si la cantidad cargada en la OT ≠ lo que pide la
+  composición; nunca corrige sola; solo compara si lo cargado es un entero).
+- **UI** (`JobDetail/AssemblySection.tsx`, al final de la pestaña Producción):
+  "Agregar producto terminado" → nombre (sugiere los productos de la OT),
+  unidades, piezas de 1 unidad con "por unidad" y "= N en total". La
+  composición se guarda con el "Guardar cambios" de siempre. Recién guardada,
+  aparece **Armado**: por pieza (letra, medida, material, procesos, tilde
+  "procesado" de Detalle como info) → por unidad, total OT, **Hechas** (contador
+  por tipo de pieza, no pieza por pieza) y Faltan; abajo "alcanza para X de N",
+  **Armadas** (no deja pasar de X) y qué letra falta para la próxima. Se guarda con
+  **"Guardar avance"** → acción nueva del store `saveAssemblyProgress` (escribe
+  sobre la config vigente, no el borrador, y deja en el Historial: "Armado de "X":
+  2 de 3 unidades armadas · piezas hechas A 3/3, B 2/3, C 3/3."). "Guardar
+  cambios" de la composición conserva los contadores vigentes (no vuelve a un
+  conteo viejo).
+- **Planilla** (`ProductionExportPage.tsx`): letras en la tabla de componentes y,
+  solo si hay composiciones, sección final "Composición y armado": por producto,
+  "1 unidad = 1 × A + 1 × B + 1 × C", tabla Ref/Pieza/Medida/Por unidad/Total
+  OT/Hechas (para anotar) y casilleros "Unidades armadas" 1..N (hasta 40). Sin
+  documento nuevo.
+- OTs viejas/sin composición: no cambia nada (mensaje "Todavía no se definió cómo
+  se arma…", planilla sin la sección). Nada se infiere.
+
+**Verificación:** `video/generador/assembly-demo.js` (ficticio, no toca Supabase):
+13/13 comprobaciones (letras, totales 3/3/3, alcanza 2 con B=2, tope de armadas,
+falta B, pieza borrada bloquea, aviso de cantidad, OT vieja). En pantalla:
+alta de la composición por la UI, guardar, avance 3/2/3 → armadas intentando 3
+quedó en 2 y "+" deshabilitado, Historial con el detalle, "Guardar cambios"
+posterior no pisó el avance, planilla con letras y sección, OT vieja sin sección.
+Build/lint limpios.
+
+**Pendiente / a confirmar con Gonzalo:** cómo identifican hoy físicamente las
+piezas en el taller (no se pudo verificar desde acá; las letras son opcionales);
+"Hechas" es un conteo manual (la app no registra fabricación pieza a pieza); si
+la misma pieza se usa en dos productos terminados distintos, cada uno lleva su
+propio conteo. Actualizar el Manual (tema 9) con esta sección cuando se confirme
+que queda así.

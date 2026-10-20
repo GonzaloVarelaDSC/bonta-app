@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { FileOutput, Plus, Trash2 } from 'lucide-react';
-import type { Job, ProductionItem } from '../../types';
+import type { Assembly, Job, ProductionItem } from '../../types';
 import { useStore } from '../../store/useStore';
 import { PRODUCTION_PROCESSES } from '../../data/catalog';
 import { productionRows, configFromRows } from '../../lib/production';
 import { friendlyError } from '../../lib/errors';
 import { ContactSheetSection } from './ContactSheetSection';
+import { AssemblySection } from './AssemblySection';
+import { piecesFromRows } from '../../lib/assembly';
 
 const inputCls = 'w-full border border-ink-200 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500';
 
@@ -21,10 +23,12 @@ export function ProductionTab({ job }: { job: Job }) {
   const materials = useStore((s) => s.materials);
   const saveProductionConfig = useStore((s) => s.saveProductionConfig);
   const [items, setItems] = useState<ProductionItem[]>(job.productionConfig.items);
+  const [assemblies, setAssemblies] = useState<Assembly[]>(job.productionConfig.assemblies ?? []);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const rows = useMemo(() => productionRows(job, { items }, materials), [job, items, materials]);
+  const pieces = useMemo(() => piecesFromRows(rows, new Set(job.products.filter((p) => p.checked).map((p) => p.id))), [rows, job.products]);
 
   // Upsert por id: un componente de la OT que todavía no tenía configuración
   // entra al borrador recién cuando se le cambia algo.
@@ -53,7 +57,16 @@ export function ProductionTab({ job }: { job: Job }) {
   async function save(): Promise<boolean> {
     setSaving(true);
     try {
-      await saveProductionConfig(job.id, configFromRows(rows), user.id);
+      // El avance de armado se guarda aparte ("Guardar avance"): acá se toman los
+      // contadores vigentes, no los del borrador, para no volver a un conteo viejo.
+      const current = job.productionConfig.assemblies ?? [];
+      const merged = assemblies.map((a) => {
+        const s = current.find((x) => x.id === a.id);
+        if (!s) return a;
+        return { ...a, assembled: s.assembled, components: a.components.map((c) => ({ ...c, ready: s.components.find((x) => x.pieceKey === c.pieceKey)?.ready ?? 0 })) };
+      });
+      await saveProductionConfig(job.id, { ...configFromRows(rows), assemblies: merged }, user.id);
+      setAssemblies(merged);
       setDirty(false);
       return true;
     } catch (err) {
@@ -164,6 +177,8 @@ export function ProductionTab({ job }: { job: Job }) {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 border border-dashed border-brand-300 rounded-lg px-3 py-2 hover:bg-brand-50">
         <Plus size={15} aria-hidden /> Agregar componente para producción
       </button>
+
+      <AssemblySection job={job} pieces={pieces} assemblies={assemblies} onChange={(next) => { setAssemblies(next); setDirty(true); }} />
     </div>
   );
 }

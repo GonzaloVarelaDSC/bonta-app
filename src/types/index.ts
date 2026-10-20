@@ -194,8 +194,28 @@ export interface ProductionItem {
   quantity?: string;
   size?: string;
 }
+// Composición y armado (19/10, CLAUDE.md §75): un producto terminado de la OT
+// (ej. "Corpóreo de polifan", 3 unidades) y qué piezas de la planilla lleva UNA
+// unidad. Las piezas NO se copian: se referencian por `pieceKey` (id del ítem de
+// producción + índice de medida = un renglón de la planilla). El total requerido
+// se calcula (por unidad × unidades), nunca se guarda. `ready` y `assembled` son
+// los únicos registros de avance: los cuenta a mano quien arma, por tipo de pieza
+// (no pieza por pieza), así el corte puede seguir haciéndose por lotes.
+export interface AssemblyComponent {
+  pieceKey: string;
+  perUnit: number;
+  ready: number; // piezas de este tipo hechas y disponibles para armar (total acumulado)
+}
+export interface Assembly {
+  id: string;
+  label: string;
+  units: number; // unidades terminadas que pide la OT
+  components: AssemblyComponent[];
+  assembled: number; // unidades ya armadas
+}
 export interface ProductionConfig {
   items: ProductionItem[];
+  assemblies?: Assembly[];
 }
 
 export interface Product {
