@@ -21,9 +21,10 @@ import { QuoteFormPage } from './components/Quotes/QuoteFormPage';
 import { QuoteDetailPage } from './components/Quotes/QuoteDetailPage';
 import { QuoteExportPage } from './components/Quotes/QuoteExportPage';
 import { RequireRole } from './components/Common/RequireRole';
+import { MetricsPage } from './components/Metrics/MetricsPage';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
-import { canManageUsers, canViewHistorico, canManageQuotes } from './lib/permissions';
+import { canManageUsers, canViewHistorico, canManageQuotes, canViewMetrics } from './lib/permissions';
 
 export default function App() {
   const init = useStore((s) => s.init);
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/presupuestos/:id" element={<RequireRole allow={canManageQuotes}><QuoteDetailPage /></RequireRole>} />
           <Route path="/usuarios" element={<RequireRole allow={canManageUsers}><UsersPage /></RequireRole>} />
           <Route path="/configuracion" element={<ConfigPage />} />
+          <Route path="/metricas" element={<RequireRole allow={canViewMetrics}><MetricsPage /></RequireRole>} />
           <Route path="/historico" element={<RequireRole allow={canViewHistorico}><HistoricoPage /></RequireRole>} />
         </Route>
       </Routes>

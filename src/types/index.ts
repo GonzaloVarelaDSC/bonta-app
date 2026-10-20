@@ -355,3 +355,24 @@ export interface StatusFlag {
   userName: string;
   at: string;
 }
+
+// Objetivo de mejora del módulo Métricas (028). La línea de base se mide al
+// crearlo y queda fija; el valor actual se recalcula siempre con la misma
+// definición (lib/metrics.ts, goalMetricValue).
+export interface MetricGoal {
+  id: string;
+  title: string;
+  metricKey: string;
+  baselineFrom: string; // yyyy-mm-dd
+  baselineTo: string;
+  baselineValue: number | null;
+  baselineN: number;
+  targetValue: number;
+  startDate: string;
+  endDate: string;
+  ownerUserId: string | null;
+  notes: string;
+  createdBy: string;
+  createdAt: string;
+  archivedAt: string | null;
+}

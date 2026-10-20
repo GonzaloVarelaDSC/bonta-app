@@ -1,10 +1,10 @@
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive, Receipt, Hammer,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, Wrench, FileCheck2, BookOpen, Zap, Archive, Receipt, Hammer, BarChart3,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canManageUsers, canCreateJobs, canViewHistorico, canManageQuotes } from '../../lib/permissions';
+import { canManageUsers, canCreateJobs, canViewHistorico, canManageQuotes, canViewMetrics } from '../../lib/permissions';
 
 // "Clientes" se sacó del menú a pedido: los clientes no se administran acá, viven en
 // Copernico. La ruta /clientes y la tabla siguen existiendo (el wizard las usa para
@@ -63,6 +63,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
             )}>
               <Receipt size={17} strokeWidth={2} /> Presupuestos
+            </NavLink>
+          </>
+        )}
+        {/* Métricas (19/10): solo admin, sección propia — es análisis, no operación diaria. */}
+        {user && canViewMetrics(user.role) && (
+          <>
+            <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Análisis</div>
+            <NavLink to="/metricas" className={({ isActive }) => clsx(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+            )}>
+              <BarChart3 size={17} strokeWidth={2} /> Métricas
             </NavLink>
           </>
         )}

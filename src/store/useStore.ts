@@ -5,10 +5,11 @@ import type {
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { fetchAllJobs, fetchJobById } from '../lib/supabaseQueries';
-import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote } from '../lib/dbMappers';
+import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJobType, mapMaterial, mapQuote, mapStatusEvent, mapMetricGoal } from '../lib/dbMappers';
+import type { StatusEvent } from '../lib/metrics';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/catalog';
-import type { Client, ProductionConfig } from '../types';
+import type { Client, ProductionConfig, MetricGoal } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
 // libre, no autonumérico) — sin tildes/espacios, y con un sufijo numérico si ya
@@ -111,6 +112,14 @@ interface StoreState {
   setQuoteValue: (quoteId: string, price: number | null, priceIncludesIva: boolean | null) => Promise<void>;
   // Presupuesto confirmado → trabajo real (22/09). Ver JSDoc de la implementación.
   confirmQuote: (quoteId: string, extra: ConfirmQuoteExtra, byUserId: string) => Promise<Job>;
+
+  // Métricas (19/10) — solo admin; la base lo exige (028_metrics.sql).
+  metricsEvents: StatusEvent[];
+  metricsLoadedAt: string | null;
+  goals: MetricGoal[];
+  loadMetrics: () => Promise<void>;
+  saveGoal: (goal: Omit<MetricGoal, 'id' | 'createdAt' | 'archivedAt' | 'createdBy'>) => Promise<void>;
+  archiveGoal: (goalId: string) => Promise<void>;
 }
 
 export interface JobSpecs {
@@ -280,6 +289,9 @@ export const useStore = create<StoreState>()((set, get) => ({
   notifications: [],
   quotes: [],
   quotesLoaded: false,
+  metricsEvents: [],
+  metricsLoadedAt: null,
+  goals: [],
   toast: null,
   statusFlags: [],
 
@@ -409,7 +421,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [] });
+    set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [], metricsEvents: [], metricsLoadedAt: null, goals: [] });
   },
 
   // Busca un cliente por nombre (tal cual está tipeado, sin distinguir mayúsculas/espacios)
@@ -912,6 +924,43 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (error) throw error;
     const rows = (data ?? []).map(mapActivity);
     set((s) => ({ activityLog: [...rows, ...s.activityLog.filter((a) => a.jobId !== jobId)] }));
+  },
+
+  // ============ Métricas ============
+  // Trae la cronología de estados de todos los trabajos (paginada: Supabase
+  // devuelve hasta 1000 filas por pedido) + los objetivos. Trabajos, clientes y
+  // presupuestos ya están en el store; los cálculos viven en lib/metrics.ts.
+  loadMetrics: async () => {
+    const PAGE = 1000;
+    const rows: any[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase.rpc('metrics_status_events').range(from, from + PAGE - 1);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+      if (!data || data.length < PAGE) break;
+    }
+    const { data: goals, error: gErr } = await supabase.from('metric_goals').select('*').order('created_at', { ascending: false });
+    if (gErr) throw gErr;
+    set({ metricsEvents: rows.map(mapStatusEvent), goals: (goals ?? []).map(mapMetricGoal), metricsLoadedAt: new Date().toISOString() });
+  },
+
+  saveGoal: async (g) => {
+    const me = get().currentUser;
+    if (!me) throw new Error('Tenés que iniciar sesión.');
+    const { data, error } = await supabase.from('metric_goals').insert({
+      title: g.title, metric_key: g.metricKey, baseline_from: g.baselineFrom, baseline_to: g.baselineTo,
+      baseline_value: g.baselineValue, baseline_n: g.baselineN, target_value: g.targetValue,
+      start_date: g.startDate, end_date: g.endDate, owner_user_id: g.ownerUserId, notes: g.notes, created_by: me.id,
+    }).select().single();
+    if (error) throw error;
+    set((s) => ({ goals: [mapMetricGoal(data), ...s.goals] }));
+  },
+
+  archiveGoal: async (goalId) => {
+    const at = new Date().toISOString();
+    const { error } = await supabase.from('metric_goals').update({ archived_at: at }).eq('id', goalId);
+    if (error) throw error;
+    set((s) => ({ goals: s.goals.map((g) => g.id === goalId ? { ...g, archivedAt: at } : g) }));
   },
 
   // ============ Presupuestos ============

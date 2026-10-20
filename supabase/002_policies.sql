@@ -223,3 +223,32 @@ drop policy if exists quotes_insert on quotes;
 create policy quotes_insert on quotes for insert to authenticated with check (is_admin_or_coordinador());
 drop policy if exists quotes_update on quotes;
 create policy quotes_update on quotes for update to authenticated using (is_admin_or_coordinador());
+
+-- ============ Métricas (028): solo admin ============
+create or replace function metrics_status_events()
+returns table (
+  id uuid, job_id uuid, user_id uuid, action text, detail text,
+  from_status text, to_status text, created_at timestamptz
+)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if coalesce(public.my_role(), '') <> 'admin' then
+    raise exception 'Solo administradores pueden ver Métricas' using errcode = '42501';
+  end if;
+  return query
+    select a.id, a.job_id, a.user_id, a.action, a.detail, a.from_status, a.to_status, a.created_at
+    from activity_log a
+    where a.action in ('crear', 'estado', 'instalacion')
+    order by a.created_at, a.id;
+end;
+$$;
+revoke all on function metrics_status_events() from public;
+revoke all on function metrics_status_events() from anon;
+grant execute on function metrics_status_events() to authenticated;
+alter table metric_goals enable row level security;
+drop policy if exists metric_goals_select on metric_goals;
+create policy metric_goals_select on metric_goals for select to authenticated using (public.my_role() = 'admin');
+drop policy if exists metric_goals_insert on metric_goals;
+create policy metric_goals_insert on metric_goals for insert to authenticated with check (public.my_role() = 'admin' and created_by = auth.uid());
+drop policy if exists metric_goals_update on metric_goals;
+create policy metric_goals_update on metric_goals for update to authenticated using (public.my_role() = 'admin');

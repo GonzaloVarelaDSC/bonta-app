@@ -287,3 +287,23 @@ begin
     alter publication supabase_realtime add table activity_log;
   end if;
 end $$;
+
+-- Objetivos de Métricas (028)
+create table if not exists metric_goals (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  metric_key text not null,           -- ver GOAL_METRICS en src/lib/metrics.ts
+  baseline_from date not null,        -- período de la línea de base
+  baseline_to date not null,
+  baseline_value numeric,             -- valor medido al crear el objetivo (queda fijo)
+  baseline_n integer not null default 0,
+  target_value numeric not null,
+  start_date date not null,           -- período de evaluación
+  end_date date not null,
+  owner_user_id uuid references profiles(id),
+  notes text not null default '',     -- qué cambio se implementa para lograrlo
+  created_by uuid not null references profiles(id),
+  created_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+create index if not exists activity_log_action_created_idx on activity_log (action, created_at);

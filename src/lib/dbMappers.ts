@@ -4,8 +4,9 @@
 import type {
   User, Client, Job, Comment, ActivityLogEntry, Notification, JobFile, BlockRecord,
   QualityCheckItem, InstallationInfo, MaterialId, SizeItem, Product, JobType, Material,
-  Quote, QuoteItem,
+  Quote, QuoteItem, MetricGoal,
 } from '../types';
+import type { StatusEvent } from './metrics';
 
 export function mapProfile(row: any): User {
   return {
@@ -114,5 +115,20 @@ export function mapJob(row: any): Job {
     files: (row.job_files ?? []).map(mapFile),
     blockRecords: (row.block_records ?? []).map(mapBlock),
     lastActivityAt: row.last_activity_at, clientImportant: row.client_important,
+  };
+}
+
+export function mapStatusEvent(row: any): StatusEvent {
+  return { id: row.id, jobId: row.job_id, userId: row.user_id, action: row.action, detail: row.detail ?? '', from: row.from_status ?? null, to: row.to_status ?? null, at: row.created_at };
+}
+
+export function mapMetricGoal(row: any): MetricGoal {
+  return {
+    id: row.id, title: row.title, metricKey: row.metric_key,
+    baselineFrom: row.baseline_from, baselineTo: row.baseline_to,
+    baselineValue: row.baseline_value === null ? null : Number(row.baseline_value), baselineN: row.baseline_n ?? 0,
+    targetValue: Number(row.target_value), startDate: row.start_date, endDate: row.end_date,
+    ownerUserId: row.owner_user_id ?? null, notes: row.notes ?? '', createdBy: row.created_by,
+    createdAt: row.created_at, archivedAt: row.archived_at ?? null,
   };
 }

@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 72 — LEER PRIMERO al retomar).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 73 — módulo Métricas; la 72 sigue siendo el resumen de estado general).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5272,3 +5272,103 @@ Realtime.
   Después de editar `useStore.ts`, reiniciar el dev server antes de inyectar datos.
 - Si cambia una pantalla que sale en el Manual: actualizar `manualContent.ts` y
   regenerar la captura con `video/generador/manual.mjs`.
+
+---
+
+## 73. Actualización 19/10 — módulo nuevo: Métricas (análisis e inteligencia operativa)
+
+Pedido largo de Gonzalo (brief completo en el chat del 19/10): una sección
+"Métricas" para entender cómo funciona el estudio con datos verificables.
+
+### Acceso
+- Solo **rol `admin`** = hoy exactamente Gonzalo, Pancho, Martín y Claudia (los 4
+  pedidos). Por rol, no por email (lección de §5/§38). `canViewMetrics` en
+  `lib/permissions.ts`; ruta `/metricas` con `RequireRole`; link en sección nueva
+  "Análisis" del menú.
+- **En la base (migración 028):** `metrics_status_events()` es `security definer`
+  y tira error 42501 si `my_role() <> 'admin'`; tabla `metric_goals` con RLS solo
+  admin y **sin policy de delete** (los objetivos se archivan, `archived_at`).
+  Ojo, límite honesto: los trabajos/clientes/presupuestos en sí ya los ven los
+  coordinadores en el resto de la app (eso no cambió); lo restringido es la
+  cronología completa en bloque y los objetivos.
+
+### Migración `028_metrics.sql` — HAY QUE CORRERLA (pendiente de confirmar)
+Función + índice en `activity_log(action, created_at)` + tabla `metric_goals` +
+policies. Mergeada en 001/002. Sin ella, la pantalla muestra "No se pudo leer el
+historial… falta correr la migración 028". Verificación:
+`select count(*) from metrics_status_events();` (como admin) y, logueado como
+coordinador, la misma consulta debe dar error de permiso.
+
+### Arquitectura
+- **`src/lib/metrics.ts` = único lugar de cálculo** (puro). `buildFacts()` arma por
+  trabajo: etapa actual, segmentos por columna del Kanban reconstruidos del
+  Historial, `historyComplete`, `deliveredAt` (= `finished_at` con estado
+  Entregado), `cancelledAt` (del historial), `firstReadyAt`. Encima: `summarize`,
+  `snapshot`, `flowSeries`, `stageStats`, `groupStats`, `clientStats`,
+  `concentration`, `quoteSummary`, `applyFilters` (Explorador), `goalMetricValue`,
+  `findings`. Nunca recalcular un KPI en un componente.
+- **Historial:** antes de la 025 los eventos `estado` no tienen `to_status` → se
+  saca del texto `Cambió el estado a X.`; `instalacion` = pasó a Entregado;
+  NUEVO/APROBADO → Pendiente; BLOQUEADO viejo → hueco. Un trabajo es "historial
+  completo" si los eventos reproducen su estado actual sin saltos (`from_status`
+  coherente); solo esos entran en tiempos por etapa (se muestra la cobertura).
+- Store: `loadMetrics` (RPC paginado de a 1000 + objetivos), `saveGoal`,
+  `archiveGoal`; estado `metricsEvents/metricsLoadedAt/goals`. Se carga al entrar a
+  la pantalla (botón "Actualizar").
+- UI en `components/Metrics/`: `MetricsPage` (todo el estado en la URL: `tab`,
+  `range`, `from/to`, `days`, filtros `f_*` → el drill-down conserva contexto y
+  "Atrás" funciona), `SummaryView`, `ProductionView`, `ClientsView`,
+  `ExplorerView`, `GoalsView`, `charts.tsx` (SVG propio, sin librería nueva),
+  `ui.tsx`, `fmt.ts`, `context.ts`.
+
+### Definiciones (las que muestran los "i" de cada indicador)
+- Ingresados = alta en el período. Entregados = marcados Entregado en el período.
+- A tiempo = entregados con día de entrega ≤ día comprometido; denominador =
+  entregados del período; cancelados fuera. "Producción lista a tiempo" =
+  primera llegada a Listo/Instalación ≤ fecha (solo con historial).
+- Ciclo = alta → Entregado (mediana y p85, interpolación lineal tipo Excel).
+- Abiertos/atrasados = hoy (no dependen del período); atrasado = mismo criterio
+  que el Dashboard (`isOverdue`), separado en "sin terminar" y "listos sin
+  entregar".
+- Días corridos o hábiles (toggle; hábiles = sin sáb/dom, no conoce feriados). La
+  app no registra horas trabajadas: todo es tiempo calendario (espera + trabajo).
+- Comparación = período anterior de igual largo; si cae antes del primer dato
+  ("datos desde…") se avisa "sin período anterior comparable" y los hallazgos
+  comparativos no se generan. Mínimo de 5 casos (`MIN_N`) para hallazgos/objetivos.
+- Presupuestos: cohorte por fecha de creación (no se guarda fecha de
+  confirmación); conversión = confirmados/(confirmados+rechazados); montos sin
+  mezclar IVA incluido / + IVA. Nunca se llama facturación ni rentabilidad.
+
+### Pestañas
+Resumen (6 KPIs con variación, ingresos vs entregas, abiertos en el tiempo,
+abiertos por etapa, hallazgos con "Investigar"), Producción y tiempos (tabla por
+etapa: hoy/entraron/salieron/mediana/p85/casos + "Ver casos"; aging de abiertos
+con línea p85; bloqueos por motivo; cumplimiento por tipo; carga abierta por
+responsable — explícitamente "no es rendimiento"; a tiempo por prioridad),
+Clientes (concentración 80%/top 5, nuevos/recurrentes, tabla ordenable, detalle
+por cliente con 12 meses, presupuestos), Explorador (filtros combinables, orden,
+paginado 25, CSV con `;` y BOM para Excel), Objetivos (línea de base medida y
+congelada al crear, meta la pone el equipo — no hay metas precargadas —, valor
+actual con la misma definición, evolución, aviso si cambió la mezcla de tipos).
+
+### Verificación hecha
+- `video/generador/metrics-demo.js` (datos 100% sintéticos, no toca Supabase):
+  ~90 trabajos con historial generado (eventos nuevos y viejos sin `to_status`,
+  instalación completada, un hueco, cancelado con y sin evento, eliminado,
+  BLOQUEADO viejo) y 13 comprobaciones contra valores calculados aparte: **13/13
+  OK**. Se corre desde la consola de la página:
+  `eval(await (await import('/video/generador/metrics-demo.js?raw')).default)()`.
+- Recorrido visual de las 5 pestañas a 1440 px, drill-down "Ver casos" de Diseño
+  → Explorador con 49 trabajos = "Salieron 49" de la tabla, alta de un objetivo,
+  período de 30 días con comparación, días hábiles, y un coordinador simulado es
+  redirigido y no ve el link. Build y lint limpios.
+- **No probado contra datos reales** (no hay login real desde acá) ni la
+  restricción en la base: lo prueba Gonzalo después de correr la 028.
+
+### Pendiente / ideas para la próxima etapa
+- Correr la 028 y comparar 2-3 números con SQL directo (ej.
+  `select count(*) from jobs where deleted_at is null and status='TERMINADO' and finished_at >= now() - interval '90 days';`).
+- Datos que harían falta para métricas mejores: fecha real de entrega/retiro,
+  motivo cuando un trabajo vuelve atrás (retrabajo), fecha de confirmación de
+  presupuesto, facturación/costos (hoy en Copérnico), horas por etapa.
+- `fetchAllJobs` no pagina: si algún día pasan de 1000 trabajos, paginarlo.

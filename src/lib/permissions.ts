@@ -45,3 +45,9 @@ export function canViewJob(user: User, job: Job): boolean {
 export function visibleJobs(user: User, jobs: Job[]): Job[] {
   return jobs.filter((j) => canViewJob(user, j));
 }
+
+// Métricas (19/10): solo admin — hoy exactamente Gonzalo, Pancho, Martín y
+// Claudia. Espejo de metrics_status_events() y de las policies de metric_goals
+// (028_metrics.sql). Por rol, no por nombre: si se suma otro dueño con rol
+// admin, lo ve sin tocar código.
+export function canViewMetrics(role: RoleId) { return role === 'admin'; }
