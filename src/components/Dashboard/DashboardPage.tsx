@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import clsx from 'clsx';
 import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox, ClipboardCheck, Wrench, PackageCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Job } from '../../types';
@@ -10,6 +11,7 @@ import { isSilent } from '../../lib/risk';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
 import { DesignLoadWidget } from './DesignLoadWidget';
+import { ScrollFadeX } from '../Common/ScrollFade';
 
 type AttentionKey = 'critical' | 'urgent' | 'dueToday' | 'overdue' | 'waitingInfo' | 'silent';
 // Cubos de flujo = una columna del Kanban cada uno ('col:<key>'), en el mismo
@@ -112,23 +114,29 @@ export function DashboardPage() {
   const cards = [...flowCards, ...attentionCards];
 
   return (
-    <div className="p-6 max-w-[1800px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1800px] mx-auto">
       <div className="flex items-baseline justify-between mb-1">
         <h1 className="text-xl font-display font-bold text-ink-900">Dashboard de producción</h1>
-        <span className="text-xs text-ink-700">Actualizado en vivo</span>
+        <span className="text-xs text-ink-700 hidden sm:inline">Actualizado en vivo</span>
       </div>
-      <p className="text-sm text-ink-700 mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
+      <p className="text-sm text-ink-700 mb-4 sm:mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
       {/* Una sola fila (Gonzalo, 12/10: no quería dos filas): primero los 7 del
           flujo en orden del Kanban, después los 5 de atención, separados por un
-          poco más de aire. Tarjetas compactas para que entren las 12 en `xl`. */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-12 gap-2 mb-5">
+          poco más de aire. Tarjetas compactas para que entren las 12 en `xl`.
+          En el celular las 12 en grilla ocupaban la primera pantalla entera y la
+          lista de trabajos arrancaba recién al scrollear: ahí van en una tira que
+          se desliza de costado, en el mismo orden. */}
+      <ScrollFadeX
+        wrapperClassName="-mx-4 sm:mx-0 mb-5" fadeFrom="from-ink-50"
+        className="flex gap-2 overflow-x-auto snap-x scroll-px-4 px-4 pt-1 pb-2 sm:p-0 sm:grid sm:grid-cols-6 xl:grid-cols-12 sm:overflow-visible"
+      >
         {cards.map((c, i) => (
           <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone} compact
             active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
-            className={i === flowCards.length ? 'xl:ml-2' : undefined} />
+            className={clsx('w-[6.5rem] shrink-0 snap-start sm:w-auto', i === flowCards.length && 'xl:ml-2')} />
         ))}
-      </div>
+      </ScrollFadeX>
 
       <DesignLoadWidget jobs={jobs} users={users} />
 
@@ -153,7 +161,7 @@ export function DashboardPage() {
             {(['mine', 'byMe', 'all'] as ScopeMode[]).map((m) => (
               <button
                 key={m} onClick={() => changeScope(m)} aria-pressed={scope === m}
-                className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                className={`text-sm sm:text-xs font-semibold px-3.5 py-2 sm:px-2.5 sm:py-1 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   scope === m ? 'bg-ink-950 text-white' : 'text-ink-700 hover:text-ink-900'
                 }`}
               >

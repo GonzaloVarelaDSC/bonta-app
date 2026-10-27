@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, RefreshCw, X } from 'lucide-react';
 import clsx from 'clsx';
@@ -9,6 +10,21 @@ import { format } from 'date-fns';
 // Cuántos avisos se ven a la vez — el resto queda guardado y va apareciendo a
 // medida que se cierran los que están a la vista (no se pierde ninguno).
 const MAX_VISIBLE = 4;
+// En el celular cada aviso ocupa casi un cuarto de pantalla: con 4 apilados se
+// tapaba todo. Se muestra uno y el resto queda en "+N avisos más".
+const MAX_VISIBLE_PHONE = 1;
+const PHONE_QUERY = '(max-width: 639px)';
+
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE_QUERY);
+    const on = () => setIsPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return isPhone;
+}
 
 /**
  * Avisos flotantes de "otra persona cambió el estado de un trabajo" (07/10).
@@ -24,9 +40,10 @@ export function StatusFlags() {
   const dismiss = useStore((s) => s.dismissStatusFlag);
   const dismissAll = useStore((s) => s.dismissAllStatusFlags);
   const navigate = useNavigate();
+  const isPhone = useIsPhone();
 
   if (flags.length === 0) return null;
-  const visible = flags.slice(0, MAX_VISIBLE);
+  const visible = flags.slice(0, isPhone ? MAX_VISIBLE_PHONE : MAX_VISIBLE);
   const hidden = flags.length - visible.length;
 
   return (
@@ -35,13 +52,13 @@ export function StatusFlags() {
       role="region" aria-label="Cambios de estado de otros usuarios"
       className={clsx(
         'fixed right-4 z-20 w-[calc(100vw-2rem)] max-w-sm space-y-2.5 pointer-events-none transition-[bottom] duration-200',
-        toastOpen ? 'bottom-24' : 'bottom-4'
+        toastOpen ? 'bottom-[calc(6rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(1rem+env(safe-area-inset-bottom))]'
       )}
     >
       {hidden > 0 && (
         <div className="pointer-events-auto flex items-center justify-between bg-white border border-ink-200 rounded-lg shadow-card px-3 py-1.5 text-xs text-ink-700">
           <span>+{hidden} {hidden === 1 ? 'aviso más' : 'avisos más'}</span>
-          <button type="button" onClick={dismissAll} className="font-semibold text-ink-900 hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+          <button type="button" onClick={dismissAll} className="font-semibold text-ink-900 hover:underline rounded py-1.5 -my-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
             Cerrar todos
           </button>
         </div>
@@ -63,7 +80,7 @@ export function StatusFlags() {
               <span className="text-[11px] font-semibold opacity-80">{time}</span>
               <button
                 type="button" onClick={() => dismiss(f.id)} aria-label={`Cerrar aviso de ${f.jobName}`}
-                className="-mr-1 p-1 rounded hover:bg-white/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="-mr-2 -my-1.5 p-2.5 sm:-mr-1 sm:my-0 sm:p-1 rounded hover:bg-white/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <X size={14} aria-hidden />
               </button>

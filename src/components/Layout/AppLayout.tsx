@@ -58,11 +58,11 @@ function Toast() {
   }, [toast, clearToast]);
   if (!toast) return null;
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm" role="status" aria-live="polite">
+    <div className="fixed left-4 right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:left-auto z-50 sm:max-w-sm" role="status" aria-live="polite">
       <div className="flex items-start gap-2.5 bg-ink-950 text-white rounded-xl shadow-pop px-4 py-3">
         <Bell size={16} className="shrink-0 mt-0.5 text-brand-300" aria-hidden />
         <span className="text-sm leading-snug">{toast}</span>
-        <button onClick={clearToast} aria-label="Cerrar aviso" className="shrink-0 text-ink-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+        <button onClick={clearToast} aria-label="Cerrar aviso" className="shrink-0 -m-2 p-2 text-ink-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
           <X size={15} aria-hidden />
         </button>
       </div>
@@ -75,7 +75,7 @@ export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false);
   if (!user) return <Navigate to="/login" replace />;
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-ink-50">
+    <div className="flex h-screen h-dvh w-screen overflow-hidden bg-ink-50">
       {navOpen && (
         <div className="fixed inset-0 bg-ink-950/40 z-30 lg:hidden" onClick={() => setNavOpen(false)} />
       )}
@@ -83,7 +83,7 @@ export function AppLayout() {
         <Sidebar onNavigate={() => setNavOpen(false)} />
       </div>
       <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setNavOpen((v) => !v)} />
+        <Header navOpen={navOpen} onMenuClick={() => setNavOpen((v) => !v)} />
         <DataLoadBanner />
         <main className="flex-1 overflow-y-auto">
           <Outlet />

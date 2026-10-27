@@ -11,6 +11,10 @@ html, body, #root { height: 100%; }
 
 body {
   margin: 0;
+  /* Con la app agregada al inicio del iPhone, el rebote del body dejaba ver un
+     hueco: el scroll real vive en <main>, no en el body. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
   background: #f8f4f4;
   color: #2d2b2b;
   font-feature-settings: 'tnum' 1;
@@ -27,3 +31,14 @@ body {
   50% { opacity: 0.35; }
 }
 .dot-live { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+/* iOS hace zoom solo al enfocar un campo con letra de menos de 16px y no vuelve:
+   en el celular los campos van a 16px. Se resuelve acá y no con maximum-scale
+   para no bloquear el zoom con dos dedos. */
+@media (max-width: 767px) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

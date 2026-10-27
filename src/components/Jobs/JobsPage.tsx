@@ -50,10 +50,10 @@ export function JobsPage() {
     });
   }, [jobs, priorityFilter, statusFilter, clientFilter, respFilter, search, clients, showArchived, onlyBlocked]);
 
-  const selectCls = 'text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
+  const selectCls = 'min-w-0 text-sm border border-ink-200 rounded-lg px-2.5 py-2 sm:py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-display font-bold text-ink-900">Trabajos</h1>
         {canCreateJobs(user.role) && (
@@ -63,10 +63,11 @@ export function JobsPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap">
         <input
           value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." aria-label="Buscar"
-          className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+          type="search" enterKeyHint="search" autoComplete="off"
+          className="col-span-2 text-sm border border-ink-200 rounded-lg px-3 py-2 sm:py-1.5 w-full sm:w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <select aria-label="Prioridad" className={selectCls} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}>
           <option value="all">Toda prioridad</option>
@@ -85,19 +86,19 @@ export function JobsPage() {
           {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
         <label
-          className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1"
+          className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1 min-h-11 sm:min-h-0"
           title="Entregados hace 3 días o más — se ocultan por default para no acumular"
         >
           <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" />
           Ver archivados{!showArchived && archivedCount > 0 ? ` (${archivedCount})` : ''}
         </label>
         {blockedCount > 0 && (
-          <label className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1">
+          <label className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1 min-h-11 sm:min-h-0">
             <input type="checkbox" checked={onlyBlocked} onChange={(e) => setOnlyBlocked(e.target.checked)} className="rounded" />
             🔒 Solo bloqueados ({blockedCount})
           </label>
         )}
-        <span className="ml-auto text-xs text-ink-700 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
+        <span className="col-span-2 sm:ml-auto text-xs text-ink-700 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="bg-white rounded-xl border border-ink-100 shadow-card overflow-hidden">

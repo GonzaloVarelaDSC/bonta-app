@@ -71,10 +71,10 @@ export function ContactSheetSection({ job }: { job: Job }) {
         <span className="flex-1 text-sm font-semibold text-ink-900">Contact sheet</span>
         {job.contactSheetPath && !busy && (
           <>
-            <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-ink-900">
+            <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-ink-900 min-h-[44px] md:min-h-0 px-1">
               <RefreshCw size={13} aria-hidden /> Reemplazar
             </button>
-            <button type="button" onClick={() => setConfirmRemove(true)} className="inline-flex items-center gap-1 text-xs font-medium text-crit-text hover:underline ml-2">
+            <button type="button" onClick={() => setConfirmRemove(true)} className="inline-flex items-center gap-1 text-xs font-medium text-crit-text hover:underline ml-2 min-h-[44px] md:min-h-0 px-1">
               <Trash2 size={13} aria-hidden /> Quitar
             </button>
           </>
@@ -88,7 +88,7 @@ export function ContactSheetSection({ job }: { job: Job }) {
           {url
             ? <img src={url} alt="Contact sheet del trabajo" className="max-h-80 w-auto mx-auto rounded border border-ink-100" />
             : <div className="h-40 flex items-center justify-center text-sm text-ink-700">{busy ? 'Subiendo...' : 'Cargando imagen...'}</div>}
-          <p className="text-[11px] text-ink-700 mt-2 text-center">Sale impresa en la planilla de producción. Para cambiarla podés pegar otra con Ctrl+V.</p>
+          <p className="text-[11px] text-ink-700 mt-2 text-center">Sale impresa en la planilla de producción. <span className="hidden md:inline">Para cambiarla podés pegar otra con Ctrl+V.</span></p>
         </div>
       ) : (
         <button
@@ -100,7 +100,8 @@ export function ContactSheetSection({ job }: { job: Job }) {
         >
           <ImagePlus size={22} aria-hidden className="text-ink-700" />
           <span className="font-medium text-ink-900">{busy ? 'Subiendo...' : 'Subir la imagen del contact sheet'}</span>
-          <span className="text-xs">Arrastrala acá, hacé click para elegirla, o copiala y pegala con Ctrl+V.</span>
+          <span className="text-xs hidden md:inline">Arrastrala acá, hacé click para elegirla, o copiala y pegala con Ctrl+V.</span>
+          <span className="text-xs md:hidden">Tocá para elegirla de la galería o los archivos.</span>
         </button>
       )}
       {error && <p role="alert" className="text-xs text-crit-text px-3 pb-3">{error}</p>}

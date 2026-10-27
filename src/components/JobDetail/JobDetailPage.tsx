@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -64,6 +64,24 @@ export function JobDetailPage() {
   const [showBlock, setShowBlock] = useState(false);
   const [showClientMsg, setShowClientMsg] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  // En el celular la cabecera no queda fija (ocupaba media pantalla), solo las
+  // pestañas. En Comentarios se baja hasta las pestañas para que el cuadro de
+  // escribir quede a la vista sin tener que buscarlo.
+  const scrollToTabs = useRef(false);
+  function selectTab(t: (typeof TABS)[number]) {
+    scrollToTabs.current = t === 'Comentarios' && window.matchMedia('(max-width: 1023px)').matches;
+    setTab(t);
+  }
+  // Después de renderizar la pestaña (antes el panel todavía no tenía alto y no había adónde bajar).
+  useEffect(() => {
+    if (!scrollToTabs.current) return;
+    scrollToTabs.current = false;
+    const box = scrollRef.current, head = headerRef.current;
+    if (box && head && box.scrollTop < head.offsetHeight) box.scrollTo({ top: head.offsetHeight });
+  }, [tab]);
 
   useEffect(() => {
     if (!id) return;
@@ -93,19 +111,21 @@ export function JobDetailPage() {
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        {/* Cabecera fija */}
-        <div className="sticky top-0 z-10 bg-white border-b border-ink-100 px-6 py-4">
+      <div ref={scrollRef} className="flex-1 min-w-0 overflow-y-auto">
+        {/* Cabecera fija en escritorio. En el celular el envoltorio es
+            "display: contents" y solo quedan fijas las pestañas. */}
+        <div className="contents lg:block lg:sticky lg:top-0 lg:z-10 lg:bg-white lg:border-b lg:border-ink-100">
+        <div ref={headerRef} className="bg-white px-4 pt-2 lg:px-6 lg:pt-4">
           {/* Vuelve a la pantalla de la que se vino (Dashboard, Kanban, Trabajos,
               Histórico...), no siempre a Trabajos. Solo si se abrió la ficha
               directo (sin historial en la app) cae a la lista de Trabajos. */}
           {canGoBack ? (
-            <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-              <ArrowLeft size={13} aria-hidden /> Volver
+            <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm lg:text-xs font-medium text-ink-700 hover:text-brand-600 min-h-[44px] lg:min-h-0 pr-3 lg:pr-0 lg:mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+              <ArrowLeft size={15} aria-hidden /> Volver
             </button>
           ) : (
-            <Link to="/trabajos" className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-              <ArrowLeft size={13} aria-hidden /> Volver a Trabajos
+            <Link to="/trabajos" className="inline-flex items-center gap-1 text-sm lg:text-xs font-medium text-ink-700 hover:text-brand-600 min-h-[44px] lg:min-h-0 pr-3 lg:pr-0 lg:mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+              <ArrowLeft size={15} aria-hidden /> Volver a Trabajos
             </Link>
           )}
           <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -122,8 +142,8 @@ export function JobDetailPage() {
                 <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
                 {canEditAnyJob(user.role) && (
                   <button onClick={() => setEditingHeader(true)} aria-label="Editar cliente y nombre del trabajo" title="Editar cliente y nombre"
-                    className="mt-1 p-1 rounded text-ink-700 hover:text-ink-900 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-                    <Pencil size={13} aria-hidden />
+                    className="-mt-1.5 lg:mt-1 p-2.5 lg:p-1 rounded text-ink-700 hover:text-ink-900 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <Pencil size={15} aria-hidden />
                   </button>
                 )}
               </div>
@@ -149,8 +169,10 @@ export function JobDetailPage() {
               <div className="text-[11px] text-ink-700 mt-1 pl-1">Asigna → Responsable</div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <PriorityBadge priority={effectivePriority(job)} />
-              <StatusBadge status={job.status} />
+              {/* En el celular prioridad y estado ya se leen en sus selects de
+                  abajo: repetirlos como badge solo empujaba todo hacia abajo. */}
+              <span className={canChangePriority(user.role) ? 'hidden lg:contents' : 'contents'}><PriorityBadge priority={effectivePriority(job)} /></span>
+              <span className="hidden lg:contents"><StatusBadge status={job.status} /></span>
               {activeBlock && <BlockedBadge blocked reason={BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]} />}
               <CountdownBadge iso={job.committedDate} status={job.status} />
               <RiskBadge risk={calculateRisk(job)} />
@@ -204,38 +226,50 @@ export function JobDetailPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            {canChangePriority(user.role) && (
+          {/* En escritorio, selects y acciones van en una sola tira (como antes); en el celular, dos grillas. */}
+          <div className="mt-3 lg:flex lg:items-center lg:gap-3 lg:flex-wrap">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 lg:contents">
+            <label className="min-w-0 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:block">
+              <span className="lg:sr-only">Estado</span>
               <select
-                value={effectivePriority(job)}
-                onChange={async (e) => { try { await setPriority(job.id, e.target.value as Priority, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white max-w-full"
+                value={job.status}
+                onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
+                className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal`}
               >
-                {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
+                {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
+            </label>
+            {canChangePriority(user.role) && (
+              <label className="min-w-0 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:block lg:order-first">
+                <span className="lg:sr-only">Prioridad</span>
+                <select
+                  value={effectivePriority(job)}
+                  onChange={async (e) => { try { await setPriority(job.id, e.target.value as Priority, user.id); } catch (err) { alert(friendlyError(err)); } }}
+                  className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal max-w-full`}
+                >
+                  {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
+                </select>
+              </label>
             )}
-            <select
-              value={job.status}
-              onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
-              className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
-            >
-              {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-            </select>
-            <label className="text-xs text-ink-700 inline-flex items-center gap-1.5">
+            <label className="col-span-2 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:inline-flex lg:flex-row lg:items-center lg:gap-1.5 lg:font-normal">
               Muestra al cliente
               <select
                 value={job.sampleReview}
                 onChange={async (e) => { try { await setSampleReview(job.id, e.target.value as SampleReview, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                className="text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white"
+                className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal`}
               >
                 {(Object.keys(SAMPLE_REVIEW_META) as SampleReview[]).map((k) => (
                   <option key={k} value={k}>{SAMPLE_REVIEW_META[k].option}</option>
                 ))}
               </select>
             </label>
+          </div>
+
+          {/* Acciones menos frecuentes: en el celular, botones parejos de 44 px. */}
+          <div className="grid grid-cols-2 gap-2 mt-3 lg:contents">
             {!activeBlock && (
-              <button onClick={() => setShowBlock(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-crit-text bg-crit-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
-                <Lock size={13} /> Bloquear trabajo
+              <button onClick={() => setShowBlock(true)} className="inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-crit-text bg-crit-bg hover:brightness-95">
+                <Lock size={14} aria-hidden /> Bloquear trabajo
               </button>
             )}
             {/* Cancelar es una decisión administrativa, no un paso más de la
@@ -245,32 +279,34 @@ export function JobDetailPage() {
                 Revertir un cancelado sigue siendo por el select (aparece como
                 opción extra mientras el trabajo esté en ese estado). */}
             {canEditAnyJob(user.role) && job.status !== 'CANCELADO' && job.status !== 'TERMINADO' && (
-              <button onClick={() => setShowCancelConfirm(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200">
-                <XCircle size={13} /> Cancelar trabajo
+              <button onClick={() => setShowCancelConfirm(true)} className="inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-ink-700 bg-ink-100 hover:bg-ink-200">
+                <XCircle size={14} aria-hidden /> Cancelar trabajo
               </button>
             )}
             {CLIENT_MSG_STATUSES.includes(job.status) && (
-              <button onClick={() => setShowClientMsg(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-plan-text bg-plan-bg rounded-md px-2.5 py-1.5 hover:brightness-95">
-                <MessageCircle size={13} /> Mensaje para el cliente
+              <button onClick={() => setShowClientMsg(true)} className="col-span-2 inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-plan-text bg-plan-bg hover:brightness-95">
+                <MessageCircle size={14} aria-hidden /> Mensaje para el cliente
               </button>
             )}
             <a
               href={`/trabajos/${job.id}/exportar`} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200"
+              className="col-span-2 inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-ink-700 bg-ink-100 hover:bg-ink-200"
             >
-              <FileOutput size={13} /> Exportar para cliente
+              <FileOutput size={14} aria-hidden /> Exportar para cliente
             </a>
+          </div>
           </div>
 
           {/* Pestañas con "volumen" tipo Chrome: la activa se levanta (fondo del
               panel + sombra) y se funde con el contenido de abajo; las
               inactivas quedan chatas sobre el header blanco. */}
-          <div role="tablist" aria-label="Secciones de la ficha" className="flex gap-1 mt-4 -mb-4 px-1 overflow-x-auto">
+        </div>
+          <div role="tablist" aria-label="Secciones de la ficha" className="sticky top-0 z-10 bg-white border-b border-ink-100 lg:static lg:border-b-0 flex gap-1 pt-3 px-3 lg:pt-4 lg:px-7 overflow-x-auto">
             {visibleTabs.map((t) => (
               <button
                 key={t} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls={`tabpanel-${t}`}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${
+                onClick={() => selectTab(t)}
+                className={`px-3 lg:px-4 py-2.5 min-h-[44px] lg:min-h-0 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${
                   tab === t
                     ? 'bg-ink-50 text-ink-900 font-semibold shadow-[0_-2px_6px_rgba(15,23,32,0.08)] relative z-10'
                     : 'text-ink-700 hover:bg-ink-100/70 hover:text-ink-900'
@@ -281,7 +317,7 @@ export function JobDetailPage() {
           </div>
         </div>
 
-        <div className="p-6" role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        <div className="p-4 lg:p-6" role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
           {tab === 'General' && (
             <>
               <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm max-w-3xl">
@@ -294,7 +330,7 @@ export function JobDetailPage() {
                     <select
                       id="job-responsible" value={job.responsibleUserId}
                       onChange={async (e) => { try { await changeResponsible(job.id, e.target.value, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                      className="border border-ink-200 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="min-h-[44px] lg:min-h-0 border border-ink-200 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                     >
                       {!users.some((u) => u.id === job.responsibleUserId && u.isProducer && u.active) && <option value={job.responsibleUserId}>{responsible?.name ?? '—'}</option>}
                       {users.filter((u) => u.isProducer && u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -320,7 +356,7 @@ export function JobDetailPage() {
                         try { await updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id); }
                         catch (err) { alert(friendlyError(err)); }
                       }}
-                      className="text-ink-800 bg-transparent border border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-1.5 -ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="min-h-[44px] lg:min-h-0 text-ink-800 bg-white lg:bg-transparent border border-ink-200 lg:border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-2 lg:px-1.5 lg:-ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                 ) : (
@@ -350,7 +386,7 @@ export function JobDetailPage() {
                   {job.specialRequirements && (
                     <p className="text-sm text-ink-800 mt-3 leading-relaxed">{job.specialRequirements}</p>
                   )}
-                  <button onClick={() => setTab('Detalle')} className="text-xs font-medium text-brand-600 hover:underline mt-3">
+                  <button onClick={() => selectTab('Detalle')} className="text-sm lg:text-xs font-medium text-brand-600 hover:underline mt-3 min-h-[44px] lg:min-h-0">
                     Editar en la pestaña Detalle →
                   </button>
                 </div>
@@ -373,7 +409,7 @@ export function JobDetailPage() {
           )}
 
           {tab === 'Comentarios' && (
-            <div className="lg:hidden -mx-6 -mb-6 h-[70vh] min-h-[380px] border-t border-ink-100">
+            <div className="lg:hidden -mx-4 -mb-4 h-[calc(100dvh-8rem)] min-h-[380px]">
               <CommentsPanel job={job} />
             </div>
           )}

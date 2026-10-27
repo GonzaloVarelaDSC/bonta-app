@@ -21,17 +21,17 @@ const ITEMS = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const user = useStore((s) => s.currentUser);
   return (
-    <aside onClick={onNavigate} className="w-60 shrink-0 bg-ink-950 text-ink-100 flex flex-col h-full">
+    <aside onClick={onNavigate} className="w-60 shrink-0 bg-ink-950 text-ink-100 flex flex-col h-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <Link to="/" className="block px-5 py-5 border-b border-white/10 hover:bg-white/5 transition-colors">
         <div className="font-brand font-extrabold text-lg tracking-tight text-white">Estudio Bonta</div>
         <div className="text-[11px] text-ink-400 mt-0.5 uppercase tracking-wide">Gestión de producción</div>
       </Link>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
         {user && canCreateJobs(user.role) && (
           <NavLink
             to="/trabajos/rapido"
             className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-1',
+              'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors mb-1',
               isActive ? 'bg-brand-500/20 text-white' : 'text-brand-300 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -44,7 +44,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             to={item.to}
             end={item.end}
             className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
               isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -59,7 +59,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <>
             <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Ventas</div>
             <NavLink to="/presupuestos" className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
               isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
             )}>
               <Receipt size={17} strokeWidth={2} /> Presupuestos
@@ -71,7 +71,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <>
             <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Análisis</div>
             <NavLink to="/metricas" className={({ isActive }) => clsx(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
               isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
             )}>
               <BarChart3 size={17} strokeWidth={2} /> Métricas
@@ -83,7 +83,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <div className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Administración</div>
             {canManageUsers(user.role) && (
               <NavLink to="/usuarios" className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
               )}>
                 <Users size={17} /> Usuarios
@@ -91,7 +91,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             )}
             {canManageUsers(user.role) && (
               <NavLink to="/configuracion" className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
               )}>
                 <Settings size={17} /> Configuración
@@ -99,7 +99,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             )}
             {canViewHistorico(user.role) && (
               <NavLink to="/historico" className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive ? 'bg-brand-500/20 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
               )}>
                 <Archive size={17} /> Histórico

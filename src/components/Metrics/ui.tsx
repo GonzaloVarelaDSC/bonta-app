@@ -34,15 +34,17 @@ export function InfoTip({ text, label = 'Cómo se calcula' }: { text: ReactNode;
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
+  // Hover y foco abren solo con mouse/teclado: en el celular el toque emula
+  // mouseenter + foco y el click lo volvía a cerrar al instante.
   return (
-    <span ref={ref} className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+    <span ref={ref} className="relative inline-flex" onPointerEnter={(e) => { if (e.pointerType === 'mouse') setOpen(true); }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') setOpen(false); }}>
       <button type="button" aria-label={label} aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
-        className="text-ink-500 hover:text-ink-800 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+        onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) setOpen(true); }} onBlur={() => setOpen(false)}
+        className="p-2 -m-2 md:p-0 md:m-0 text-ink-500 hover:text-ink-800 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
         <Info size={13} aria-hidden="true" />
       </button>
       {open && (
-        <span role="tooltip" className="absolute z-30 left-1/2 -translate-x-1/2 top-5 w-72 rounded-lg bg-ink-900 text-white text-xs leading-relaxed px-3 py-2 shadow-pop font-normal normal-case tracking-normal text-left">
+        <span role="tooltip" className="max-md:fixed max-md:inset-x-4 max-md:bottom-6 max-md:w-auto max-md:z-50 md:absolute z-30 md:left-1/2 md:-translate-x-1/2 md:top-5 md:w-72 rounded-lg bg-ink-900 text-white text-xs leading-relaxed px-3 py-2 shadow-pop font-normal normal-case tracking-normal text-left">
           {text}
         </span>
       )}

@@ -43,11 +43,11 @@ export function ConfirmQuoteModal({
     >
       <div
         role="dialog" aria-modal="true" aria-labelledby="confirm-quote-title"
-        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-2">
           <h3 id="confirm-quote-title" className="font-display font-bold text-ink-900">Confirmar presupuesto</h3>
-          <button onClick={onClose} aria-label="Cerrar" className="text-ink-700 hover:text-ink-900"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="p-2 -m-2 text-ink-700 hover:text-ink-900"><X size={18} /></button>
         </div>
         <p className="text-sm text-ink-800 mb-4">
           Se va a generar un trabajo nuevo con el cliente, nombre y detalle ya cargados en este presupuesto — solo
@@ -79,11 +79,11 @@ export function ConfirmQuoteModal({
         </div>
 
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} disabled={confirming} className="px-3.5 py-2 rounded-lg text-sm text-ink-700 hover:bg-ink-50 disabled:opacity-40">Cancelar</button>
+          <button onClick={onClose} disabled={confirming} className="px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm text-ink-700 hover:bg-ink-50 disabled:opacity-40">Cancelar</button>
           <button
             disabled={!canSubmit || confirming}
             onClick={() => canSubmit && onConfirm(jobTypeId, committedDate, responsibleUserId)}
-            className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-brand-500 text-white hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-semibold bg-brand-500 text-white hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {confirming ? 'Generando trabajo...' : 'Confirmar y generar trabajo'}
           </button>

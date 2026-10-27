@@ -76,7 +76,7 @@ export function JobPriceSection({ job }: { job: Job }) {
               {price.note && <span className="basis-full text-xs text-ink-800">{price.note}</span>}
             </>
           ) : <span className="text-sm text-ink-700">Todavía sin cargar. Se carga cuando se sabe el precio final, no hace falta al crear la ficha.</span>}
-          <button type="button" onClick={startEdit} className="text-xs font-medium text-brand-600 hover:underline">{price ? 'Editar' : 'Cargar importe'}</button>
+          <button type="button" onClick={startEdit} className="text-sm lg:text-xs font-medium text-brand-600 hover:underline min-h-[44px] lg:min-h-0">{price ? 'Editar' : 'Cargar importe'}</button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -84,11 +84,11 @@ export function JobPriceSection({ job }: { job: Job }) {
             <label className="sr-only" htmlFor={`price-${job.id}`}>Importe</label>
             <span className="text-sm text-ink-700">$</span>
             <input id={`price-${job.id}`} inputMode="decimal" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Ej.: 350000"
-              className="w-40 text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              enterKeyHint="done" className="w-40 min-h-[44px] lg:min-h-0 text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
             <div role="group" aria-label="El importe tipeado" className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5 text-xs">
               {[false, true].map((v) => (
                 <button key={String(v)} type="button" aria-pressed={withIva === v} onClick={() => setWithIva(v)}
-                  className={clsx('px-2.5 py-1 rounded-md font-medium', withIva === v ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50')}>
+                  className={clsx('px-3 py-2.5 lg:px-2.5 lg:py-1 rounded-md font-medium', withIva === v ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50')}>
                   {v ? 'Incluye IVA (21%)' : 'Sin IVA'}
                 </button>
               ))}
@@ -104,8 +104,8 @@ export function JobPriceSection({ job }: { job: Job }) {
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota opcional (ej.: incluye flete, se cobró en dos pagos)" aria-label="Nota del importe"
             className="w-full max-w-md text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
           <div className="flex gap-2">
-            <button type="button" disabled={!valid || saving} onClick={save} className="text-sm px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-medium disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>
-            <button type="button" onClick={() => setEditing(false)} className="text-sm px-3 py-1.5 rounded-lg border border-ink-200 hover:bg-ink-50">Cancelar</button>
+            <button type="button" disabled={!valid || saving} onClick={save} className="min-h-[44px] lg:min-h-0 text-sm px-4 lg:px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-medium disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>
+            <button type="button" onClick={() => setEditing(false)} className="min-h-[44px] lg:min-h-0 text-sm px-4 lg:px-3 py-1.5 rounded-lg border border-ink-200 hover:bg-ink-50">Cancelar</button>
             {price && <button type="button" onClick={remove} className="ml-auto text-xs text-crit-text hover:underline">Quitar importe</button>}
           </div>
         </div>

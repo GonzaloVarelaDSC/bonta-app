@@ -84,10 +84,10 @@ function AssemblyCard({ job, a, pieces, saved, onPatch, onRemove }: {
           className="flex-1 min-w-[200px] bg-white border border-ink-200 rounded-md px-2 py-1.5 text-sm font-semibold text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500" />
         <datalist id={`asm-labels-${a.id}`}>{job.products.map((p) => <option key={p.id} value={p.label} />)}</datalist>
         <label className="text-xs text-ink-700 inline-flex items-center gap-1.5">Unidades que pide la OT
-          <input type="number" min={1} value={a.units || ''} onChange={(e) => onPatch({ units: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
+          <input type="number" inputMode="numeric" min={1} value={a.units || ''} onChange={(e) => onPatch({ units: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
             className={clsx(inputCls, 'w-20 font-semibold')} />
         </label>
-        <button type="button" onClick={onRemove} aria-label="Quitar este producto terminado" className="text-ink-700 hover:text-crit-text p-1"><Trash2 size={15} aria-hidden /></button>
+        <button type="button" onClick={onRemove} aria-label="Quitar este producto terminado" className="text-ink-700 hover:text-crit-text p-2.5 md:p-1"><Trash2 size={15} aria-hidden /></button>
       </div>
 
       <div className="p-3 space-y-2">
@@ -104,13 +104,13 @@ function AssemblyCard({ job, a, pieces, saved, onPatch, onRemove }: {
                 {[...(st.piece ? [st.piece] : []), ...unusedPieces].map((p) => <option key={p.key} value={p.key}>{pieceOption(p)}</option>)}
               </select>
               <label className="text-xs text-ink-700 inline-flex items-center gap-1">por unidad
-                <input type="number" min={1} value={c.perUnit || ''} aria-label={`Cantidad por unidad de la pieza ${i + 1}`}
+                <input type="number" inputMode="numeric" min={1} value={c.perUnit || ''} aria-label={`Cantidad por unidad de la pieza ${i + 1}`}
                   onChange={(e) => onPatch({ components: a.components.map((x, j) => (j === i ? { ...x, perUnit: Math.max(0, Math.floor(Number(e.target.value) || 0)) } : x)) })}
                   className={clsx(inputCls, 'w-16')} />
               </label>
               <span className="text-xs text-ink-800 tabular-nums min-w-[86px]">= <b>{st.total}</b> en total</span>
               <button type="button" aria-label={`Quitar pieza ${i + 1}`} onClick={() => onPatch({ components: a.components.filter((_, j) => j !== i) })}
-                className="text-ink-700 hover:text-crit-text p-1"><Trash2 size={14} aria-hidden /></button>
+                className="text-ink-700 hover:text-crit-text p-2.5 md:p-1"><Trash2 size={14} aria-hidden /></button>
             </div>
           );
         })}
@@ -170,7 +170,41 @@ function ProgressBlock({ job, a, pieces }: { job: Job; a: Assembly; pieces: Piec
   return (
     <div className="mt-3 border-t border-ink-100 pt-3 space-y-3">
       <div className="text-[11px] uppercase tracking-wide font-semibold text-ink-700">Armado</div>
-      <div className="overflow-x-auto -mx-3">
+      {/* En el celular, una tarjeta por pieza: en la tabla la columna Pieza
+          quedaba de una palabra por renglón y los +/- eran chicos para el taller. */}
+      <ul className="md:hidden space-y-2">
+        {st.components.map((c) => {
+          const p = c.piece!;
+          return (
+            <li key={c.pieceKey} className="rounded-lg border border-ink-200 bg-white p-3">
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 inline-flex items-center justify-center min-w-[26px] h-[26px] rounded bg-ink-900 text-white text-sm font-bold">{p.ref}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-ink-900 text-sm">{p.label}{p.size && <span className="font-normal text-ink-700"> · {p.size}</span>}</div>
+                  <div className="text-xs text-ink-700">
+                    {[p.material, p.processes.map((id) => PRODUCTION_PROCESSES.find((x) => x.id === id)?.short).filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Sin material ni procesos cargados'}
+                    {p.processedInOt && <span className="ml-1 text-plan-text">· marcado procesado en Detalle</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+                <div className="text-xs text-ink-700 leading-tight">
+                  <div>{c.perUnit} por unidad · <b className="text-ink-900">{c.total}</b> en total</div>
+                  <div className={clsx('mt-0.5 font-semibold', c.missing ? 'text-crit-text' : 'text-plan-text')}>
+                    {c.missing ? `Faltan ${c.missing}` : <span className="inline-flex items-center gap-1"><Check size={13} aria-hidden /> Completo</span>}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] text-ink-700 mb-0.5">Hechas</div>
+                  <Stepper value={c.ready} onChange={(v) => setReady(c.pieceKey, v)} label={`Piezas ${p.ref} hechas`} />
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden md:block overflow-x-auto -mx-3">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-[11px] text-ink-700 text-left">
@@ -229,12 +263,12 @@ function ProgressBlock({ job, a, pieces }: { job: Job; a: Assembly; pieces: Piec
       </div>
 
       {changed && (
-        <div className="flex gap-2">
-          <button type="button" onClick={save} disabled={saving} className="text-sm font-semibold bg-ink-950 text-white px-3 py-1.5 rounded-lg hover:bg-ink-800 disabled:opacity-60">
+        <div className="flex gap-2 sticky bottom-0 bg-white py-2 md:static md:py-0 md:bg-transparent">
+          <button type="button" onClick={save} disabled={saving} className="flex-1 md:flex-none min-h-[44px] md:min-h-0 text-sm font-semibold bg-ink-950 text-white px-3 py-1.5 rounded-lg hover:bg-ink-800 disabled:opacity-60">
             {saving ? 'Guardando...' : 'Guardar avance'}
           </button>
           <button type="button" onClick={() => setLocal({ key: savedKey, assembled: a.assembled, ready: Object.fromEntries(a.components.map((c) => [c.pieceKey, c.ready])) })}
-            className="text-sm px-3 py-1.5 rounded-lg border border-ink-200 hover:bg-ink-50">Descartar</button>
+            className="min-h-[44px] md:min-h-0 text-sm px-3 py-1.5 rounded-lg border border-ink-200 hover:bg-ink-50">Descartar</button>
         </div>
       )}
     </div>
@@ -244,11 +278,11 @@ function ProgressBlock({ job, a, pieces }: { job: Job; a: Assembly; pieces: Piec
 function Stepper({ value, onChange, max, label }: { value: number; onChange: (v: number) => void; max?: number; label: string }) {
   return (
     <span className="inline-flex items-center rounded-md border border-ink-200 bg-white" role="group" aria-label={label}>
-      <button type="button" aria-label={`Restar 1 (${label})`} disabled={value <= 0} onClick={() => onChange(value - 1)} className="px-1.5 py-1 text-ink-700 hover:bg-ink-50 disabled:opacity-30"><Minus size={13} aria-hidden /></button>
-      <input type="number" min={0} max={max} value={value} aria-label={label}
+      <button type="button" aria-label={`Restar 1 (${label})`} disabled={value <= 0} onClick={() => onChange(value - 1)} className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 inline-flex items-center justify-center px-1.5 py-1 text-ink-700 hover:bg-ink-50 disabled:opacity-30"><Minus size={13} aria-hidden /></button>
+      <input type="number" inputMode="numeric" min={0} max={max} value={value} aria-label={label}
         onChange={(e) => onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-        className="w-12 text-center text-sm font-semibold tabular-nums border-x border-ink-200 py-1 focus:outline-none" />
-      <button type="button" aria-label={`Sumar 1 (${label})`} disabled={max !== undefined && value >= max} onClick={() => onChange(value + 1)} className="px-1.5 py-1 text-ink-700 hover:bg-ink-50 disabled:opacity-30"><Plus size={13} aria-hidden /></button>
+        className="w-12 self-stretch text-center text-sm font-semibold tabular-nums border-x border-ink-200 py-1 focus:outline-none" />
+      <button type="button" aria-label={`Sumar 1 (${label})`} disabled={max !== undefined && value >= max} onClick={() => onChange(value + 1)} className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 inline-flex items-center justify-center px-1.5 py-1 text-ink-700 hover:bg-ink-50 disabled:opacity-30"><Plus size={13} aria-hidden /></button>
     </span>
   );
 }

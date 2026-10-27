@@ -49,7 +49,7 @@ export function EditJobHeaderModal({ job, onClose }: { job: Job; onClose: () => 
     <ModalShell titleId="edit-job-header-title" onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <h3 id="edit-job-header-title" className="font-display font-bold text-ink-900">Editar cliente y nombre</h3>
-        <button onClick={onClose} aria-label="Cerrar" className="text-ink-700 hover:text-ink-900"><X size={18} /></button>
+        <button onClick={onClose} aria-label="Cerrar" className="p-2 -m-2 text-ink-700 hover:text-ink-900"><X size={18} /></button>
       </div>
       <div className="space-y-3">
         <div>

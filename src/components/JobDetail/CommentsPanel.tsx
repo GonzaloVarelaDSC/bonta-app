@@ -118,7 +118,7 @@ export function CommentsPanel({ job }: { job: Job }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-ink-100 shrink-0">
+      <div className="hidden lg:block px-4 py-3 border-b border-ink-100 shrink-0">
         <div className="text-sm font-semibold text-ink-800">Comentarios</div>
         <div className="text-[11px] text-ink-700">Reemplaza la cadena de mails para este trabajo</div>
       </div>
@@ -151,7 +151,7 @@ export function CommentsPanel({ job }: { job: Job }) {
                 key={u.id} type="button" role="option" aria-selected={i === highlight}
                 onMouseDown={(e) => { e.preventDefault(); selectMention(u); }}
                 onMouseEnter={() => setHighlight(i)}
-                className={`w-full text-left px-3 py-2 flex items-center gap-2 text-sm ${i === highlight ? 'bg-brand-50' : 'hover:bg-ink-50'}`}
+                className={`w-full text-left px-3 py-3 lg:py-2 flex items-center gap-2 text-sm ${i === highlight ? 'bg-brand-50' : 'hover:bg-ink-50'}`}
               >
                 <Avatar name={u.name} color={u.avatarColor} size={22} />
                 <span className="text-ink-900">{u.name}</span>
@@ -159,9 +159,9 @@ export function CommentsPanel({ job }: { job: Job }) {
             ))}
           </div>
         )}
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-1.5 lg:gap-1 mb-2">
           {MENTIONABLE.map((m) => (
-            <button key={m.role} onClick={() => setText((t) => `${t}${t ? ' ' : ''}${m.label} `)} className="text-[11px] text-brand-600 bg-brand-100 rounded-full px-2 py-0.5 hover:bg-brand-200/70">
+            <button key={m.role} onClick={() => setText((t) => `${t}${t ? ' ' : ''}${m.label} `)} className="text-xs lg:text-[11px] text-brand-600 bg-brand-100 rounded-full px-3 py-2 lg:px-2 lg:py-0.5 hover:bg-brand-200/70">
               {m.label}
             </button>
           ))}
@@ -182,10 +182,11 @@ export function CommentsPanel({ job }: { job: Job }) {
             }}
             placeholder="Escribí un comentario... @ para mencionar"
             aria-label="Escribir un comentario"
+            enterKeyHint="send"
             rows={2}
             className="flex-1 text-sm border border-ink-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
-          <button onClick={submit} aria-label="Enviar comentario" className="self-end bg-ink-950 text-white rounded-lg p-2.5 hover:bg-ink-800 transition-colors">
+          <button onClick={submit} aria-label="Enviar comentario" className="self-end bg-ink-950 text-white rounded-lg p-3.5 lg:p-2.5 hover:bg-ink-800 transition-colors">
             <Send size={15} />
           </button>
         </div>

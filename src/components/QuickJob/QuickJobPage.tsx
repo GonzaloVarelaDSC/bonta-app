@@ -181,7 +181,7 @@ export function QuickJobPage() {
   }
 
   return (
-    <div className="p-5 max-w-3xl mx-auto pb-28">
+    <div className="p-4 sm:p-5 max-w-3xl mx-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <div className="flex items-center gap-2 mb-1">
         <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-brand-100 text-brand-600 shrink-0"><Zap size={15} /></span>
         <h1 className="text-lg font-display font-bold text-ink-900">Carga rápida</h1>
@@ -196,6 +196,7 @@ export function QuickJobPage() {
               id="qj-client" className={inputCls} list="qj-clientes-existentes" value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               placeholder="Nombre del cliente — si es nuevo y todavía no está en Copernico, no importa"
+              autoComplete="off" autoCapitalize="words" enterKeyHint="next"
               autoFocus
             />
             <datalist id="qj-clientes-existentes">
@@ -213,8 +214,8 @@ export function QuickJobPage() {
             )}
           </div>
           <div><label htmlFor="qj-name" className={labelCls}>Nombre del trabajo</label>
-            <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" /></div>
-          <div className="grid grid-cols-2 gap-4">
+            <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" autoComplete="off" enterKeyHint="next" /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label htmlFor="qj-type" className={labelCls}>Tipo de trabajo</label>
               <select id="qj-type" className={inputCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
                 {jobTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -222,11 +223,11 @@ export function QuickJobPage() {
             </div>
             <div><label htmlFor="qj-date" className={labelCls}>Fecha de entrega</label>
               <input id="qj-date" type="date" className={inputCls} value={committedDate} onChange={(e) => changeDate(e.target.value)} />
-              <div className="flex flex-wrap gap-1 mt-1.5">
+              <div className="flex flex-wrap gap-1.5 sm:gap-1 mt-1.5">
                 {DATE_PRESETS.map((p) => (
                   <button
                     type="button" key={p.label} onClick={() => changeDate(addDaysLocal(p.days))}
-                    className={`text-[11px] px-2 py-1 rounded-full border ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}
+                    className={`text-xs sm:text-[11px] px-3 py-2 sm:px-2 sm:py-1 rounded-full border ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}
                   >
                     {p.label}
                   </button>
@@ -262,10 +263,10 @@ export function QuickJobPage() {
           {requiresInstallation && (
             <div className="grid grid-cols-2 gap-4 bg-ink-50 rounded-lg p-3">
               <div className="col-span-2"><label htmlFor="qj-install-address" className={labelCls}>Dirección *</label>
-                <input id="qj-install-address" className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
-              <div><label htmlFor="qj-install-phone" className={labelCls}>Teléfono de contacto</label>
-                <input id="qj-install-phone" className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
-              <div><label htmlFor="qj-install-date" className={labelCls}>Fecha</label>
+                <input id="qj-install-address" autoComplete="off" enterKeyHint="next" className={inputCls} value={installAddress} onChange={(e) => setInstallAddress(e.target.value)} /></div>
+              <div className="col-span-2 sm:col-span-1"><label htmlFor="qj-install-phone" className={labelCls}>Teléfono de contacto</label>
+                <input id="qj-install-phone" type="tel" inputMode="tel" autoComplete="off" className={inputCls} value={installContactPhone} onChange={(e) => setInstallContactPhone(e.target.value)} /></div>
+              <div className="col-span-2 sm:col-span-1"><label htmlFor="qj-install-date" className={labelCls}>Fecha</label>
                 <input id="qj-install-date" type="date" className={inputCls} value={installDate} onChange={(e) => setInstallDate(e.target.value)} /></div>
             </div>
           )}
@@ -302,7 +303,7 @@ export function QuickJobPage() {
             <div className="flex flex-wrap gap-1.5">
               {ASSIGN_ALSO_NAMES.map((name) => (
                 <button type="button" key={name} onClick={() => toggleAssignedName(name)} aria-pressed={assignedNames.includes(name)}
-                  className={`text-xs px-2.5 py-1.5 rounded-full border ${assignedNames.includes(name) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
+                  className={`text-xs px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-full border ${assignedNames.includes(name) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                   {name}
                 </button>
               ))}
@@ -312,19 +313,19 @@ export function QuickJobPage() {
         </Section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-5 py-3 flex items-center justify-between gap-3 z-20">
-        <span className="text-xs text-ink-700">
+      <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-4 sm:px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3 z-20">
+        <span className="min-w-0 text-[11px] sm:text-xs leading-snug text-ink-700">
           {!hasSizeData
             ? 'Cargá al menos una medida (cantidad, ancho o alto) para poder crear el trabajo'
             : softWarnings.length > 0
               ? `Se puede crear igual — falta: ${softWarnings.join(', ')}`
               : 'Listo para crear'}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button
             disabled={!hasSizeData || submitting} onClick={handleSubmitClick}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-5 py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold bg-brand-500 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Zap size={15} /> {submitting ? 'Creando...' : 'Crear trabajo'}
           </button>

@@ -75,9 +75,9 @@ export function QuoteDetailPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <Link to="/presupuestos" className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 hover:text-brand-600 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-        <ArrowLeft size={13} aria-hidden /> Volver a Presupuestos
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <Link to="/presupuestos" className="inline-flex items-center gap-1 text-sm sm:text-xs font-medium text-ink-700 hover:text-brand-600 min-h-[44px] sm:min-h-0 pr-3 sm:pr-0 sm:mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+        <ArrowLeft size={15} aria-hidden /> Volver a Presupuestos
       </Link>
 
       <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
@@ -86,18 +86,18 @@ export function QuoteDetailPage() {
           <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{quote.name}</h1>
           <div className="text-sm text-ink-700 mt-0.5">{client?.name}</div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {quote.price !== null ? (
             <a
               href={`/presupuestos/${quote.id}/exportar`} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 hover:bg-ink-200"
+              className="inline-flex items-center gap-1 text-sm sm:text-xs font-semibold text-ink-700 bg-ink-100 rounded-md px-2.5 py-1.5 min-h-[44px] sm:min-h-0 hover:bg-ink-200"
             >
               <FileOutput size={13} /> Exportar presupuesto
             </a>
           ) : (
             <span
               title="Cargá el importe en «Valor del presupuesto» antes de poder exportarlo"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-ink-400 bg-ink-100 rounded-md px-2.5 py-1.5 cursor-not-allowed"
+              className="inline-flex items-center gap-1 text-sm sm:text-xs font-semibold text-ink-400 bg-ink-100 rounded-md px-2.5 py-1.5 min-h-[44px] sm:min-h-0 cursor-not-allowed"
             >
               <FileOutput size={13} /> Exportar presupuesto
             </span>
@@ -110,7 +110,7 @@ export function QuoteDetailPage() {
           {quote.status !== 'CONFIRMADO' && canManageQuotes(user.role) && (
             <button
               onClick={() => setShowConfirmModal(true)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-plan-text rounded-md px-2.5 py-1.5 hover:brightness-110"
+              className="w-full sm:w-auto justify-center inline-flex items-center gap-1 text-sm sm:text-xs font-semibold text-white bg-plan-text rounded-md px-2.5 py-1.5 min-h-[44px] sm:min-h-0 hover:brightness-110"
             >
               <CheckCircle2 size={13} /> Confirmar presupuesto
             </button>
@@ -285,23 +285,23 @@ function QuoteValueSection({ quote }: { quote: Quote }) {
           <div>
             <label htmlFor="qd-price" className={labelCls}>Importe</label>
             <input
-              id="qd-price" className={`${inputCls} w-40`} inputMode="decimal" value={priceInput}
+              id="qd-price" className={`${inputCls} w-40`} inputMode="decimal" enterKeyHint="done" value={priceInput}
               onChange={(e) => setPriceInput(e.target.value)} placeholder="$"
             />
           </div>
           <div role="group" aria-label="¿El importe incluye IVA?" className="inline-flex rounded-full border border-ink-200 overflow-hidden text-xs font-semibold">
             <button type="button" onClick={() => setIvaChoice('incluido')} aria-pressed={ivaChoice === 'incluido'}
-              className={`px-3 py-2 ${ivaChoice === 'incluido' ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'}`}>
+              className={`px-4 py-3 sm:px-3 sm:py-2 ${ivaChoice === 'incluido' ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'}`}>
               IVA incluido
             </button>
             <button type="button" onClick={() => setIvaChoice('mas_iva')} aria-pressed={ivaChoice === 'mas_iva'}
-              className={`px-3 py-2 ${ivaChoice === 'mas_iva' ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'}`}>
+              className={`px-4 py-3 sm:px-3 sm:py-2 ${ivaChoice === 'mas_iva' ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'}`}>
               + IVA
             </button>
           </div>
           <button
             onClick={save} disabled={saving}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-4 py-2 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-4 py-2 min-h-[44px] sm:min-h-0 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? 'Guardando...' : 'Guardar valor'}
           </button>

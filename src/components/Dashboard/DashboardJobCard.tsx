@@ -34,7 +34,8 @@ const PRIORITY_ACCENT: Record<Priority, string> = {
  * "Ver ficha" se mantiene, pero además clickear cualquier zona no interactiva de
  * la tarjeta (todo lo que no sea el select de estado, el editor de N° o el botón
  * mismo) también abre la ficha — mismo resguardo `closest(...)` que ya usan
- * JobsTable y el Kanban.
+ * JobsTable y el Kanban. En el celular el botón se oculta: quedaba solo en un
+ * renglón propio en cada ficha, y ahí tocar la tarjeta ya es el gesto natural.
  */
 export function DashboardJobCard({ job }: { job: Job }) {
   const navigate = useNavigate();
@@ -79,23 +80,23 @@ export function DashboardJobCard({ job }: { job: Job }) {
         <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
         <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
 
-        <div className="flex flex-col items-end gap-0.5 ml-auto">
-          <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium flex-wrap justify-end">
+        <div className="flex flex-col items-start sm:items-end gap-0.5 sm:ml-auto">
+          <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium flex-wrap sm:justify-end">
             <span className="whitespace-nowrap">Asignado {fmtDate(job.createdAt)}</span>
-            <span className="text-ink-700 font-normal hidden sm:inline">·</span>
+            <span className="text-ink-700 font-normal">·</span>
             <span className="whitespace-nowrap">Entrega {fmtDate(job.committedDate)}</span>
             <CountdownBadge iso={job.committedDate} status={job.status} />
           </div>
           {/* Hora exacta de creación (punto 2, 20/09) — mismo timestamp que
               "Asignado" de arriba (createdAt), pero con la hora, en texto
               secundario para no competir con el nombre/estado del trabajo. */}
-          <span className="text-[11px] text-ink-700 whitespace-nowrap">Creado {fmtShort(job.createdAt)}</span>
+          <span className="hidden sm:inline text-[11px] text-ink-700 whitespace-nowrap">Creado {fmtShort(job.createdAt)}</span>
         </div>
 
         <button
           type="button"
           onClick={() => navigate(`/trabajos/${job.id}`)}
-          className="shrink-0 flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
+          className="shrink-0 hidden sm:flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
         >
           Ver ficha <ArrowRight size={12} />
         </button>

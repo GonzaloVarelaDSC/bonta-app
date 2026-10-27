@@ -149,12 +149,12 @@ export function MetricsPage() {
           <div role="group" aria-label="Cómo contar los días" className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5 text-xs">
             {(['calendar', 'business'] as const).map((m) => (
               <button key={m} type="button" aria-pressed={mode === m} onClick={() => update((p) => (m === 'calendar' ? p.delete('days') : p.set('days', m)))}
-                className={clsx('px-2.5 py-1 rounded-md font-medium', mode === m ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50')}>
+                className={clsx('px-2.5 py-2.5 md:py-1 rounded-md font-medium', mode === m ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50')}>
                 {m === 'calendar' ? 'Días corridos' : 'Días hábiles'}
               </button>
             ))}
           </div>
-          <button type="button" onClick={refresh} disabled={loading} className="inline-flex items-center gap-1.5 text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-ink-50 disabled:opacity-60" title={loadedAt ? `Historial leído a las ${format(new Date(loadedAt), 'HH:mm')}` : undefined}>
+          <button type="button" onClick={refresh} disabled={loading} className="inline-flex items-center gap-1.5 text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 min-h-[44px] md:min-h-0 bg-white hover:bg-ink-50 disabled:opacity-60" title={loadedAt ? `Historial leído a las ${format(new Date(loadedAt), 'HH:mm')}` : undefined}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : undefined} aria-hidden="true" /> Actualizar
           </button>
         </div>
@@ -165,7 +165,14 @@ export function MetricsPage() {
         {dataSince && <> · datos desde el {format(dataSince, 'd MMM yyyy', { locale: es })}</>}
       </div>
 
-      <nav role="tablist" aria-label="Secciones de Métricas" className="flex gap-1 border-b border-ink-200 mb-4 overflow-x-auto overflow-y-hidden">
+      {/* En el celular las 6 secciones no entran y las últimas quedaban fuera de vista: un selector las muestra todas. */}
+      <label className="md:hidden block mb-4">
+        <span className="sr-only">Sección de Métricas</span>
+        <select className={clsx(sel, 'w-full min-h-[44px] font-medium')} value={tab} onChange={(e) => update((p) => p.set('tab', e.target.value))}>
+          {TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+        </select>
+      </label>
+      <nav role="tablist" aria-label="Secciones de Métricas" className="hidden md:flex gap-1 border-b border-ink-200 mb-4 overflow-x-auto overflow-y-hidden">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} type="button" onClick={() => update((p) => p.set('tab', t.key))}
             className={clsx('px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px', tab === t.key ? 'border-brand-500 text-ink-900' : 'border-transparent text-ink-700 hover:text-ink-900')}>

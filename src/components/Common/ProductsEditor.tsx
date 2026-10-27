@@ -71,7 +71,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
               <button
                 type="button" onClick={() => update(i, { outsourced: false })}
                 aria-pressed={!product.outsourced}
-                className={`px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                className={`px-3 py-2 sm:px-2 sm:py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   !product.outsourced ? 'bg-ink-950 text-white' : 'text-ink-700 hover:bg-ink-50'
                 }`}
               >
@@ -87,7 +87,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
                 <Truck size={11} aria-hidden /> Tercerizado
               </button>
             </div>
-            <button type="button" onClick={() => remove(i)} aria-label={`Quitar producto ${i + 1}`} className="text-ink-700 hover:text-crit-text shrink-0">
+            <button type="button" onClick={() => remove(i)} aria-label={`Quitar producto ${i + 1}`} className="text-ink-700 hover:text-crit-text shrink-0 p-2 -m-1 sm:p-0 sm:m-0">
               <X size={15} />
             </button>
           </div>
@@ -97,7 +97,7 @@ export function ProductsEditor({ products, onChange, jobTypeId }: { products: Pr
               <div className="flex flex-wrap gap-1.5">
                 {materials.map((m) => (
                   <button type="button" key={m.id} onClick={() => toggleMaterial(i, m.id)} aria-pressed={product.materialIds.includes(m.id)}
-                    className={`text-xs px-2.5 py-1.5 rounded-full border ${product.materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
+                    className={`text-xs px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-full border ${product.materialIds.includes(m.id) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700'}`}>
                     {m.label}
                   </button>
                 ))}

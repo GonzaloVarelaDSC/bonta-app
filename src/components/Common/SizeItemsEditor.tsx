@@ -57,10 +57,10 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
         {items.length === 0 && <div className="px-3 py-4 text-sm text-ink-700 italic text-center">Sin renglones todavía — agregá uno abajo.</div>}
         {items.map((item, i) => (
           <div key={i} className={`${GRID_COLS} items-center px-3 py-2`}>
-            <input aria-label="Cantidad" data-cell={`${i}-0`} onKeyDown={(e) => onEnter(e, i, 0)} value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
-            <input aria-label="Ancho" data-cell={`${i}-1`} onKeyDown={(e) => onEnter(e, i, 1)} value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
-            <input aria-label="Alto" data-cell={`${i}-2`} onKeyDown={(e) => onEnter(e, i, 2)} value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
-            <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-1 justify-self-center">
+            <input aria-label="Cantidad" inputMode="numeric" enterKeyHint="next" autoComplete="off" data-cell={`${i}-0`} onKeyDown={(e) => onEnter(e, i, 0)} value={item.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={cellCls} />
+            <input aria-label="Ancho" enterKeyHint="next" autoComplete="off" data-cell={`${i}-1`} onKeyDown={(e) => onEnter(e, i, 1)} value={item.width} onChange={(e) => update(i, { width: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <input aria-label="Alto" enterKeyHint="next" autoComplete="off" data-cell={`${i}-2`} onKeyDown={(e) => onEnter(e, i, 2)} value={item.height} onChange={(e) => update(i, { height: e.target.value })} placeholder="cm o «a medida»" className={cellCls} />
+            <button type="button" onClick={() => remove(i)} aria-label="Quitar este renglón de medida" className="text-ink-700 hover:text-crit-text p-2.5 -m-1.5 sm:p-1 sm:m-0 justify-self-center">
               <X size={15} />
             </button>
           </div>
@@ -68,7 +68,7 @@ export function SizeItemsEditor({ items, onChange }: { items: SizeItem[]; onChan
       </div>
       <button
         type="button" onClick={add}
-        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-brand-600 border-t border-ink-100 py-2 hover:bg-brand-50"
+        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-brand-600 border-t border-ink-100 py-3 sm:py-2 hover:bg-brand-50"
       >
         <Plus size={13} /> Agregar medida
       </button>

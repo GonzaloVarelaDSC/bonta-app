@@ -69,7 +69,7 @@ export function QuoteFormPage() {
   }
 
   return (
-    <div className="p-5 max-w-3xl mx-auto pb-28">
+    <div className="p-4 sm:p-5 max-w-3xl mx-auto pb-32">
       <div className="flex items-center gap-2 mb-1">
         <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-brand-100 text-brand-600 shrink-0"><Receipt size={15} /></span>
         <h1 className="text-lg font-display font-bold text-ink-900">Nuevo presupuesto</h1>
@@ -85,7 +85,7 @@ export function QuoteFormPage() {
             <input
               id="qt-client" className={inputCls} list="qt-clientes-existentes" value={clientName}
               onChange={(e) => setClientName(e.target.value)}
-              placeholder="Nombre del cliente" autoFocus
+              placeholder="Nombre del cliente" autoFocus enterKeyHint="next" autoComplete="off"
             />
             <datalist id="qt-clientes-existentes">
               {clients.map((c) => <option key={c.id} value={c.name} />)}
@@ -103,7 +103,7 @@ export function QuoteFormPage() {
           </div>
           <div>
             <label htmlFor="qt-name" className={labelCls}>Nombre del trabajo</label>
-            <input id="qt-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Cartelería sucursal Palermo" />
+            <input id="qt-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Cartelería sucursal Palermo" enterKeyHint="next" />
           </div>
         </Section>
 
@@ -112,15 +112,15 @@ export function QuoteFormPage() {
         </Section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-5 py-3 flex items-center justify-between gap-3 z-20">
-        <span className="text-xs text-ink-700">
+      <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-4 sm:px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex flex-wrap items-center justify-between gap-x-3 gap-y-2 z-20">
+        <span className="w-full sm:w-auto text-xs text-ink-700">
           {!canSubmit ? 'Cargá al menos el cliente y el nombre del trabajo' : 'El valor se carga después, desde el presupuesto ya creado'}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button
             disabled={!canSubmit || submitting} onClick={submit}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-5 py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto justify-center min-h-[44px] inline-flex items-center gap-1.5 text-sm font-semibold bg-brand-500 text-white px-5 py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Receipt size={15} /> {submitting ? 'Creando...' : 'Crear presupuesto'}
           </button>

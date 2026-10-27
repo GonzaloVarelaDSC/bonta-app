@@ -26,11 +26,11 @@ export function ClientMessageModal({ job, client, onClose }: { job: Job; client?
     >
       <div
         role="dialog" aria-modal="true" aria-labelledby="client-msg-title"
-        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
           <h3 id="client-msg-title" className="font-display font-bold text-ink-900">Mensaje para el cliente</h3>
-          <button onClick={onClose} aria-label="Cerrar" className="text-ink-700 hover:text-ink-900"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="p-2 -m-2 text-ink-700 hover:text-ink-900"><X size={18} /></button>
         </div>
         <label htmlFor="client-msg-text" className="block text-xs font-medium text-ink-700 mb-1.5">
           Editalo si hace falta antes de copiarlo o mandarlo — no se envía solo.
@@ -48,14 +48,14 @@ export function ClientMessageModal({ job, client, onClose }: { job: Job; client?
           {waHref && (
             <a
               href={waHref} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-plan-text text-white hover:brightness-110"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-semibold bg-plan-text text-white hover:brightness-110"
             >
               <MessageCircle size={15} /> Abrir en WhatsApp
             </a>
           )}
           <button
             onClick={copy}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600"
           >
             {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? 'Copiado' : 'Copiar mensaje'}
           </button>

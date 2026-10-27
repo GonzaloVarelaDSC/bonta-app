@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { SlidersHorizontal, Undo2, X, ArrowRight, Trash2 } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
-  type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
 } from '@dnd-kit/core';
 import { useStore } from '../../store/useStore';
 import { visibleJobs, canDeleteJob } from '../../lib/permissions';
@@ -135,7 +135,7 @@ function KanbanCard({ job }: { job: Job }) {
       }}
       aria-label={`Abrir ficha — ${client?.name ?? 'Sin cliente'}, ${job.name}`}
       className={clsx(
-        'bg-white rounded-lg shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow',
+        'bg-white rounded-lg shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow select-none [-webkit-touch-callout:none]',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
         // Antes un trabajo bloqueado "saltaba" a la columna Pendiente (Fase 3,
         // 17/09 — bloquear ya no pisa `status`, así que se queda en su columna
@@ -161,11 +161,11 @@ function KanbanCardOverlay({ job, client }: { job: Job; client?: Client }) {
   );
 }
 
-function KanbanColumnView({ colKey, label, tone, jobs }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[] }) {
+function KanbanColumnView({ colKey, label, tone, jobs, className }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[]; className?: string }) {
   const { setNodeRef, isOver } = useDroppable({ id: colKey });
   const toneCls = COLUMN_TONE_CLASSES[tone];
   return (
-    <div className="flex flex-col h-full min-h-0 min-w-0">
+    <div className={clsx('flex flex-col h-full min-h-0 min-w-0', className)}>
       <div className={clsx('flex items-start justify-between gap-2 rounded-lg px-2.5 py-1.5 mb-2', toneCls.header)}>
         <span className="text-[13px] font-semibold leading-tight">{label}</span>
         <span className={clsx('text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center tabular shrink-0', toneCls.count)}>
@@ -197,7 +197,7 @@ function TrashDropZone() {
     <div
       ref={setNodeRef}
       className={clsx(
-        'fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full px-4 py-3 shadow-pop border-2 transition-colors',
+        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-6 z-30 flex items-center gap-2 rounded-full px-4 py-3 shadow-pop border-2 transition-colors',
         isOver ? 'bg-crit text-white border-crit scale-110' : 'bg-white text-crit-text border-crit/40'
       )}
     >
@@ -234,7 +234,7 @@ function FiltersButton({
       <button
         type="button" onClick={() => setOpen((v) => !v)}
         className={clsx(
-          'inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5 border transition-colors',
+          'inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2.5 sm:px-2.5 sm:py-1.5 border transition-colors',
           activeCount > 0 ? 'bg-brand-100 text-brand-600 border-brand-300' : 'bg-white text-ink-700 border-ink-200 hover:border-ink-300'
         )}
       >
@@ -244,7 +244,7 @@ function FiltersButton({
         )}
       </button>
       {open && (
-        <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-lg shadow-pop border border-ink-100 z-30 p-3 space-y-3">
+        <div className="absolute right-0 sm:right-auto sm:left-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-pop border border-ink-100 z-30 p-3 space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-ink-700 mb-1">Prioridad</label>
             <select
@@ -308,7 +308,14 @@ export function KanbanPage() {
   // "Trabajos activos" no cuenta los Terminados — quedan en el board (columna
   // Terminado) pero no son trabajo pendiente, así que no tienen que sumar acá.
   const activeCount = useMemo(() => jobs.filter((j) => j.status !== 'TERMINADO').length, [jobs]);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // En el celular, con PointerSensor cualquier deslizamiento del dedo sobre una
+  // tarjeta arrancaba un arrastre (o lo cortaba el scroll): no se podía recorrer
+  // el tablero sin mover fichas. Con el dedo hay que mantener apretada la
+  // tarjeta un instante para arrastrarla; con el mouse sigue igual que antes.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
+  );
   const [activeJob, setActiveJob] = useState<Job | null>(null);
 
   // Un drag accidental cambia el estado real de un trabajo con un solo gesto de
@@ -360,7 +367,7 @@ export function KanbanPage() {
   }
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-4 sm:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
@@ -373,7 +380,8 @@ export function KanbanPage() {
         </div>
         <span className="text-xs text-ink-700 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
-      <ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-4" className="h-full overflow-x-auto" fadeFrom="from-ink-50">
+      <p className="lg:hidden text-xs text-ink-700 mt-1">Deslizá para ver las columnas. Para mover una ficha, mantenela apretada y arrastrala.</p>
+      <ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-3 sm:mt-4 -mx-4 sm:mx-0" className="h-full overflow-x-auto snap-x scroll-px-4 px-4 sm:px-0 sm:scroll-px-0 md:snap-none" fadeFrom="from-ink-50">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>
           {/* 7 columnas fijas dejan poco margen por columna incluso en un monitor
               normal (a 1440px de ancho de pantalla ya se veía "Bensimon" cortado a
@@ -386,10 +394,13 @@ export function KanbanPage() {
               ítem #5). 1150px (~154px/columna) recupera las 7 sin scroll en
               1440-1536px, y mejora 1366px de ~5 a ~6 y media, sin volver al ancho
               original (1120px) que causaba el truncamiento. */}
-          <div className="grid grid-cols-7 gap-3 h-full min-w-[1150px]">
+          {/* En el celular cada columna ocupa casi todo el ancho (se lee una a la
+              vez y se asoma la siguiente), en vez de 7 columnas de ~160px. */}
+          <div className="flex gap-3 h-full md:grid md:grid-cols-7 md:min-w-[1150px]">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumnView
                 key={col.key} colKey={col.key} label={col.label} tone={col.tone}
+                className="w-[78vw] max-w-[320px] shrink-0 snap-start md:w-auto md:max-w-none"
                 jobs={jobs.filter((j) => columnOf(j) === col.key)}
               />
             ))}
@@ -416,9 +427,9 @@ export function KanbanPage() {
       )}
 
       {undoAction && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-ink-950 text-white text-sm rounded-lg shadow-pop px-4 py-2.5">
+        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-max max-w-[calc(100vw-2rem)] flex items-center gap-3 bg-ink-950 text-white text-sm rounded-lg shadow-pop px-4 py-2.5">
           <span>"{undoAction.jobName}" pasó a {undoAction.toLabel}</span>
-          <button type="button" onClick={undo} className="inline-flex items-center gap-1 font-semibold text-brand-300 hover:text-brand-200">
+          <button type="button" onClick={undo} className="shrink-0 inline-flex items-center gap-1 py-2 -my-2 font-semibold text-brand-300 hover:text-brand-200">
             <Undo2 size={14} /> Deshacer
           </button>
         </div>

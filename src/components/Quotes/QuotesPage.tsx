@@ -52,7 +52,7 @@ export function QuotesPage() {
   const selectCls = 'text-sm border border-ink-200 rounded-lg px-2.5 py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-display font-bold text-ink-900">Presupuestos</h1>
         {canManageQuotes(user.role) && (

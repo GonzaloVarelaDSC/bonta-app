@@ -77,10 +77,11 @@ export function ExplorerView({ ctx, filters, setFilters }: { ctx: MetricsCtx; fi
   return (
     <div className="bg-white rounded-xl border border-ink-200 shadow-card">
       <div className="p-3 border-b border-ink-200 space-y-2">
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* En el celular, grilla de a dos: en fila suelta cada filtro quedaba en su renglón. */}
+        <div className="grid grid-cols-2 gap-2 items-center sm:flex sm:flex-wrap max-sm:[&_select]:w-full max-sm:[&_select]:max-w-none">
           <input value={filters.q} onChange={(e) => set('q', e.target.value)} placeholder="Buscar N°, trabajo o cliente…" aria-label="Buscar"
-            className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          <label className="text-xs text-ink-700 inline-flex items-center gap-1">Período por
+            className="text-sm border border-ink-200 rounded-lg px-3 py-1.5 col-span-2 w-full sm:w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label className="col-span-2 text-xs text-ink-700 inline-flex items-center gap-1">Período por
             <select className={sel} value={filters.dateField} onChange={(e) => set('dateField', e.target.value as ExplorerFilters['dateField'])}>
               <option value="none">— no filtrar por fecha —</option>
               <option value="created">fecha de alta</option>

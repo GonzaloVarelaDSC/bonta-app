@@ -14,11 +14,11 @@ export function BlockModal({ onClose, onConfirm }: { onClose: () => void; onConf
     >
       <div
         role="dialog" aria-modal="true" aria-labelledby="block-modal-title"
-        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-pop w-full max-w-md p-5 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 id="block-modal-title" className="font-display font-bold text-ink-900">Bloquear trabajo</h3>
-          <button onClick={onClose} aria-label="Cerrar" className="text-ink-700 hover:text-ink-900"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="p-2 -m-2 text-ink-700 hover:text-ink-900"><X size={18} /></button>
         </div>
         <label htmlFor="block-reason" className="block text-xs font-medium text-ink-700 mb-1.5">Motivo</label>
         <select id="block-reason" value={reason} onChange={(e) => setReason(e.target.value as BlockReason)} className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-crit/30">
@@ -29,11 +29,11 @@ export function BlockModal({ onClose, onConfirm }: { onClose: () => void; onConf
           placeholder="Explicá qué falta o qué pasó, con el detalle que necesita quien lo lea después."
           className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-crit/30" />
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-3.5 py-2 rounded-lg text-sm text-ink-700 hover:bg-ink-50">Cancelar</button>
+          <button onClick={onClose} className="px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm text-ink-700 hover:bg-ink-50">Cancelar</button>
           <button
             disabled={!description.trim()}
             onClick={() => description.trim() && onConfirm(reason, description.trim())}
-            className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-crit text-white hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-semibold bg-crit text-white hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Bloquear trabajo
           </button>

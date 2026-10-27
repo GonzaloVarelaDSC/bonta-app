@@ -67,9 +67,9 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 <StatusSelect status={j.status} options={statusOptionsFor(j)} onChange={(st) => tryChangeJobStatus(j, st, setStatus, currentUser!.id)} />
                 {isBlocked(j) && <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[j.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />}
                 {resp && <span className="flex items-center gap-1.5 text-xs text-ink-700"><Avatar name={resp.name} color={resp.avatarColor} size={20} />{resp.name.split(' ')[0]}</span>}
-                <span className="ml-auto flex items-center gap-3">
-                  <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} aria-label={`Ver ficha de ${j.name}`} className="text-ink-700 hover:text-brand-600 p-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><ArrowRight size={16} /></button>
-                  {canDelete && <button type="button" onClick={() => setConfirmDelete(j)} aria-label={`Eliminar ${j.name}`} className="text-crit hover:text-crit-text p-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Trash2 size={16} /></button>}
+                <span className="ml-auto flex items-center gap-2">
+                  <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} aria-label={`Ver ficha de ${j.name}`} className="text-ink-700 hover:text-brand-600 p-2.5 -my-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><ArrowRight size={16} /></button>
+                  {canDelete && <button type="button" onClick={() => setConfirmDelete(j)} aria-label={`Eliminar ${j.name}`} className="text-crit hover:text-crit-text p-2.5 -my-1 -mr-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Trash2 size={16} /></button>}
                 </span>
               </div>
             </li>
@@ -137,7 +137,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 </td>
                 <td className="px-2 py-2.5">
                   {isClosedStatus(j.status)
-                    ? <span className="text-xs text-ink-700">{fmtShort(j.committedDate)}</span>
+                    ? <span className="text-xs text-ink-700">{fmtDate(j.committedDate)}</span>
                     : <CountdownBadge iso={j.committedDate} status={j.status} />}
                 </td>
                 {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}

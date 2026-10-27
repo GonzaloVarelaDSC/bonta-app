@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 76 — ícono para "Agregar a inicio"; la 72 sigue siendo el resumen de estado general).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 77 — segunda pasada de celular; la 72 sigue siendo el resumen de estado general).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5514,3 +5514,52 @@ de apple-touch-icon, manifest, título "Bonta" y modo pantalla completa. Los PNG
 generaron con Playwright desde el logo (script en el scratchpad, no en el repo).
 iOS guarda el ícono al momento de agregar: para verlo hay que borrar el acceso viejo
 del inicio y volver a agregarlo.
+
+---
+
+## 77. Actualización 27/10 (cont.) — segunda pasada de celular (dos agentes en paralelo)
+
+Gonzalo usa la app como "app agregada al inicio" del iPhone (pantalla completa) y
+pidió mejorar la UX/UI mobile. Se lanzaron 2 agentes con archivos repartidos
+(sin pisarse), revisando a 390×844 y 375×667 con datos ficticios y chequeando que
+escritorio (1440) no cambie. Build/lint limpios. No probado en un iPhone real.
+
+**Base y listas (Layout, Dashboard, Kanban, Trabajos, Carga rápida, Common):**
+- `index.html`: `viewport-fit=cover`, `lang="es"`. `index.css`: en celular táctil
+  los campos van a 16 px (evita el zoom de iOS sin bloquear el pellizco), sin
+  rebote del body ni resaltado gris al tocar.
+- Zonas seguras (`env(safe-area-inset-*)`) en header, menú, toast, avisos
+  flotantes, barra fija de Carga rápida, tacho/"Deshacer" del Kanban.
+- Header: menú/campana 44 px, buscador a todo el ancho libre con resultados a lo
+  ancho; `aria-expanded`. Menú lateral con scroll (antes Usuarios/Configuración/
+  Histórico quedaban fuera de alcance a 375×667).
+- Avisos flotantes: en celular 1 visible + "+N avisos más".
+- Dashboard: cubos en tira deslizable en celular; tarjeta sin "Ver ficha" ni
+  "Creado…" en celular (tocar la tarjeta abre la ficha).
+- Kanban: con el dedo hay que **mantener apretada 300 ms** para arrastrar (deslizar
+  ya no mueve fichas); columnas al 78% del ancho con encastre; ayuda breve.
+- Trabajos: filtros en grilla; botones más grandes. Escritorio: fecha de entrega
+  de cerrados sin hora (decisión 7).
+- Carga rápida: Tipo y Fecha apilados, teclado adecuado (numérico en Cantidad,
+  "Siguiente", teléfono), chips y X a 44 px.
+
+**Ficha y secciones (JobDetail, Quotes, Metrics):**
+- Ficha: en celular la cabecera ya **no queda fija** (ocupaba 525 de 844 px);
+  solo las pestañas. Estado y Prioridad con etiqueta visible en 2 columnas,
+  Muestra debajo, Bloquear/Cancelar/Exportar de 44 px; se ocultan los badges
+  duplicados. Comentarios en celular ocupa la pantalla y tiene tecla "Enviar".
+- Composición y armado: en celular tarjeta por pieza con +/− de 44 px y
+  "Guardar avance" pegado abajo.
+- Modales con alto máx. 90% y scroll propio. Presupuestos con botones de 44 px y
+  pie que respeta la barra de inicio.
+- Métricas: selector de sección en celular; el "i" de ayuda abre con un toque
+  (antes se abría y cerraba solo) y el globo sale abajo, fijo; filtros del
+  Explorador en 2 columnas.
+
+**Preguntas abiertas para Gonzalo** (en el chat): Cantidad ¿siempre número?; ¿1
+o 2 avisos flotantes en celular?; ¿teclado directo en Cliente al abrir Carga
+rápida?; ¿300 ms cómodo en el Kanban?; ¿qué se usa más en la ficha desde el
+celular?; ¿saltos de línea en comentarios?; ¿"Exportar para cliente" en celular?
+**Pendiente:** regenerar las capturas del Manual (sobre todo tema 11 Celular)
+con `video/generador/manual.mjs`; texto viejo "Fase 2 / cuentas de prueba" en
+Usuarios.

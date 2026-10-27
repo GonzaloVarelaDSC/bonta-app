@@ -14,7 +14,7 @@ function readableNotification(text: string): string {
   return text.replace(/[A-Z_]{5,}/g, (code) => (code in STATUS_LABELS ? `"${STATUS_LABELS[code as JobStatus]}"` : code));
 }
 
-export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
+export function Header({ onMenuClick, navOpen }: { onMenuClick?: () => void; navOpen?: boolean }) {
   const navigate = useNavigate();
   const user = useStore((s) => s.currentUser);
   const jobs = useStore((s) => s.jobs);
@@ -69,21 +69,22 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   if (!user) return null;
 
   return (
-    <header className="h-16 shrink-0 bg-white border-b border-ink-100 flex items-center gap-2 sm:gap-4 px-3 sm:px-6" ref={boxRef}>
-      <button onClick={onMenuClick} aria-label="Abrir menú" className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-ink-50 text-ink-700 shrink-0">
+    <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] shrink-0 bg-white border-b border-ink-100 flex items-center gap-1 sm:gap-4 px-2 sm:px-6" ref={boxRef}>
+      <button onClick={onMenuClick} aria-label="Abrir menú" aria-expanded={!!navOpen} className="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg hover:bg-ink-50 text-ink-700 shrink-0">
         <Menu size={20} />
       </button>
-      <div className="relative flex-1 max-w-md">
+      <div className="relative flex-1 min-w-0 max-w-md">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-700" />
         <input
           value={query}
           onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
           onFocus={() => setShowResults(true)}
-          placeholder="Buscar trabajo, cliente, material..." aria-label="Buscar"
-          className="w-full pl-9 pr-3 py-2 rounded-lg bg-ink-50 border border-transparent text-sm focus:bg-white focus:border-brand-400 focus:outline-none transition-colors"
+          placeholder="Buscar trabajo, cliente..." aria-label="Buscar"
+          type="search" enterKeyHint="search" autoComplete="off" autoCorrect="off" spellCheck={false}
+          className="w-full pl-9 pr-3 h-10 rounded-lg bg-ink-50 border border-transparent text-sm focus:bg-white focus:border-brand-400 focus:outline-none transition-colors"
         />
         {showResults && results.length > 0 && (
-          <div className="absolute mt-1.5 w-full bg-white rounded-lg shadow-pop border border-ink-100 overflow-hidden z-30">
+          <div className="fixed left-3 right-3 top-[calc(4rem+env(safe-area-inset-top))] max-h-[60vh] overflow-y-auto sm:absolute sm:left-auto sm:right-auto sm:top-auto sm:max-h-none sm:mt-1.5 sm:w-full bg-white rounded-lg shadow-pop border border-ink-100 sm:overflow-hidden z-30">
             {results.map((j) => (
               <button
                 key={j.id}
@@ -100,10 +101,10 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         )}
       </div>
 
-      <div className="flex-1" />
+      <div className="hidden sm:block flex-1" />
 
       <div className="relative">
-        <button onClick={() => setShowNotifs((v) => !v)} aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`} className="relative p-2 rounded-lg hover:bg-ink-50 text-ink-700">
+        <button onClick={() => setShowNotifs((v) => !v)} aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`} aria-expanded={showNotifs} className="relative w-11 h-11 sm:w-auto sm:h-auto sm:p-2 flex items-center justify-center rounded-lg hover:bg-ink-50 text-ink-700">
           <Bell size={19} />
           {unread > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-crit text-white text-[10px] font-bold flex items-center justify-center">
@@ -112,14 +113,14 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           )}
         </button>
         {showNotifs && (
-          <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">
+          <div className="fixed left-3 right-3 top-[calc(4rem+env(safe-area-inset-top))] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-ink-100">
               <span className="text-sm font-semibold text-ink-900">Notificaciones</span>
               {unread > 0 && (
-                <button onClick={() => markAllRead(user.id)} className="text-xs text-brand-600 hover:underline">Marcar todas como leídas</button>
+                <button onClick={() => markAllRead(user.id)} className="text-xs text-brand-600 hover:underline py-2 -my-2">Marcar todas como leídas</button>
               )}
             </div>
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto">
               {myNotifs.length === 0 && <div className="px-4 py-6 text-sm text-ink-700 text-center">Sin notificaciones.</div>}
               {myNotifs.map((n) => (
                 <button
@@ -140,7 +141,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       <div className="relative">
-        <button onClick={() => setShowAccount((v) => !v)} className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-lg hover:bg-ink-50">
+        <button onClick={() => setShowAccount((v) => !v)} aria-label={`Cuenta de ${user.name}`} aria-expanded={showAccount} className="flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 min-h-11 rounded-lg hover:bg-ink-50">
           <Avatar name={user.name} color={user.avatarColor} size={32} />
           <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-ink-900 leading-tight">{user.name}</div>
@@ -154,7 +155,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-pop border border-ink-100 z-30 overflow-hidden">
             <button
               onClick={() => { logout(); navigate('/login'); }}
-              className="w-full text-left px-4 py-2.5 text-sm text-ink-700 hover:bg-ink-50 flex items-center gap-2"
+              className="w-full text-left px-4 py-3 sm:py-2.5 text-sm text-ink-700 hover:bg-ink-50 flex items-center gap-2"
             >
               <LogOut size={15} /> Cerrar sesión
             </button>

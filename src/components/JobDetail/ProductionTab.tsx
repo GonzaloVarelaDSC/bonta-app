@@ -94,15 +94,15 @@ export function ProductionTab({ job }: { job: Job }) {
           Marcá qué procesos lleva cada componente y exportá la planilla para imprimir y completar a mano en el taller.
           Los componentes de la OT salen de la pestaña Detalle; acá podés sumar otros solo para producción.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {dirty && (
             <button onClick={save} disabled={saving}
-              className="text-sm font-semibold text-ink-800 bg-white border border-ink-200 rounded-lg px-3 py-2 hover:bg-ink-50 disabled:opacity-60">
+              className="min-h-[44px] sm:min-h-0 text-sm font-semibold text-ink-800 bg-white border border-ink-200 rounded-lg px-3 py-2 hover:bg-ink-50 disabled:opacity-60">
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           )}
           <button onClick={exportPdf} disabled={saving}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-60">
+            className="flex-1 sm:flex-none justify-center min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-60">
             <FileOutput size={15} aria-hidden /> Exportar PDF de producción
           </button>
         </div>
@@ -128,7 +128,7 @@ export function ProductionTab({ job }: { job: Job }) {
               )}
               {extra && <span className="text-[11px] font-semibold text-review-text bg-review-bg rounded-full px-2 py-0.5 shrink-0">Agregado para producción</span>}
               {extra && (
-                <button type="button" onClick={() => removeExtra(item.id)} aria-label={`Quitar ${item.label || 'componente'}`} className="text-ink-700 hover:text-crit-text shrink-0">
+                <button type="button" onClick={() => removeExtra(item.id)} aria-label={`Quitar ${item.label || 'componente'}`} className="text-ink-700 hover:text-crit-text shrink-0 p-2 -m-2 lg:p-0 lg:m-0">
                   <Trash2 size={15} aria-hidden />
                 </button>
               )}
@@ -158,7 +158,7 @@ export function ProductionTab({ job }: { job: Job }) {
                     const on = item.processes.includes(p.id);
                     return (
                       <button type="button" key={p.id} onClick={() => toggleProcess(item, p.id)} aria-pressed={on}
-                        className={`text-xs px-2.5 py-1.5 rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${on ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}>
+                        className={`text-sm lg:text-xs px-3 py-2.5 lg:px-2.5 lg:py-1.5 rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${on ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}>
                         {p.label}
                       </button>
                     );
