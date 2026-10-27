@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 75 — composición y armado en Producción; la 72 sigue siendo el resumen de estado general).
+la contradiga más arriba**. Última actualización: 19/10/2026 (sección 76 — ícono para "Agregar a inicio"; la 72 sigue siendo el resumen de estado general).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5500,3 +5500,17 @@ piezas en el taller (no se pudo verificar desde acá; las letras son opcionales)
 la misma pieza se usa en dos productos terminados distintos, cada uno lleva su
 propio conteo. Actualizar el Manual (tema 9) con esta sección cuando se confirme
 que queda así.
+
+---
+
+## 76. Actualización 27/10 — ícono de la app al "Agregar a inicio" (iPhone/Android)
+
+Gonzalo agregó la app a la pantalla de inicio desde Safari y salía un ícono que no
+era el logo. Se sumaron `public/apple-touch-icon.png` (180), `icon-192.png` e
+`icon-512.png` — logo blanco (`logo-mark-blanco.png`) centrado al 62% sobre fondo
+`ink-950` (#1a1817, el mismo del menú lateral) — más `public/manifest.webmanifest`
+(nombre corto "Bonta", `display: standalone`) y en `index.html` los `<link>`/`<meta>`
+de apple-touch-icon, manifest, título "Bonta" y modo pantalla completa. Los PNG se
+generaron con Playwright desde el logo (script en el scratchpad, no en el repo).
+iOS guarda el ícono al momento de agregar: para verlo hay que borrar el acceso viejo
+del inicio y volver a agregarlo.
