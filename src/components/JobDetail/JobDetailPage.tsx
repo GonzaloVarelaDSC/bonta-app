@@ -58,9 +58,13 @@ export function JobDetailPage() {
   const navigate = useNavigate();
   // `key === 'default'` = esta es la primera pantalla de la sesión (link directo,
   // recarga, pestaña nueva): no hay "atrás" dentro de la app a donde volver.
-  const canGoBack = useLocation().key !== 'default';
+  const location = useLocation();
+  const canGoBack = location.key !== 'default';
 
-  const [tab, setTab] = useState<(typeof TABS)[number]>('General');
+  // El aviso de una mención abre directo en Comentarios (en escritorio la
+  // conversación ya está siempre a la derecha, así que solo aplica en celular).
+  const [tab, setTab] = useState<(typeof TABS)[number]>(() =>
+    (location.state as { tab?: string } | null)?.tab === 'Comentarios' && window.matchMedia('(max-width: 1023px)').matches ? 'Comentarios' : 'General');
   const [showBlock, setShowBlock] = useState(false);
   const [showClientMsg, setShowClientMsg] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);

@@ -141,7 +141,7 @@ await shot('06-campana', [[1, 'button[aria-label^="Notificaciones"]']]);
 await page.click('button[aria-label^="Notificaciones"]');
 await S(() => {
   const st = window.__S.getState(); const j = st.jobs[0];
-  window.__S.setState({ statusFlags: [{ id: 'f1', jobId: j.id, jobName: j.name, from: 'EN_DISENO', to: 'EN_PRODUCCION', userName: 'Gastón', at: new Date().toISOString() }] });
+  window.__S.setState({ statusFlags: [{ id: 'f1', kind: 'estado', authorId: '', jobId: j.id, jobName: j.name, from: 'EN_DISENO', to: 'EN_PRODUCCION', userName: 'Gastón', at: new Date().toISOString() }] });
 });
 await page.waitForTimeout(500);
 await shot('06-aviso-estado', [[1, '[aria-label="Cambios de estado de otros usuarios"]']]);

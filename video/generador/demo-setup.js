@@ -240,7 +240,7 @@ async () => {
   // Ayudas para el guion (las usa record.mjs).
   window.__demo = {
     ids: { jobs: Object.fromEntries(Object.entries(J).map(([k, v]) => [k, v.id])), quotes: Object.fromEntries(Object.entries(Q).map(([k, v]) => [k, v.id])) },
-    flag: (jobKey, from, to, userName) => set((s) => ({ statusFlags: [{ id: uid(), jobId: J[jobKey].id, jobName: J[jobKey].name, from, to, userName, at: new Date().toISOString() }, ...s.statusFlags] })),
+    flag: (jobKey, from, to, userName) => set((s) => ({ statusFlags: [{ id: uid(), kind: 'estado', authorId: '', jobId: J[jobKey].id, jobName: J[jobKey].name, from, to, userName, at: new Date().toISOString() }, ...s.statusFlags] })),
     notify: (jobKey, text) => set((s) => ({ notifications: [{ id: uid(), userId: U.gonzalo.id, jobId: J[jobKey].id, text, read: false, createdAt: new Date().toISOString() }, ...s.notifications], toast: text })),
     clear: () => set({ toast: null, statusFlags: [] }),
   };

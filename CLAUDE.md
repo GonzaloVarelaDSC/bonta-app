@@ -5563,3 +5563,47 @@ celular?; ¿saltos de línea en comentarios?; ¿"Exportar para cliente" en celul
 **Pendiente:** regenerar las capturas del Manual (sobre todo tema 11 Celular)
 con `video/generador/manual.mjs`; texto viejo "Fase 2 / cuentas de prueba" en
 Usuarios.
+
+---
+
+## 78. Actualización 28/10 — carga de diseño, actualización en vivo reparada, avisos de modificaciones y menciones, Kanban de costado
+
+1. **Carga de diseño** (`DesignLoadWidget`, `workloadOf` en `lib/selectors.ts`):
+   Gastón se asignó una ficha en Pendiente y su número no subía (§62 contaba solo la
+   columna Diseño). Ahora: número/barra = **carga de diseño** = asignados sin empezar
+   (Pendiente/Falta info) + en diseño (En diseño/Diseño listo); al lado "N asignados"
+   (todo lo activo donde es responsable) y abajo el desglose "X sin empezar · Y en
+   diseño · Z ya pasó diseño". No cuentan Entregado/Cancelado/eliminados; bloqueados sí.
+   Reemplaza §45.1/§62.1.
+2. **Actualización en vivo — causa:** la tabla `jobs` nunca estuvo en la publicación
+   `supabase_realtime` (solo `notifications` 021 y `activity_log` 025), así que el
+   canal `jobs-changes` se suscribía sin error y no recibía nada. **Migración
+   `030_jobs_realtime_publication.sql` — hay que correrla.** Además (`useStore.ts`):
+   cada fila del Historial de otra persona también refresca ese trabajo
+   (`scheduleJobRefresh`, une eventos del mismo trabajo en 250 ms y hace upsert, así
+   aparecen fichas nuevas) y se suma al Historial abierto; con la ficha abierta se
+   refrescan sus comentarios; al volver a la pestaña/celular tras >30 s, al volver la
+   red o al reconectarse un canal se hace una resincronización silenciosa
+   (`resyncSilently`, no periódica). Errores de canal quedan en consola.
+3. **Avisos flotantes ampliados** (`StatusFlags.tsx`, `StatusFlag.kind`):
+   `estado` (como antes), `cambio` (otras modificaciones: responsable, prioridad, fecha,
+   datos, detalle, producción, armado, muestra, N°, bloqueo, producto, contact sheet,
+   instalación, eliminar/restaurar — no el alta ni el importe) y `mencion`. Salen del
+   Historial (`flagFromActivity`/`CHANGE_LABELS`), nunca del autor; varios cambios de
+   la misma persona en la misma ficha dentro de 3 min se agrupan en un aviso
+   (`pushFlag`, `memberIds`). La mención llega por la notificación: se busca el
+   comentario y se muestra quién y qué dijo; si ya estás en esa ficha no sale aviso;
+   click abre la ficha (en celular, en Comentarios). La campana no cambió. El toast de
+   una notificación se omite si ese cambio ya tiene aviso flotante (evita doble alerta).
+   El chequeo de respaldo de la campana (30 s) también dispara aviso/toast de lo nuevo.
+   Hora relativa ("hace 2 minutos"). Textos del Historial más claros: prioridad con
+   etiqueta, fecha "antes → después", detalle con qué cambió (medidas de «X», etc.).
+4. **Kanban** (escritorio ≥768 px): columnas de ancho según sus fichas; las fichas se
+   acomodan en tantas filas como entran en el alto y siguen en otra columna a la
+   derecha (grid `auto-flow: column`); columna vacía angosta (150 px); si sobra ancho
+   las columnas con fichas se estiran (tope 260 px por ficha); el tablero se desliza de
+   costado. Celular igual que antes. Drag & drop probado.
+
+Verificado con Playwright y datos ficticios (1440×900, 1280×720, 390×844): Kanban,
+arrastre, widget y los tres tipos de aviso. **No probado con dos cuentas reales ni
+contra Supabase** (lo prueba Gonzalo después de correr la 030).

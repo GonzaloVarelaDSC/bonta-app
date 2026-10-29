@@ -161,11 +161,63 @@ function KanbanCardOverlay({ job, client }: { job: Job; client?: Client }) {
   );
 }
 
-function KanbanColumnView({ colKey, label, tone, jobs, className }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[]; className?: string }) {
+// Tablero de escritorio (28/10): en vez de que una columna con muchas fichas
+// crezca para abajo, las fichas se acomodan en tantas filas como entran en el
+// alto disponible y siguen en una columna más a la derecha (como una grilla que
+// se llena de arriba hacia abajo). Una columna vacía queda angosta y el tablero
+// se recorre de costado. Si sobra ancho, las columnas con fichas se estiran
+// (hasta CARD_MAX) para no dejar un hueco al final.
+const CARD_W = 208;
+const CARD_MAX = 260;
+const CARD_GAP = 8;
+const EMPTY_COL_W = 150;
+// Alto aproximado de una ficha + espacio; con esto se calcula cuántas filas entran.
+const CARD_SLOT_H = 128;
+// Encabezado de la columna (título + margen) y relleno del área de fichas.
+const COLUMN_CHROME_H = 52;
+
+function useBoardRows(ref: React.RefObject<HTMLDivElement | null>) {
+  const [rows, setRows] = useState(4);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setRows(Math.max(1, Math.floor((el.clientHeight - COLUMN_CHROME_H + CARD_GAP) / CARD_SLOT_H)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return rows;
+}
+
+function useIsDesktop() {
+  const q = '(min-width: 768px)';
+  const [ok, setOk] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(q);
+    const on = () => setOk(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return ok;
+}
+
+function KanbanColumnView({ colKey, label, tone, jobs, className, rows }: { colKey: string; label: string; tone: ColumnTone; jobs: Job[]; className?: string; rows: number | null }) {
   const { setNodeRef, isOver } = useDroppable({ id: colKey });
   const toneCls = COLUMN_TONE_CLASSES[tone];
+  // rows = null → celular: lista vertical de siempre, una columna por pantalla.
+  const cardCols = rows ? Math.max(1, Math.ceil(jobs.length / rows)) : 1;
+  const sizing = rows
+    ? jobs.length === 0
+      ? { flex: `0 0 ${EMPTY_COL_W}px` }
+      : {
+          flexGrow: cardCols, flexShrink: 0,
+          flexBasis: cardCols * CARD_W + (cardCols - 1) * CARD_GAP + 16,
+          maxWidth: cardCols * CARD_MAX + (cardCols - 1) * CARD_GAP + 16,
+        }
+    : undefined;
   return (
-    <div className={clsx('flex flex-col h-full min-h-0 min-w-0', className)}>
+    <div className={clsx('flex flex-col h-full min-h-0 min-w-0', className)} style={sizing}>
       <div className={clsx('flex items-start justify-between gap-2 rounded-lg px-2.5 py-1.5 mb-2', toneCls.header)}>
         <span className="text-[13px] font-semibold leading-tight">{label}</span>
         <span className={clsx('text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center tabular shrink-0', toneCls.count)}>
@@ -175,9 +227,14 @@ function KanbanColumnView({ colKey, label, tone, jobs, className }: { colKey: st
       <div
         ref={setNodeRef}
         className={clsx(
-          'flex-1 min-h-0 overflow-y-auto rounded-xl p-2 space-y-2 border-2 transition-colors',
+          'flex-1 min-h-0 overflow-y-auto rounded-xl p-2 border-2 transition-colors',
+          rows ? 'grid content-start' : 'space-y-2',
           isOver ? 'bg-brand-100/60 border-brand-300' : `${toneCls.body} border-transparent`
         )}
+        style={rows && jobs.length > 0 ? {
+          gridAutoFlow: 'column', gridTemplateRows: `repeat(${Math.min(rows, jobs.length)}, auto)`,
+          gridAutoColumns: 'minmax(0, 1fr)', gap: CARD_GAP,
+        } : undefined}
       >
         {jobs.map((j) => <KanbanCard key={j.id} job={j} />)}
         {jobs.length === 0 && <div className="text-xs text-ink-700 text-center py-6">Sin trabajos</div>}
@@ -317,6 +374,9 @@ export function KanbanPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
   );
   const [activeJob, setActiveJob] = useState<Job | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const boardRows = useBoardRows(boardRef);
+  const isDesktop = useIsDesktop();
 
   // Un drag accidental cambia el estado real de un trabajo con un solo gesto de
   // mouse — más fácil de hacer "sin querer" que el select de estado, que pide
@@ -381,26 +441,17 @@ export function KanbanPage() {
         <span className="text-xs text-ink-700 hidden lg:inline">Arrastrá una tarjeta para cambiar el estado</span>
       </div>
       <p className="lg:hidden text-xs text-ink-700 mt-1">Deslizá para ver las columnas. Para mover una ficha, mantenela apretada y arrastrala.</p>
-      <ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-3 sm:mt-4 -mx-4 sm:mx-0" className="h-full overflow-x-auto snap-x scroll-px-4 px-4 sm:px-0 sm:scroll-px-0 md:snap-none" fadeFrom="from-ink-50">
+      <ScrollFadeX wrapperClassName="flex-1 min-h-0 mt-3 sm:mt-4 -mx-4 sm:mx-0" className="h-full overflow-x-auto snap-x scroll-px-4 px-4 sm:px-0 sm:scroll-px-0 md:snap-none md:pb-1" fadeFrom="from-ink-50">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveJob(null)}>
-          {/* 7 columnas fijas dejan poco margen por columna incluso en un monitor
-              normal (a 1440px de ancho de pantalla ya se veía "Bensimon" cortado a
-              "Bens…" — ver CLAUDE.md §25, hallazgo 3). El nombre de cliente envuelve
-              en 2 líneas en vez de truncar (ver CardBody, line-clamp-2) — ese fix es
-              independiente del ancho de la grilla, así que angostarla no reintroduce
-              el corte de texto. `min-w-[1400px]` (200px/columna) resolvía el corte
-              pero de paso rompió la visibilidad: en 1366-1536px (notebooks comunes)
-              ya no entraban las 7 columnas ni haciendo zoom al 100% (AUDITORIA_UXUI_2026-09-15.md,
-              ítem #5). 1150px (~154px/columna) recupera las 7 sin scroll en
-              1440-1536px, y mejora 1366px de ~5 a ~6 y media, sin volver al ancho
-              original (1120px) que causaba el truncamiento. */}
-          {/* En el celular cada columna ocupa casi todo el ancho (se lee una a la
-              vez y se asoma la siguiente), en vez de 7 columnas de ~160px. */}
-          <div className="flex gap-3 h-full md:grid md:grid-cols-7 md:min-w-[1150px]">
+          {/* Escritorio: columnas de ancho según sus fichas (ver KanbanColumnView) y el
+              tablero se desliza de costado. Celular: cada columna ocupa casi todo
+              el ancho y se ve una a la vez. */}
+          <div ref={boardRef} className="flex gap-3 h-full">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumnView
                 key={col.key} colKey={col.key} label={col.label} tone={col.tone}
-                className="w-[78vw] max-w-[320px] shrink-0 snap-start md:w-auto md:max-w-none"
+                className={isDesktop ? undefined : 'w-[78vw] max-w-[320px] shrink-0 snap-start'}
+                rows={isDesktop ? boardRows : null}
                 jobs={jobs.filter((j) => columnOf(j) === col.key)}
               />
             ))}

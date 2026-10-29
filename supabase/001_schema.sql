@@ -288,6 +288,17 @@ begin
   end if;
 end $$;
 
+-- Realtime de trabajos (030): sin esto los cambios de otros no aparecen solos.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'jobs'
+  ) then
+    alter publication supabase_realtime add table jobs;
+  end if;
+end $$;
+
 -- Objetivos de Métricas (028)
 create table if not exists metric_goals (
   id uuid primary key default gen_random_uuid(),

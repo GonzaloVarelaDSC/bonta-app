@@ -2,7 +2,7 @@ import { PenTool } from 'lucide-react';
 import clsx from 'clsx';
 import type { Job, User } from '../../types';
 import { Avatar } from '../Common/Badges';
-import { isActive } from '../../lib/selectors';
+import { workloadOf } from '../../lib/selectors';
 
 // Piso de la escala de la barra: sin esto, con 2-4 trabajos totales (el caso
 // normal de este equipo chico) cualquiera con el número más alto queda con la
@@ -46,69 +46,59 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
   const producers = users.filter((u) => u.active && u.isProducer);
   if (producers.length < 2) return null;
 
-  // Bug reportado 20/09: se le asignaron ~3 trabajos a Gastón y el contador
-  // seguía en 0. Causa real: acá solo se contaban `EN_DISENO`/`DISENO_LISTO`, pero
-  // un trabajo recién asignado nace en `PENDIENTE` (§4.5 de CLAUDE.md) y no hay
-  // forma de pasarlo a "En diseño" salvo moviéndolo a mano en el Kanban o el
-  // select de estado — así que "asignado hoy" y "en diseño" casi nunca coinciden
-  // el mismo día. No era un problema de ID ni de caché: el filtro de estado era
-  // demasiado angosto para lo que el widget necesita responder ("¿cuánto tiene
-  // encima cada uno ahora mismo?"). Se amplía a cualquier trabajo activo
-  // (`isActive` — todo menos Entregado/Cancelado, mismo criterio que ya usa el
-  // resto del Dashboard) del que sea responsable, sin importar la etapa exacta.
-  //
-  // Gonzalo, 12/10: con eso el widget decía "9" y "2" cuando en diseño no había
-  // ninguno — engañoso para un cuadro que se llama "Carga de diseño". Ahora el
-  // número principal (y la barra) es lo que está de verdad EN DISEÑO, y al lado
-  // va en chico el total asignado activo, así no se pierde ninguna de las dos
-  // lecturas.
+  // Historia del criterio: 20/09 contaba todo lo activo (decía "9" sin nada en
+  // diseño); 12/10 solo la columna Diseño, y entonces una ficha recién asignada
+  // (nace en Pendiente) no aparecía — lo que le pasó a Gastón el 28/10. Ahora la
+  // barra y el número son la carga de diseño (asignados sin empezar + en diseño,
+  // `workloadOf`) y abajo se desglosa, así una asignación se ve en el acto.
   const counts = producers
-    .map((u) => {
-      const mine = jobs.filter((j) => j.responsibleUserId === u.id && isActive(j));
-      return {
-        user: u,
-        count: mine.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO').length,
-        total: mine.length,
-      };
-    })
-    .sort((a, b) => b.count - a.count || b.total - a.total);
+    .map((u) => ({ user: u, ...workloadOf(jobs, u.id) }))
+    .sort((a, b) => b.designLoad - a.designLoad || b.assigned - a.assigned);
 
-  const scaleMax = Math.max(SCALE_FLOOR, ...counts.map((c) => c.count));
-  const minCount = Math.min(...counts.map((c) => c.count));
-  const allTied = counts.every((c) => c.count === minCount);
+  const scaleMax = Math.max(SCALE_FLOOR, ...counts.map((c) => c.designLoad));
+  const minCount = Math.min(...counts.map((c) => c.designLoad));
+  const allTied = counts.every((c) => c.designLoad === minCount);
 
   return (
-    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4 mb-5 max-w-md">
+    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4 mb-5 max-w-xl">
       <div className="flex items-center gap-2 mb-0.5">
         <PenTool size={14} className="text-info-text" aria-hidden />
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
-      <p className="text-xs text-ink-700 mb-3">Trabajos en diseño de cada uno (y el total que tiene asignado), para repartir el próximo.</p>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        {counts.map(({ user, count, total }) => {
-          const isLeast = !allTied && count === minCount;
+      <p className="text-xs text-ink-700 mb-3">Lo asignado que todavía tiene que pasar por diseño (sin empezar + en diseño), para repartir el próximo.</p>
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+        {counts.map(({ user, designLoad, assigned, notStarted, inDesign, afterDesign }) => {
+          const isLeast = !allTied && designLoad === minCount;
+          const detail = [
+            notStarted > 0 && `${notStarted} sin empezar`,
+            inDesign > 0 && `${inDesign} en diseño`,
+            afterDesign > 0 && `${afterDesign} ya pasó diseño`,
+          ].filter(Boolean).join(' · ') || 'Nada asignado';
           return (
             <div
-              key={user.id} role="group" className="flex items-center gap-1.5"
-              aria-label={`${user.name}: ${count} trabajo${count === 1 ? '' : 's'} en diseño, ${total} asignado${total === 1 ? '' : 's'} en total${isLeast ? ', el que menos tiene' : ''}`}
+              key={user.id} role="group" className="min-w-0"
+              aria-label={`${user.name}: carga de diseño ${designLoad}. ${assigned} asignado${assigned === 1 ? '' : 's'} en total: ${detail}.${isLeast ? ' Es quien menos carga tiene.' : ''}`}
             >
-              <Avatar name={user.name} color={user.avatarColor} size={18} aria-hidden />
-              <span className="text-xs font-medium text-ink-800 whitespace-nowrap" aria-hidden>{user.name.split(' ')[0]}</span>
-              <div className="w-16 h-1.5 rounded-full bg-ink-100 overflow-hidden shrink-0" aria-hidden>
-                <div
-                  className={clsx('h-full rounded-full transition-all', isLeast && !allTied ? 'bg-plan' : 'bg-info')}
-                  style={{ width: count === 0 ? '0%' : `${Math.max(10, (count / scaleMax) * 100)}%` }}
-                />
+              <div className="flex items-center gap-1.5" aria-hidden>
+                <Avatar name={user.name} color={user.avatarColor} size={18} />
+                <span className="text-xs font-medium text-ink-800 whitespace-nowrap">{user.name.split(' ')[0]}</span>
+                <div className="w-16 h-1.5 rounded-full bg-ink-100 overflow-hidden shrink-0">
+                  <div
+                    className={clsx('h-full rounded-full transition-all', isLeast ? 'bg-plan' : 'bg-info')}
+                    style={{ width: designLoad === 0 ? '0%' : `${Math.max(10, (designLoad / scaleMax) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-ink-900 tabular">{designLoad}</span>
+                <span className="text-[11px] text-ink-700 whitespace-nowrap">· {assigned} asignado{assigned === 1 ? '' : 's'}</span>
               </div>
-              <span className="text-sm font-semibold text-ink-900 tabular" aria-hidden>{count}</span>
-              <span className="text-[11px] text-ink-700 whitespace-nowrap" aria-hidden>· {total} asignado{total === 1 ? '' : 's'}</span>
+              <p className="text-[11px] text-ink-700 mt-0.5 pl-6" aria-hidden>{detail}</p>
             </div>
           );
         })}
       </div>
       {!allTied && (
         <p className="text-[11px] text-ink-700 mt-2">
-          <span className="font-semibold text-plan-text">{counts.find((c) => c.count === minCount)?.user.name.split(' ')[0]}</span> tiene menos carga.
+          <span className="font-semibold text-plan-text">{counts.find((c) => c.designLoad === minCount)?.user.name.split(' ')[0]}</span> tiene menos carga.
         </p>
       )}
     </div>

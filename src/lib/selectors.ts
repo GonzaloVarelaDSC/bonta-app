@@ -46,6 +46,22 @@ export function isActive(job: Job): boolean {
   return job.status !== 'TERMINADO' && job.status !== 'CANCELADO';
 }
 
+/**
+ * Asignaciones vs. carga de diseño de una persona (28/10). Son dos lecturas
+ * distintas: "asignados" = todo lo activo donde es responsable, en cualquier
+ * etapa; "carga de diseño" = lo asignado que todavía tiene que pasar por diseño
+ * (sin empezar + en diseño). Antes solo contaba lo que estaba en la columna
+ * Diseño, así que una ficha recién asignada (nace en Pendiente) no se veía.
+ * Entregados, cancelados y eliminados no cuentan; los bloqueados sí (siguen
+ * siendo de esa persona).
+ */
+export function workloadOf(jobs: Job[], userId: string) {
+  const mine = jobs.filter((j) => j.responsibleUserId === userId && isActive(j) && !j.deletedAt);
+  const notStarted = mine.filter((j) => j.status === 'PENDIENTE' || j.status === 'FALTA_INFORMACION').length;
+  const inDesign = mine.filter((j) => j.status === 'EN_DISENO' || j.status === 'DISENO_LISTO').length;
+  return { assigned: mine.length, notStarted, inDesign, designLoad: notStarted + inDesign, afterDesign: mine.length - notStarted - inDesign };
+}
+
 export interface DashboardCounts {
   pending: number; critical: number; urgent: number; dueToday: number; overdue: number;
   blocked: number; inDesign: number; inProduction: number; readyToDeliver: number; waitingInfo: number; silent: number;

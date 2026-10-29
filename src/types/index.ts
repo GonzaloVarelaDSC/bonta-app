@@ -366,12 +366,21 @@ export interface Quote {
 // Aviso flotante de "otro usuario cambió el estado de un trabajo" (07/10) —
 // deliberadamente separado de `Notification` (la campana): no se persiste por
 // usuario ni se guarda en `notifications`, vive solo en memoria de la sesión.
+// 28/10: además del cambio de estado, también avisa otras modificaciones de la
+// ficha ('cambio', con una línea por campo) y las menciones en comentarios.
+export type FlagKind = 'estado' | 'cambio' | 'mencion';
 export interface StatusFlag {
-  id: string; // id de la fila de activity_log que lo originó
+  id: string; // id de la fila de activity_log (o del comentario) que lo originó
+  kind: FlagKind;
   jobId: string;
   jobName: string;
-  from: JobStatus;
-  to: JobStatus;
+  from?: JobStatus; // solo 'estado'
+  to?: JobStatus;   // solo 'estado'
+  /** 'cambio': qué se modificó ({ label: 'Responsable', value: 'Martín → Gastón' }); 'mencion': el texto del comentario. */
+  lines?: { label: string; value: string }[];
+  authorId: string;
+  /** Si agrupa varias filas del Historial, todas sus ids (para no repetirlas ni volver a mostrarlas). */
+  memberIds?: string[];
   userName: string;
   at: string;
 }

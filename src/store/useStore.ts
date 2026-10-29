@@ -9,6 +9,8 @@ import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJob
 import type { StatusEvent } from '../lib/metrics';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/catalog';
+import { PRIORITY_META } from '../lib/priority';
+import { fmtDate } from '../lib/dates';
 import type { Client, ProductionConfig, MetricGoal, JobPrice } from '../types';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
@@ -221,10 +223,99 @@ function writeFlagsSeen(uid: string, v: FlagsSeen) {
   try { localStorage.setItem(FLAGS_KEY(uid), JSON.stringify(v)); } catch { /* sin storage: solo se pierde el recordatorio */ }
 }
 /** `dismissedId` null = no queda ninguno abierto: la marca pasa a ahora. */
-function markFlagsSeen(uid: string, dismissedId: string | null) {
-  if (dismissedId === null) return writeFlagsSeen(uid, { seenUntil: new Date().toISOString(), dismissed: [] });
+function markFlagsSeen(uid: string, dismissedIds: string[] | null) {
+  if (dismissedIds === null) return writeFlagsSeen(uid, { seenUntil: new Date().toISOString(), dismissed: [] });
   const cur = readFlagsSeen(uid) ?? { seenUntil: new Date().toISOString(), dismissed: [] };
-  writeFlagsSeen(uid, { ...cur, dismissed: [...cur.dismissed, dismissedId].slice(-200) });
+  writeFlagsSeen(uid, { ...cur, dismissed: [...cur.dismissed, ...dismissedIds].slice(-300) });
+}
+
+/** Resumen corto de qué cambió en el detalle (para el Historial y el aviso): ": medidas de «Letras» · material de «Base»". */
+function specChanges(before: Job | undefined, specs: { products: Job['products']; specialRequirements: string }): string {
+  if (!before) return '';
+  const name = (p: { label: string }) => `«${p.label.trim() || 'Producto sin nombre'}»`;
+  const out: string[] = [];
+  for (const p of specs.products) {
+    const old = before.products.find((x) => x.id === p.id);
+    if (!old) { out.push(`agregó ${name(p)}`); continue; }
+    if (JSON.stringify(old.sizeItems) !== JSON.stringify(p.sizeItems)) out.push(`medidas o cantidades de ${name(p)}`);
+    if (old.materialIds.join() !== p.materialIds.join()) out.push(`material de ${name(p)}`);
+    if (old.label !== p.label) out.push(`nombre de ${name(old)} → ${name(p)}`);
+    if ((old.notes ?? '') !== (p.notes ?? '')) out.push(`notas de ${name(p)}`);
+    if (!!old.outsourced !== !!p.outsourced) out.push(`${name(p)} ${p.outsourced ? 'pasa a tercerizado' : 'pasa a hecho acá'}`);
+  }
+  for (const old of before.products) if (!specs.products.some((p) => p.id === old.id)) out.push(`quitó ${name(old)}`);
+  if ((before.specialRequirements ?? '') !== (specs.specialRequirements ?? '')) out.push('requisitos especiales');
+  return out.length ? `: ${out.slice(0, 4).join(' · ')}${out.length > 4 ? ' y más' : ''}` : '';
+}
+
+// Qué filas del Historial generan aviso flotante cuando las hace OTRA persona
+// (28/10). Quedan afuera el alta (ya avisa la campana de asignación), el importe
+// (dato reservado) y las acciones sin uso (archivos, control de calidad).
+const CHANGE_LABELS: Record<string, string> = {
+  responsable: 'Responsable', prioridad: 'Prioridad', fecha: 'Fecha de entrega', datos: 'Datos de la ficha',
+  especificaciones: 'Detalle del trabajo', produccion: 'Producción', armado: 'Armado', muestra: 'Muestra al cliente',
+  numero: 'N° de trabajo', bloqueo: 'Bloqueo', desbloqueo: 'Bloqueo', producto: 'Producto', contact_sheet: 'Contact sheet',
+  instalacion: 'Instalación', asignacion: 'Asignados', eliminar: 'Ficha', restaurar: 'Ficha',
+};
+// En estas el detalle es "Cambió X: antes → después" y alcanza con lo que sigue a los dos puntos.
+const SPLIT_ON_COLON = new Set(['responsable', 'prioridad', 'fecha', 'muestra', 'especificaciones']);
+// Varias modificaciones seguidas de la misma persona en la misma ficha van en un solo aviso.
+const GROUP_WINDOW_MS = 3 * 60 * 1000;
+
+function changeLine(action: string, detail: string): { label: string; value: string } | null {
+  const label = CHANGE_LABELS[action];
+  if (!label) return null;
+  let value = (detail ?? '').trim().replace(/\.$/, '');
+  const i = value.indexOf(': ');
+  if (SPLIT_ON_COLON.has(action) && i > 0) value = value.slice(i + 2);
+  else if (action === 'datos') value = value.replace(/^Corrigió /, '');
+  return { label, value: value.charAt(0).toUpperCase() + value.slice(1) };
+}
+
+function firstName(get: () => StoreState, userId: string) {
+  const u = get().users.find((x) => x.id === userId);
+  return u ? u.name.split(' ')[0] : 'Alguien';
+}
+
+/** Arma el aviso de una fila del Historial hecha por otra persona; null si no corresponde avisar. */
+function flagFromActivity(get: () => StoreState, row: any, job: Job | undefined | null): StatusFlag | null {
+  const me = get().currentUser;
+  if (!row || !me || row.user_id === me.id || !job) return null;
+  // Una ficha eliminada solo avisa el propio "Eliminó" (si no, desaparece sin explicación).
+  if (job.deletedAt && row.action !== 'eliminar') return null;
+  const base = { id: row.id, jobId: job.id, jobName: job.name, authorId: row.user_id, userName: firstName(get, row.user_id), at: row.created_at };
+  if (row.action === 'estado') {
+    if (!row.from_status || !row.to_status) return null;
+    return { ...base, kind: 'estado', from: row.from_status, to: row.to_status };
+  }
+  const line = changeLine(row.action, row.detail);
+  return line ? { ...base, kind: 'cambio', lines: [line] } : null;
+}
+
+/**
+ * Suma un aviso a la pila sin duplicar (mismo id = mismo evento) y agrupando las
+ * modificaciones seguidas de la misma persona en la misma ficha: una operación
+ * con varios campos, o varias en pocos minutos, no llena la pantalla.
+ */
+function pushFlag(set: (fn: (s: StoreState) => Partial<StoreState>) => void, flag: StatusFlag) {
+  set((s) => {
+    if (s.statusFlags.some((f) => f.id === flag.id || f.memberIds?.includes(flag.id))) return {};
+    if (flag.kind === 'cambio') {
+      const t = new Date(flag.at).getTime();
+      const host = s.statusFlags.find((f) => f.kind === 'cambio' && f.jobId === flag.jobId && f.authorId === flag.authorId
+        && Math.abs(new Date(f.at).getTime() - t) < GROUP_WINDOW_MS);
+      if (host) {
+        const lines = [...(host.lines ?? [])];
+        for (const l of flag.lines ?? []) {
+          const k = lines.findIndex((x) => x.label === l.label);
+          if (k >= 0) lines[k] = l; else lines.push(l);
+        }
+        const merged = { ...host, lines, memberIds: [...(host.memberIds ?? [host.id]), flag.id], at: flag.at > host.at ? flag.at : host.at };
+        return { statusFlags: [merged, ...s.statusFlags.filter((f) => f.id !== host.id)] };
+      }
+    }
+    return { statusFlags: [flag, ...s.statusFlags].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50) };
+  });
 }
 
 async function loadMissedStatusFlags(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState) {
@@ -235,23 +326,90 @@ async function loadMissedStatusFlags(set: (fn: (s: StoreState) => Partial<StoreS
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   const since = seen.seenUntil > weekAgo ? seen.seenUntil : weekAgo;
   const { data, error } = await supabase.from('activity_log').select('*')
-    .eq('action', 'estado').neq('user_id', me.id).gt('created_at', since)
-    .not('from_status', 'is', null).order('created_at', { ascending: false }).limit(50);
-  if (error) { console.warn('[avisos de estado] no se pudieron traer los pendientes, se ignora:', error); return; }
-  const flags: StatusFlag[] = [];
+    .in('action', ['estado', ...Object.keys(CHANGE_LABELS)]).neq('user_id', me.id).gt('created_at', since)
+    .order('created_at', { ascending: true }).limit(100);
+  if (error) { console.warn('[avisos] no se pudieron traer los pendientes, se ignora:', error); return; }
   for (const row of (data ?? []) as any[]) {
     if (seen.dismissed.includes(row.id)) continue;
-    const job = get().jobs.find((j) => j.id === row.job_id);
-    if (!job || job.deletedAt) continue;
-    const author = get().users.find((u) => u.id === row.user_id);
-    flags.push({ id: row.id, jobId: job.id, jobName: job.name, from: row.from_status, to: row.to_status, userName: author ? author.name.split(' ')[0] : 'Alguien', at: row.created_at });
+    const flag = flagFromActivity(get, row, get().jobs.find((j) => j.id === row.job_id));
+    if (flag) pushFlag(set, flag);
   }
-  if (flags.length === 0) return;
-  set((s) => {
-    const known = new Set(s.statusFlags.map((f) => f.id));
-    const merged = [...s.statusFlags, ...flags.filter((f) => !known.has(f.id))].sort((a, b) => b.at.localeCompare(a.at));
-    return { statusFlags: merged.slice(0, 50) };
-  });
+}
+
+// --- Actualización en vivo (28/10) ---
+// Varios eventos del mismo trabajo en pocos ms (el UPDATE de jobs + la fila del
+// Historial de la misma acción) se resuelven con una sola lectura.
+const pendingRefresh = new Map<string, ReturnType<typeof setTimeout>>();
+function scheduleJobRefresh(set: (fn: (s: StoreState) => Partial<StoreState>) => void, jobId: string) {
+  const prev = pendingRefresh.get(jobId);
+  if (prev) clearTimeout(prev);
+  pendingRefresh.set(jobId, setTimeout(async () => {
+    pendingRefresh.delete(jobId);
+    try {
+      const job = await fetchJobById(jobId);
+      // Upsert: si el trabajo es nuevo para esta pantalla (lo creó otro) se agrega.
+      set((s) => ({ jobs: job ? [job, ...s.jobs.filter((j) => j.id !== jobId)] : s.jobs.filter((j) => j.id !== jobId) }));
+      // Con la ficha abierta, también los comentarios (comentar toca jobs.last_activity_at).
+      if (viewingJob(jobId)) await refreshComments(set, jobId);
+    } catch (err) { console.warn('[en vivo] no se pudo refrescar el trabajo, se ignora:', err); }
+  }, 250));
+}
+function viewingJob(jobId: string) {
+  return typeof window !== 'undefined' && window.location.pathname.startsWith(`/trabajos/${jobId}`);
+}
+
+// Al volver a la app (con la pestaña o el celular en segundo plano el socket se
+// corta) o al reconectarse un canal, se trae lo que cambió mientras tanto. No es
+// un refresco periódico: corre solo en esos momentos.
+let lastResync = 0;
+async function resyncSilently(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState) {
+  if (!get().currentUser || Date.now() - lastResync < 15000) return;
+  lastResync = Date.now();
+  try {
+    const jobs = await fetchAllJobs();
+    set(() => ({ jobs }));
+    const open = jobs.find((j) => viewingJob(j.id));
+    if (open) await refreshComments(set, open.id);
+    await refreshMyNotifications(set, get);
+    await loadMissedStatusFlags(set, get);
+  } catch (err) { console.warn('[en vivo] no se pudo resincronizar, se ignora:', err); }
+}
+
+// Aviso de mención (28/10): llega como notificación para mí; se busca el
+// comentario para mostrar quién y qué dijo. Si ya estoy mirando esa ficha, el
+// comentario aparece solo en la conversación y no hace falta el aviso.
+async function announceMention(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState, notif: Notification) {
+  const me = get().currentUser;
+  if (!me || !notif.jobId) return;
+  try {
+    await refreshComments(set, notif.jobId);
+    if (viewingJob(notif.jobId)) return;
+    const comment = get().comments
+      .filter((c) => c.jobId === notif.jobId && c.mentions.includes(me.id) && c.userId !== me.id)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const job = get().jobs.find((j) => j.id === notif.jobId) ?? (await fetchJobById(notif.jobId));
+    if (!job) return;
+    const text = comment?.text.trim() ?? '';
+    pushFlag(set, {
+      id: `mencion-${notif.id}`, kind: 'mencion', jobId: job.id, jobName: job.name,
+      lines: text ? [{ label: '', value: text.length > 140 ? `${text.slice(0, 140)}…` : text }] : [],
+      authorId: comment?.userId ?? '', userName: comment ? firstName(get, comment.userId) : 'Alguien',
+      at: comment?.createdAt ?? notif.createdAt,
+    });
+  } catch (err) { console.warn('[menciones] no se pudo armar el aviso, se ignora:', err); }
+}
+
+/** Notificación nueva para mí (por realtime o por el chequeo de respaldo): mención → aviso flotante; el resto → toast. */
+function onIncomingNotification(set: (fn: (s: StoreState) => Partial<StoreState>) => void, get: () => StoreState, notif: Notification) {
+  if (notif.text.startsWith('Te mencionaron')) { void announceMention(set, get, notif); return; }
+  // Si el mismo cambio ya trajo su aviso flotante (estado, responsable,
+  // prioridad...), el toast sería una segunda alerta por el mismo evento. Se
+  // espera un momento porque la fila del Historial puede llegar después.
+  setTimeout(() => {
+    const recent = Date.now() - 60000;
+    const covered = get().statusFlags.some((f) => f.jobId === notif.jobId && new Date(f.at).getTime() > recent);
+    if (!covered) set(() => ({ toast: notif.text }));
+  }, 1500);
 }
 
 async function insertNotifications(userIds: string[], jobId: string, text: string): Promise<void> {
@@ -282,6 +440,8 @@ async function insertNotifications(userIds: string[], jobId: string, text: strin
 // Guardo de módulo: init() puede correr dos veces (StrictMode en dev) o si algún
 // componente lo vuelve a llamar — las suscripciones de realtime se arman una vez.
 let realtimeStarted = false;
+// Para quién ya se cargó la campana al menos una vez (ver refreshMyNotifications).
+let notifPrimedFor: string | null = null;
 
 export const useStore = create<StoreState>()((set, get) => ({
   authReady: false,
@@ -309,10 +469,11 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   clearToast: () => set(() => ({ toast: null })),
   dismissStatusFlag: (id) => {
+    const flag = get().statusFlags.find((f) => f.id === id);
     const rest = get().statusFlags.filter((f) => f.id !== id);
     set({ statusFlags: rest });
     const me = get().currentUser;
-    if (me) markFlagsSeen(me.id, rest.length === 0 ? null : id);
+    if (me) markFlagsSeen(me.id, rest.length === 0 ? null : (flag?.memberIds ?? [id]));
   },
   dismissAllStatusFlags: () => {
     set({ statusFlags: [] });
@@ -342,20 +503,31 @@ export const useStore = create<StoreState>()((set, get) => ({
       await loadMissedStatusFlags(set, get);
     });
 
-    // Actualización en vivo: cualquier cambio en "jobs" (propio o de otro usuario) refresca esa ficha.
+    // Si un canal se cae y vuelve (red, celular bloqueado), al reconectarse se
+    // trae lo que cambió mientras estuvo caído; los errores quedan en consola.
+    const watch = (name: string) => {
+      let wasSubscribed = false;
+      return (status: string, err?: Error) => {
+        if (status === 'SUBSCRIBED') { if (wasSubscribed) void resyncSilently(set, get); wasSubscribed = true; }
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn(`[en vivo] canal ${name}: ${status}`, err ?? '');
+      };
+    };
+
+    // Actualización en vivo: cualquier cambio en "jobs" (propio o de otro usuario)
+    // refresca esa ficha. 28/10: hasta la migración 030 la tabla `jobs` no estaba
+    // en la publicación `supabase_realtime`, así que este canal nunca recibía nada
+    // y los cambios de los demás no aparecían sin recargar.
     supabase
       .channel('jobs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, async (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, (payload) => {
         const id = (payload.new as any)?.id ?? (payload.old as any)?.id;
-        if (!id) return;
-        const job = await fetchJobById(id);
-        set((s) => ({ jobs: job ? [job, ...s.jobs.filter((j) => j.id !== id)] : s.jobs.filter((j) => j.id !== id) }));
+        if (id) scheduleJobRefresh(set, id);
       })
-      .subscribe();
+      .subscribe(watch('jobs-changes'));
 
-    // Aviso en vivo cuando cae una notificación para mí (ficha nueva, me
-    // asignaron, me mencionaron). RLS ya filtra a `user_id = auth.uid()`, pero
-    // igual chequeamos por las dudas. Prepende a la lista y dispara el toast.
+    // Notificación nueva para mí (me asignaron, me mencionaron...). RLS ya filtra
+    // a `user_id = auth.uid()`, pero igual se chequea. Va a la campana y además:
+    // mención → aviso flotante; el resto → toast (`onIncomingNotification`).
     supabase
       .channel('my-notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
@@ -363,41 +535,43 @@ export const useStore = create<StoreState>()((set, get) => ({
         const me = get().currentUser?.id;
         if (!row || !me || row.user_id !== me) return;
         const notif = mapNotification(row);
-        set((s) => (s.notifications.some((n) => n.id === notif.id)
-          ? {}
-          : { notifications: [notif, ...s.notifications], toast: notif.text }));
+        if (get().notifications.some((n) => n.id === notif.id)) return;
+        set((s) => ({ notifications: [notif, ...s.notifications] }));
+        onIncomingNotification(set, get, notif);
       })
-      .subscribe();
+      .subscribe(watch('my-notifications'));
 
-    // Aviso flotante cuando OTRA persona cambia el estado de un trabajo (07/10).
-    // Escucha las filas de `activity_log` de tipo 'estado' (las que ya inserta
-    // `setStatus` para el Historial) — RLS (`can_view_job`) ya limita qué trabajos
-    // le llegan a cada usuario, y la propia fila trae `user_id` del autor, que se
-    // descarta si soy yo. No toca `notifications` (la campana).
+    // Historial en vivo (activity_log ya está publicada desde la 025). Cada fila de
+    // otra persona: (1) refresca ese trabajo — así el cambio llega aunque falle el
+    // canal de jobs —, (2) se suma al Historial abierto y (3) arma el aviso
+    // flotante (cambio de estado u otra modificación, `flagFromActivity`). RLS
+    // (`can_view_job`) ya limita qué trabajos le llegan a cada uno.
     supabase
       .channel('status-flags')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, async (payload) => {
         const row = payload.new as any;
         const me = get().currentUser;
-        if (!row || !me || row.action !== 'estado' || !row.from_status || !row.to_status) return;
-        if (row.user_id === me.id) return;
-        if (get().statusFlags.some((f) => f.id === row.id)) return;
+        if (!row || !me || row.user_id === me.id) return;
+        scheduleJobRefresh(set, row.job_id);
+        set((s) => (s.activityLog.some((a) => a.id === row.id) ? {} : { activityLog: [mapActivity(row), ...s.activityLog] }));
         try {
           const job = get().jobs.find((j) => j.id === row.job_id) ?? (await fetchJobById(row.job_id));
-          if (!job || job.deletedAt) return;
-          const author = get().users.find((u) => u.id === row.user_id);
-          const flag: StatusFlag = {
-            id: row.id, jobId: job.id, jobName: job.name,
-            from: row.from_status, to: row.to_status,
-            userName: author ? author.name.split(' ')[0] : 'Alguien',
-            at: row.created_at,
-          };
-          set((s) => (s.statusFlags.some((f) => f.id === flag.id) ? {} : { statusFlags: [flag, ...s.statusFlags].slice(0, 50) }));
+          const flag = flagFromActivity(get, row, job);
+          if (flag) pushFlag(set, flag);
         } catch (err) {
-          console.warn('[avisos de estado] no se pudo armar el aviso, se ignora:', err);
+          console.warn('[avisos] no se pudo armar el aviso, se ignora:', err);
         }
       })
-      .subscribe();
+      .subscribe(watch('status-flags'));
+
+    if (typeof document !== 'undefined') {
+      let hiddenAt = 0;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+        else if (hiddenAt && Date.now() - hiddenAt > 30000) void resyncSilently(set, get);
+      });
+      window.addEventListener('online', () => void resyncSilently(set, get));
+    }
 
     // Red de contención del canal `my-notifications`: el broadcast de `postgres_changes`
     // depende de que la tabla `notifications` esté agregada a la publicación
@@ -433,6 +607,7 @@ export const useStore = create<StoreState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
+    notifPrimedFor = null;
     set({ currentUser: null, jobs: [], comments: [], activityLog: [], notifications: [], quotes: [], quotesLoaded: false, statusFlags: [], metricsEvents: [], metricsLoadedAt: null, goals: [], jobPrices: {}, jobPricesLoaded: false });
   },
 
@@ -590,7 +765,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     const before = get().jobs.find((j) => j.id === jobId)!;
     const { error } = await supabase.from('jobs').update({ priority_manual: priority, last_activity_at: new Date().toISOString() }).eq('id', jobId);
     if (error) throw error;
-    await insertActivity(set, jobId, byUserId, 'prioridad', `Cambió la prioridad de ${before.priorityManual ?? before.priorityAuto} a ${priority}.`);
+    await insertActivity(set, jobId, byUserId, 'prioridad', `Cambió la prioridad: ${PRIORITY_META[before.priorityManual ?? before.priorityAuto].label} → ${PRIORITY_META[priority].label}.`);
     await insertNotifications([before.responsibleUserId, ...before.assignedUserIds].filter((id) => id !== byUserId), jobId, `Cambió la prioridad de ${jobLabel(before)}.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
@@ -631,7 +806,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       if (before) set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? before : j) }));
       throw error;
     }
-    await insertActivity(set, jobId, byUserId, 'fecha', 'Cambió la fecha de entrega comprometida.');
+    await insertActivity(set, jobId, byUserId, 'fecha', `Cambió la fecha de entrega comprometida: ${before ? fmtDate(before.committedDate) : '—'} → ${fmtDate(committedDate)}.`);
     await refreshJob(set, jobId);
   },
 
@@ -709,12 +884,13 @@ export const useStore = create<StoreState>()((set, get) => ({
   },
 
   updateJobSpecs: async (jobId, specs, byUserId) => {
+    const before = get().jobs.find((j) => j.id === jobId);
     const { error } = await supabase.from('jobs').update({
       products: specs.products,
       special_requirements: specs.specialRequirements, last_activity_at: new Date().toISOString(),
     }).eq('id', jobId);
     if (error) throw error;
-    await insertActivity(set, jobId, byUserId, 'especificaciones', 'Actualizó el detalle del trabajo.');
+    await insertActivity(set, jobId, byUserId, 'especificaciones', `Actualizó el detalle del trabajo${specChanges(before, specs)}.`);
     await refreshJob(set, jobId);
   },
 
@@ -1225,5 +1401,13 @@ async function refreshMyNotifications(set: (fn: (s: StoreState) => Partial<Store
   const user = get().currentUser;
   if (!user) return;
   const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50);
-  set(() => ({ notifications: (data ?? []).map(mapNotification) }));
+  const fresh = (data ?? []).map(mapNotification);
+  // Si el realtime no las trajo, las que aparecen recién acá también avisan (una
+  // sola vez: después ya están en la lista). La primera carga de cada usuario no
+  // avisa nada viejo.
+  const known = new Set(get().notifications.map((n) => n.id));
+  const isNew = notifPrimedFor === user.id ? fresh.filter((n) => !known.has(n.id) && !n.read) : [];
+  notifPrimedFor = user.id;
+  set(() => ({ notifications: fresh }));
+  for (const n of isNew) onIncomingNotification(set, get, n);
 }
