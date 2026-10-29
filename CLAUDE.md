@@ -5606,4 +5606,4 @@ Usuarios.
 
 Verificado con Playwright y datos ficticios (1440×900, 1280×720, 390×844): Kanban,
 arrastre, widget y los tres tipos de aviso. **No probado con dos cuentas reales ni
-contra Supabase** (lo prueba Gonzalo después de correr la 030).
+contra Supabase**. **030 corrida y confirmada por Gonzalo (29/10):** la publicación lista jobs, activity_log y notifications.
