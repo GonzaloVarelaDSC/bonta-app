@@ -30,3 +30,6 @@ audit-screenshots/
 
 # Video de presentación (MP4 pesado, no va al repo)
 video/*.mp4
+
+# Cuestionario con datos internos (repo público)
+cuestionario/

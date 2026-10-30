@@ -5607,3 +5607,25 @@ Usuarios.
 Verificado con Playwright y datos ficticios (1440×900, 1280×720, 390×844): Kanban,
 arrastre, widget y los tres tipos de aviso. **No probado con dos cuentas reales ni
 contra Supabase**. **030 corrida y confirmada por Gonzalo (29/10):** la publicación lista jobs, activity_log y notifications.
+
+---
+
+## 79. Actualización 30/10 — relevamiento de la app real (solo lectura) + cuestionario para Gonzalo
+
+Gonzalo pidió mirar la app real **sin modificar nada** y armarle todas las preguntas
+necesarias (workflow completo, materiales, máquinas, futuros agentes). Se leyó con
+su sesión ya iniciada en Chrome (GET a la API, nada escrito). Resultado en
+`cuestionario/` (**gitignoreado**: tiene nombres de clientes y el repo es público):
+`Cuestionario-Estudio-Bonta.xlsx` (108 preguntas en 16 temas con listas
+desplegables + hojas Materiales, Máquinas y Productos típicos para completar) y
+`Cuestionario-Estudio-Bonta.pdf` (misma cosa para imprimir, con el resumen de lo
+visto). Los generadores (exceljs + Playwright) quedaron en el scratchpad de la sesión.
+
+Lo más importante que se vio (al 30/10): 63 fichas (49 vigentes); muchas creadas
+casi vacías con medidas de relleno ("1x1x1", "1xx", "?x?x?") y "Trabajo sin nombre"
+para esquivar la medida obligatoria; materiales reales escritos en notas porque el
+catálogo es genérico; ~16 fichas con tipo "Otro"; ninguna con contacto/teléfono;
+Cliente y Nombre usados para notas; Gonzalo hace 95 de 124 cambios de estado y
+muchas fichas se cierran juntas; planilla de producción/composición/contact
+sheet/bloqueos/importes casi sin uso; comentarios casi todos de prueba.
+**Próximo paso: esperar las respuestas de Gonzalo** antes de cambiar la carga.
