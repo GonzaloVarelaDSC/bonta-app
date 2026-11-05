@@ -5677,5 +5677,9 @@ trabajo "Planificado" para hoy se ve Crítico con "por fecha". Build/lint limpio
    y porcentajes (top clientes, a tiempo por prioridad, vueltas para atrás).
 2. **Exportar PDF con contact sheet:** Gonzalo dice que sigue sin andar ("no
    bueno"). No se pudo reproducir: Claude in Chrome sin navegador conectado y el
-   navegador integrado bloqueado contra bonta-app.vercel.app (§30.6). Queda
-   pendiente conectar Chrome y probar en un trabajo real con contact sheet.
+   navegador integrado bloqueado contra bonta-app.vercel.app (§30.6). **Resuelto y confirmado el
+   04/11:** con Chrome conectado se probó en la app real (trabajo "Bajo acrilico",
+   con contact sheet): la planilla carga con la imagen, el botón abre el diálogo de
+   imprimir y Gonzalo confirmó que la vista previa sale bien. Claude in Chrome ya
+   está instalado y conectado en su compu (sirve para revisar la app real en modo
+   lectura, con su sesión).
