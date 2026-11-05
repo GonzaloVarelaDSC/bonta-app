@@ -5683,3 +5683,7 @@ trabajo "Planificado" para hoy se ve Crítico con "por fecha". Build/lint limpio
    imprimir y Gonzalo confirmó que la vista previa sale bien. Claude in Chrome ya
    está instalado y conectado en su compu (sirve para revisar la app real en modo
    lectura, con su sesión).
+3. **Pestaña activa con el azul del logo** (04/11): token nuevo `logo`
+   (`#13077a`, medido de `logo-mark.png`, + `logo-bg` `#eeedf8`) en
+   `tailwind.config.js`. La pestaña en la que estás parado se pinta con fondo
+   `logo-bg`, texto `logo` en negrita y subrayado azul, en Métricas y en la ficha.

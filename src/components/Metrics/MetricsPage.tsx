@@ -175,7 +175,7 @@ export function MetricsPage() {
       <nav role="tablist" aria-label="Secciones de Métricas" className="hidden md:flex gap-1 border-b border-ink-200 mb-4 overflow-x-auto overflow-y-hidden">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} type="button" onClick={() => update((p) => p.set('tab', t.key))}
-            className={clsx('px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px', tab === t.key ? 'border-brand-500 text-ink-900' : 'border-transparent text-ink-700 hover:text-ink-900')}>
+            className={clsx('px-3 py-2 text-sm whitespace-nowrap border-b-2 -mb-px rounded-t-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500', tab === t.key ? 'border-logo bg-logo-bg text-logo font-semibold' : 'border-transparent font-medium text-ink-700 hover:text-ink-900 hover:bg-ink-100/70')}>
             {t.label}
           </button>
         ))}

@@ -52,6 +52,9 @@ export default {
         // vistazo del resto (gris = no arrancado, azul = en curso, verde = listo,
         // rojo/naranja = necesita atención), como en Linear/GitHub/Trello.
         info: { DEFAULT: '#3068e0', bg: '#eaf1fd', text: '#1d4ed8' },
+        // Azul del logo del estudio (medido de logo-mark.png). Marca la pestaña en
+        // la que estás parado (Métricas y ficha, 04/11): es identidad, no un estado.
+        logo: { DEFAULT: '#13077a', bg: '#eeedf8' },
         // Violeta y verde azulado agregados para darle identidad de color propia a
         // cada columna del Kanban (antes solo había 3 tonos para 7 columnas) — no
         // llevan carga de "alarma" como crit/urg, son solo identidad visual.

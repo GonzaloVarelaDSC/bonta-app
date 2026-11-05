@@ -313,7 +313,7 @@ export function JobDetailPage() {
                 onClick={() => selectTab(t)}
                 className={`px-3 lg:px-4 py-2.5 min-h-[44px] lg:min-h-0 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors ${desktopOnlyTab(t) ? '' : 'lg:hidden'} ${
                   tab === t
-                    ? 'bg-ink-50 text-ink-900 font-semibold shadow-[0_-2px_6px_rgba(15,23,32,0.08)] relative z-10'
+                    ? 'bg-logo-bg text-logo font-semibold shadow-[inset_0_-2px_0_theme(colors.logo.DEFAULT)] relative z-10'
                     : 'text-ink-700 hover:bg-ink-100/70 hover:text-ink-900'
                 }`}>
                 {t}
