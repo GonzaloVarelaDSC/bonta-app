@@ -5629,3 +5629,36 @@ Cliente y Nombre usados para notas; Gonzalo hace 95 de 124 cambios de estado y
 muchas fichas se cierran juntas; planilla de producción/composición/contact
 sheet/bloqueos/importes casi sin uso; comentarios casi todos de prueba.
 **Próximo paso: esperar las respuestas de Gonzalo** antes de cambiar la carga.
+
+---
+
+## 80. Actualización 04/11 — exportar con contact sheet, contact sheet en la hoja del cliente, prioridad que sube sola por la fecha
+
+1. **Exportar PDF de producción con contact sheet** (Gonzalo: "no me deja exportar").
+   No se pudo reproducir contra la base real (Chrome no conectado). La planilla
+   dependía del link firmado y del `onLoad` de la imagen para abrir el diálogo de
+   imprimir: si el link fallaba o la imagen no avisaba que cargó, la hoja quedaba
+   esperando sin imprimir. Ahora (`Common/useContactSheetImage.ts`):
+   `useContactSheetImage` baja la imagen entera y la muestra desde memoria
+   (`blob:`), y `usePrintWhenReady` abre el diálogo una sola vez, apenas está lista,
+   o igual a los 8 s si algo tarda. Si la imagen falla, aviso rojo en pantalla (no
+   se imprime) y la hoja sale sin imagen. **Pendiente: que Gonzalo confirme con un
+   trabajo real**; si sigue fallando, pedirle el texto del aviso rojo.
+2. **Contact sheet en la hoja para el cliente** (`JobExportPage.tsx`): sección
+   "Imágenes del trabajo" debajo de la descripción. Se sigue subiendo en la pestaña
+   Producción (una sola imagen para las dos hojas). El botón de imprimir espera a
+   que cargue.
+3. **Prioridad que sube sola por la fecha** (`lib/priority.ts`). Reemplaza §9.7
+   ("siempre manual"): `effectivePriority` = la elegida, **subida** según los días
+   a la entrega (misma escala que la sugerencia de Carga rápida, `datePriority`:
+   ≤1 día o atrasado → Crítico, ≤3 → Urgente, ≤7 → Normal). Nunca baja lo elegido;
+   no se guarda en la base (se calcula al mostrar). No sube si está "En espera" ni
+   en Listo/Instalación/Entregado/Cancelado. Al lado de la prioridad aparece
+   "↗ por fecha" (`EscalatedHint`, con la elegida en el tooltip) en Dashboard,
+   Trabajos y la ficha. Los filtros Críticos/Urgentes del Dashboard ahora usan la
+   misma prioridad que los cubos (antes contaban distinto). Métricas usa la misma
+   función (los trabajos cerrados no cambian).
+
+Verificado en el navegador local con datos ficticios: hoja del cliente con imagen,
+planilla con imagen → imprime sola, con error → aviso + imprime igual, y un
+trabajo "Planificado" para hoy se ve Crítico con "por fecha". Build/lint limpios.

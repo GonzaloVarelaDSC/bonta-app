@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import { fmtDate } from '../../lib/dates';
 import { SizeItemsView } from '../Common/SizeItemsEditor';
 import { Section as SharedSection } from '../Common/Section';
+import { useContactSheetImage } from '../Common/useContactSheetImage';
 import type { Material } from '../../types';
 
 function materialLabels(materialIds: string[], materials: Material[]): string {
@@ -30,6 +31,7 @@ export function JobExportPage() {
   const job = useStore((s) => s.jobs).find((j) => j.id === id);
   const client = useStore((s) => s.clients).find((c) => c.id === job?.clientId);
   const materials = useStore((s) => s.materials);
+  const sheet = useContactSheetImage(job?.contactSheetPath);
 
   if (!user) return <Navigate to="/login" replace />;
   if (!job) return <Navigate to="/trabajos" replace />;
@@ -41,12 +43,17 @@ export function JobExportPage() {
           <ArrowLeft size={15} /> Volver a la ficha
         </button>
         <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800"
+          onClick={() => window.print()} disabled={sheet.status === 'loading'}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold bg-ink-950 text-white px-4 py-2 rounded-lg hover:bg-ink-800 disabled:opacity-60"
         >
-          <Printer size={15} /> Imprimir / Guardar como PDF
+          <Printer size={15} /> {sheet.status === 'loading' ? 'Cargando imagen...' : 'Imprimir / Guardar como PDF'}
         </button>
       </div>
+      {sheet.status === 'error' && (
+        <p role="alert" className="print:hidden max-w-2xl mx-auto mt-4 text-sm text-crit-text bg-crit-bg border border-crit/30 rounded-lg px-4 py-2">
+          No se pudo cargar la imagen del contact sheet ({sheet.message}). La hoja sale igual, sin la imagen.
+        </p>
+      )}
 
       <div className="max-w-2xl mx-auto bg-white shadow-card my-8 p-10 print:shadow-none print:my-0 print:p-0 print:max-w-none">
         <header className="flex items-start gap-3 border-b border-ink-200 pb-5 mb-6">
@@ -67,6 +74,16 @@ export function JobExportPage() {
         </p>
 
         <Section title="Descripción"><div className="whitespace-pre-wrap break-words">{job.description || '—'}</div></Section>
+
+        {/* Contact sheet (04/11): las mismas imágenes que se van a imprimir, para
+            que el cliente confirme qué se produce. Se sube en la pestaña
+            Producción de la ficha. */}
+        {sheet.status === 'ready' && (
+          <Section title="Imágenes del trabajo">
+            <img src={sheet.src} alt="Contact sheet: imágenes que se van a producir"
+              className="block w-full max-h-[170mm] object-contain border border-ink-100 rounded print:break-inside-avoid" />
+          </Section>
+        )}
 
         {job.products.map((p, i) => (
           <Section key={p.id} title={p.label || `Producto ${i + 1}`}>

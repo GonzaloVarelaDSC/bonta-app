@@ -8,7 +8,7 @@ import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { friendlyError } from '../../lib/errors';
-import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge, BlockedBadge } from '../Common/Badges';
+import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge, BlockedBadge, EscalatedHint } from '../Common/Badges';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
 import { STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
@@ -176,6 +176,7 @@ export function JobDetailPage() {
               {/* En el celular prioridad y estado ya se leen en sus selects de
                   abajo: repetirlos como badge solo empujaba todo hacia abajo. */}
               <span className={canChangePriority(user.role) ? 'hidden lg:contents' : 'contents'}><PriorityBadge priority={effectivePriority(job)} /></span>
+              <EscalatedHint job={job} />
               <span className="hidden lg:contents"><StatusBadge status={job.status} /></span>
               {activeBlock && <BlockedBadge blocked reason={BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]} />}
               <CountdownBadge iso={job.committedDate} status={job.status} />

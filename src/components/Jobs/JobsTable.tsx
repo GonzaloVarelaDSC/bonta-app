@@ -5,7 +5,7 @@ import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canDeleteJob } from '../../lib/permissions';
-import { PriorityBadge, StatusSelect, CountdownBadge, Avatar, BlockedBadge } from '../Common/Badges';
+import { PriorityBadge, StatusSelect, CountdownBadge, Avatar, BlockedBadge, EscalatedHint } from '../Common/Badges';
 import { fmtShort, fmtDate } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { isBlocked } from '../../lib/selectors';
@@ -53,7 +53,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
           return (
             <li key={j.id} className="px-4 py-3 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <PriorityBadge priority={effectivePriority(j)} size="sm" />
+                <PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} />
                 <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
                 {isClosedStatus(j.status)
                   ? <span className="text-xs text-ink-700 ml-auto">{fmtDate(j.committedDate)}</span>
@@ -112,7 +112,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                 }}
                 className="group border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
               >
-                <td className="px-4 py-2.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /></td>
+                <td className="px-4 py-2.5"><div className="flex flex-col items-start gap-0.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} /></div></td>
                 <td className="px-2 py-2.5 whitespace-nowrap">
                   <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
                 </td>

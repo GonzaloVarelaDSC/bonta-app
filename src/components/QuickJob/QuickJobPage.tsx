@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, ArrowRight, Lightbulb } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobTypes, ASSIGN_ALSO_NAMES } from '../../data/catalog';
-import { PRIORITY_META } from '../../lib/priority';
+import { PRIORITY_META, datePriority } from '../../lib/priority';
 import { friendlyError } from '../../lib/errors';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
@@ -42,17 +42,7 @@ const DATE_PRESETS = [
 
 // Sugerencia automática al elegir la fecha — sigue siendo 100% editable
 // después a mano, esto solo precarga un punto de partida razonable.
-function suggestPriority(dateStr: string): Priority {
-  if (!dateStr) return 'NORMAL';
-  const today = new Date();
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const daysDiff = Math.round((new Date(y, m - 1, d).getTime() - todayOnly.getTime()) / 86_400_000);
-  if (daysDiff <= 1) return 'CRITICO';
-  if (daysDiff <= 3) return 'URGENTE';
-  if (daysDiff <= 7) return 'NORMAL';
-  return 'PLANIFICADO';
-}
+const suggestPriority = (dateStr: string): Priority => datePriority(dateStr);
 
 // Carga de un solo tramo (sin pasos) para cargar un trabajo mientras el
 // cliente está al teléfono o al lado nuestro — sin clicks de más, con las

@@ -1,6 +1,7 @@
 import clsx from 'clsx';
-import type { Priority, RiskLevel, JobStatus, SampleReview, QuoteStatus } from '../../types';
-import { PRIORITY_META } from '../../lib/priority';
+import { TrendingUp } from 'lucide-react';
+import type { Job, Priority, RiskLevel, JobStatus, SampleReview, QuoteStatus } from '../../types';
+import { PRIORITY_META, chosenPriority, isEscalatedByDate } from '../../lib/priority';
 import { RISK_META } from '../../lib/risk';
 import { STATUS_LABELS, SAMPLE_REVIEW_META, QUOTE_STATUS_LABELS } from '../../data/catalog';
 import { countdown, fmtDate } from '../../lib/dates';
@@ -29,6 +30,18 @@ export function PriorityBadge({ priority, size = 'md' }: { priority: Priority; s
         size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
       )}>
       <span aria-hidden>{meta.emoji}</span>{meta.label}
+    </span>
+  );
+}
+
+/** Aclara que la prioridad que se ve subió sola por la fecha de entrega (04/11). */
+export function EscalatedHint({ job }: { job: Job }) {
+  if (!isEscalatedByDate(job)) return null;
+  const chosen = PRIORITY_META[chosenPriority(job)].label;
+  return (
+    <span title={`Se cargó como ${chosen}; subió sola porque se acerca la fecha de entrega.`}
+      className="inline-flex items-center gap-0.5 text-[10px] font-medium text-ink-700 whitespace-nowrap">
+      <TrendingUp size={11} aria-hidden /> por fecha <span className="sr-only">(se cargó como {chosen})</span>
     </span>
   );
 }

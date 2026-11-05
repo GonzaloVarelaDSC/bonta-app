@@ -88,7 +88,7 @@ export function ContactSheetSection({ job }: { job: Job }) {
           {url
             ? <img src={url} alt="Contact sheet del trabajo" className="max-h-80 w-auto mx-auto rounded border border-ink-100" />
             : <div className="h-40 flex items-center justify-center text-sm text-ink-700">{busy ? 'Subiendo...' : 'Cargando imagen...'}</div>}
-          <p className="text-[11px] text-ink-700 mt-2 text-center">Sale impresa en la planilla de producción. <span className="hidden md:inline">Para cambiarla podés pegar otra con Ctrl+V.</span></p>
+          <p className="text-[11px] text-ink-700 mt-2 text-center">Sale en la planilla de producción y en la hoja para el cliente.<span className="hidden md:inline">Para cambiarla podés pegar otra con Ctrl+V.</span></p>
         </div>
       ) : (
         <button

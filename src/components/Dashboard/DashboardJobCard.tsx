@@ -5,7 +5,7 @@ import type { Job, Priority, BlockReason } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
 import { canEditAnyJob, canChangePriority } from '../../lib/permissions';
-import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge, BlockedBadge } from '../Common/Badges';
+import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, Avatar, SampleReviewBadge, BlockedBadge, EscalatedHint } from '../Common/Badges';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
 import { fmtDate, fmtShort } from '../../lib/dates';
@@ -68,6 +68,7 @@ export function DashboardJobCard({ job }: { job: Job }) {
         {canEditPriority
           ? <PrioritySelect priority={priority} onChange={async (p) => { try { await setPriority(job.id, p, currentUser!.id); } catch (err) { alert(friendlyError(err)); } }} />
           : <PriorityBadge priority={priority} size="sm" />}
+        <EscalatedHint job={job} />
         {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
         <StatusSelect
           status={job.status} options={statusOptionsFor(job)}

@@ -8,6 +8,7 @@ import { visibleJobs } from '../../lib/permissions';
 import { computeCounts, isOverdue, isDueToday, isMissingInfo, isArchivedJob, sortByPriority } from '../../lib/selectors';
 import { KANBAN_COLUMNS } from '../../data/catalog';
 import { isSilent } from '../../lib/risk';
+import { effectivePriority } from '../../lib/priority';
 import { KpiCard } from './KpiCard';
 import { DashboardJobCard } from './DashboardJobCard';
 import { DesignLoadWidget } from './DesignLoadWidget';
@@ -84,8 +85,8 @@ export function DashboardPage() {
   const filtered = useMemo(() => {
     let base = scoped;
     switch (filter) {
-      case 'critical': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'CRITICO'); break;
-      case 'urgent': base = scoped.filter((j) => (j.priorityManual ?? j.priorityAuto) === 'URGENTE'); break;
+      case 'critical': base = scoped.filter((j) => effectivePriority(j) === 'CRITICO'); break;
+      case 'urgent': base = scoped.filter((j) => effectivePriority(j) === 'URGENTE'); break;
       case 'dueToday': base = scoped.filter(isDueToday); break;
       case 'overdue': base = scoped.filter(isOverdue); break;
       case 'waitingInfo': base = scoped.filter(isMissingInfo); break;

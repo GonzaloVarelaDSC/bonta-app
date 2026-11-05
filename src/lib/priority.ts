@@ -1,12 +1,46 @@
-import type { Job, Priority } from '../types';
+import { differenceInCalendarDays } from 'date-fns';
+import type { Job, JobStatus, Priority } from '../types';
 
-// La prioridad ya NO se calcula sola por fecha/bloqueo/cliente importante — Gonzalo
-// pidió (25/08, segunda ronda) que la urgencia sea siempre una decisión manual suya,
-// elegida al crear el trabajo y editable después desde la ficha. `priorityAuto` sigue
-// existiendo en el esquema como respaldo (default 'NORMAL' en la base) solo para los
-// pocos trabajos viejos que quedaran sin `priorityManual` cargado.
-export function effectivePriority(job: Job): Priority {
+// La prioridad la elige una persona al crear el trabajo (25/08) y es editable
+// desde la ficha. Desde el 04/11 además **sube sola** a medida que se acerca la
+// fecha de entrega: un trabajo cargado como "Planificado" que se entrega hoy
+// tiene que verse Crítico. Solo sube, nunca baja lo que eligió una persona, y no
+// se guarda en la base: se calcula al mostrar, así siempre está al día.
+// `priorityAuto` sigue en el esquema solo como respaldo de trabajos viejos sin
+// `priorityManual` cargado.
+
+// Ya salió de producción (o se cerró): el plazo deja de apurar.
+const NO_ESCALATION: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION', 'TERMINADO', 'CANCELADO'];
+
+/** Prioridad que corresponde solo por la fecha (misma escala que sugiere Carga rápida). */
+export function datePriority(date: string, now: Date = new Date()): Priority {
+  if (!date) return 'NORMAL';
+  // "2026-11-04" (input de fecha) se lee como día local, no UTC.
+  const d = date.length === 10 ? new Date(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) : new Date(date);
+  const days = differenceInCalendarDays(d, now);
+  if (days <= 1) return 'CRITICO';
+  if (days <= 3) return 'URGENTE';
+  if (days <= 7) return 'NORMAL';
+  return 'PLANIFICADO';
+}
+
+/** La que eligió una persona (o el respaldo viejo), sin el ajuste por fecha. */
+export function chosenPriority(job: Job): Priority {
   return job.priorityManual ?? job.priorityAuto;
+}
+
+/** La que se muestra y se usa para ordenar/filtrar: la elegida, subida por la fecha si hace falta. */
+export function effectivePriority(job: Job, now: Date = new Date()): Priority {
+  const chosen = chosenPriority(job);
+  // "En espera" es una pausa a propósito (depende de resolver algo antes): no corre plazo.
+  if (chosen === 'EN_ESPERA' || NO_ESCALATION.includes(job.status) || !job.committedDate) return chosen;
+  const byDate = datePriority(job.committedDate, now);
+  return PRIORITY_META[byDate].order < PRIORITY_META[chosen].order ? byDate : chosen;
+}
+
+/** true si la prioridad que se ve subió sola por la fecha (para explicarlo en pantalla). */
+export function isEscalatedByDate(job: Job, now: Date = new Date()): boolean {
+  return effectivePriority(job, now) !== chosenPriority(job);
 }
 
 // `sla` es una propuesta de referencia (Gonzalo pidió dejar el plazo de cada
