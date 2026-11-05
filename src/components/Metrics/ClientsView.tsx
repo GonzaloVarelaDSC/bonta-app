@@ -9,7 +9,7 @@ import { QUOTE_STATUS_LABELS } from '../../data/catalog';
 import type { MetricsCtx } from './context';
 import { Card, LimitNote, InfoTip } from './ui';
 import { fmtNum, fmtPct, fmtDays } from './fmt';
-import { BarList, LineChart } from './charts';
+import { BarList, DonutChart, LineChart } from './charts';
 
 const th = 'px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-700';
 const td = 'px-3 py-2 text-sm text-ink-900 tabular-nums';
@@ -152,7 +152,7 @@ function ClientDetail({ ctx, clientId, onClose }: { ctx: MetricsCtx; clientId: s
           </div>
           <div>
             <div className="text-xs font-medium text-ink-800 mb-1">Tipos de trabajo</div>
-            <BarList rows={[...types.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => ({ key: t, label: ctx.typeLabel(t), value: n, tone: 'brand' }))} />
+            <DonutChart size={130} rows={[...types.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => ({ key: t, label: ctx.typeLabel(t), value: n, tone: 'brand' }))} />
           </div>
           <button type="button" onClick={() => ctx.drill({ clientId }, { from: new Date(0), to: new Date(ctx.now.getTime() + 86400000) })} className="text-xs font-medium text-brand-600 hover:underline">Ver todos sus trabajos en el Explorador →</button>
         </div>

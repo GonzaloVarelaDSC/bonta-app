@@ -5,7 +5,7 @@ import { PRIORITY_META } from '../../lib/priority';
 import type { MetricsCtx } from './context';
 import { Card, InfoTip, LimitNote } from './ui';
 import { fmtNum, fmtPct, fmtDays } from './fmt';
-import { AgingChart, BarList } from './charts';
+import { AgingChart, BarList, DonutChart } from './charts';
 import { TONE_BG } from './fmt';
 import clsx from 'clsx';
 import { FlowExtras } from './FlowExtras';
@@ -104,7 +104,7 @@ export function ProductionView({ ctx }: { ctx: MetricsCtx }) {
             <div><div className="text-2xl font-display font-bold text-ink-900">{blocks.total}</div><div className="text-[11px] text-ink-700">bloqueos en el período</div></div>
             <div><div className="text-2xl font-display font-bold text-crit-text">{blocks.open}</div><div className="text-[11px] text-ink-700">trabajos bloqueados hoy</div></div>
           </div>
-          <BarList emptyText="No se registraron bloqueos en el período." rows={blocks.reasons.map(([reason, r]) => ({
+          <DonutChart emptyText="No se registraron bloqueos en el período." rows={blocks.reasons.map(([reason, r]) => ({
             key: reason, label: BLOCK_REASON_LABELS[reason as keyof typeof BLOCK_REASON_LABELS] ?? reason, value: r.n, tone: 'crit',
             sub: r.durations.length ? `mediana ${fmtNum(r.durations.sort((a, b) => a - b)[Math.floor((r.durations.length - 1) / 2)], 1)} d` : 'sin cerrar',
           }))} />

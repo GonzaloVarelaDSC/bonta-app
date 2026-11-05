@@ -8,7 +8,7 @@ import type { MetricsCtx } from './context';
 import type { JobFacts } from '../../lib/metrics';
 import { Card, KpiTile, Delta, LimitNote, InfoTip } from './ui';
 import { fmtNum, fmtPct } from './fmt';
-import { LineChart, BarList } from './charts';
+import { LineChart, BarList, DonutChart } from './charts';
 
 const money = (x: number | null | undefined) => (x === null || x === undefined ? '—' : x.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }));
 const th = 'px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-700';
@@ -72,7 +72,7 @@ export function RevenueView({ ctx }: { ctx: MetricsCtx }) {
           {byClient.length > 0 && <p className="text-[11px] text-ink-600 mt-2">Que un cliente sume mucho no dice si es rentable: no hay costos cargados.</p>}
         </Card>
         <Card title="Por tipo de trabajo" subtitle="Importe de lo entregado e importe mediano por trabajo.">
-          <BarList emptyText="Sin importes cargados en el período." rows={byType.map((r) => {
+          <DonutChart emptyText="Sin importes cargados en el período." centerLabel={compactMoney(byType.reduce((s, r) => s + r.total, 0))} rows={byType.map((r) => {
             const med = median(facts.filter((f) => f.job.jobTypeId === r.key && f.price !== null && f.deliveredAt && f.deliveredAt >= period.from.toISOString() && f.deliveredAt < period.to.toISOString()).map((f) => f.price!));
             return { key: r.key, label: ctx.typeLabel(r.key), value: r.total, display: compactMoney(r.total), tone: 'brand', sub: `mediana ${compactMoney(med)}`, onClick: () => drill({ typeId: r.key, dateField: 'delivered', state: 'delivered' }) };
           })} />

@@ -5,7 +5,7 @@ import { summarize, snapshot, flowSeries, findings, FLOW_STAGES, STAGE_LABEL, ST
 import type { MetricsCtx } from './context';
 import { Card, KpiTile, Delta, LimitNote } from './ui';
 import { fmtNum, fmtPct, fmtDays } from './fmt';
-import { LineChart, BarList } from './charts';
+import { LineChart, DonutChart } from './charts';
 
 export function SummaryView({ ctx }: { ctx: MetricsCtx }) {
   const { facts, period, prev, mode, unit, comparable, drill } = ctx;
@@ -67,7 +67,7 @@ export function SummaryView({ ctx }: { ctx: MetricsCtx }) {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card title="Dónde están hoy los abiertos" subtitle="Por etapa del Kanban. Click para ver los trabajos.">
-          <BarList rows={FLOW_STAGES.map((s) => {
+          <DonutChart rows={FLOW_STAGES.map((s) => {
             const n = facts.filter((f) => f.open && f.stage === s).length;
             return { key: s, label: STAGE_LABEL[s], value: n, tone: STAGE_TONE[s], onClick: () => drill({ state: 'open', stage: s }) };
           })} />

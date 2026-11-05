@@ -136,6 +136,85 @@ export function BarList({ rows, max, emptyText = 'Sin datos' }: { rows: BarRow[]
   );
 }
 
+// Torta (anillo) para "partes de un total" (04/11, pedido de Gonzalo: no todo en
+// barras). Mismas filas que BarList, así se puede cambiar uno por otro. Si las
+// filas no traen color propio, o todas traen el mismo, se reparte esta paleta.
+const DONUT_PALETTE = ['info', 'brand', 'plan', 'review', 'urg', 'site', 'norm', 'ink'] as const;
+const DONUT_FILL: Record<string, string> = {
+  wait: 'fill-wait', info: 'fill-info', norm: 'fill-norm', review: 'fill-review', plan: 'fill-plan', site: 'fill-site',
+  done: 'fill-ink-500', crit: 'fill-crit', urg: 'fill-urg', brand: 'fill-brand-500', ink: 'fill-ink-400',
+};
+const MAX_SLICES = 7;
+
+/** Anillo con el total al centro y la leyenda con cantidad y %. Cada fila es clickeable si tiene `onClick`. */
+export function DonutChart({ rows, centerLabel, emptyText = 'Sin datos', size = 150 }: {
+  rows: BarRow[]; centerLabel?: string; emptyText?: string; size?: number;
+}) {
+  const [hover, setHover] = useState<string | null>(null);
+  const sorted = rows.filter((r) => r.value > 0).sort((a, b) => b.value - a.value);
+  if (sorted.length === 0) return <div className="text-sm text-ink-700 py-4">{emptyText}</div>;
+  // Más de 7 porciones ya no se leen: el resto se junta en "Otros".
+  const shown: BarRow[] = sorted.length > MAX_SLICES
+    ? [...sorted.slice(0, MAX_SLICES - 1), { key: '__otros', label: `Otros (${sorted.length - MAX_SLICES + 1})`, value: sorted.slice(MAX_SLICES - 1).reduce((s, r) => s + r.value, 0), tone: 'ink' }]
+    : sorted;
+  const ownTones = new Set(shown.map((r) => r.tone ?? '')).size > 1;
+  const toneOf = (r: BarRow, i: number) => (r.key === '__otros' ? 'ink' : ownTones && r.tone ? r.tone : DONUT_PALETTE[i % DONUT_PALETTE.length]);
+  const total = shown.reduce((s, r) => s + r.value, 0);
+  const R = size / 2; const r0 = R * 0.62;
+  const starts = shown.map((_, i) => shown.slice(0, i).reduce((t, r) => t + r.value, 0) / total);
+  const arc = (from: number, to: number): string => {
+    // Un círculo completo no se puede dibujar con un solo arco: se parte en dos.
+    if (to - from >= 0.9999) return `${arc(from, from + 0.5)} ${arc(from + 0.5, to - 0.0001)}`;
+    const p = (t: number, rad: number) => [R + rad * Math.sin(t * 2 * Math.PI), R - rad * Math.cos(t * 2 * Math.PI)];
+    const [x1, y1] = p(from, R); const [x2, y2] = p(to, R); const [x3, y3] = p(to, r0); const [x4, y4] = p(from, r0);
+    const large = to - from > 0.5 ? 1 : 0;
+    return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${r0} ${r0} 0 ${large} 0 ${x4} ${y4} Z`;
+  };
+  const hovered = shown.find((r) => r.key === hover);
+  const pct = (v: number) => `${fmtNum((v / total) * 100, 0)}%`;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} role="img" aria-label={`Gráfico de torta: ${shown.map((r) => `${r.label} ${r.display ?? fmtNum(r.value)}`).join(', ')}`}>
+          {shown.map((r, i) => {
+            return (
+              <path key={r.key} d={arc(starts[i], starts[i] + r.value / total)}
+                className={clsx(DONUT_FILL[toneOf(r, i)], 'stroke-white transition-opacity', r.onClick && 'cursor-pointer', hover && hover !== r.key && 'opacity-40')}
+                strokeWidth={1.5} onMouseEnter={() => setHover(r.key)} onMouseLeave={() => setHover(null)} onClick={r.onClick} />
+            );
+          })}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <div className="text-lg font-display font-bold text-ink-900 tabular-nums leading-tight">{hovered ? (hovered.display ?? fmtNum(hovered.value)) : (centerLabel ?? fmtNum(total))}</div>
+          <div className="text-[10px] text-ink-700 leading-tight line-clamp-2">{hovered ? `${hovered.label} · ${pct(hovered.value)}` : 'total'}</div>
+        </div>
+      </div>
+      <ul className="flex-1 min-w-0 w-full space-y-0.5">
+        {shown.map((r, i) => {
+          const inner = (
+            <>
+              <span className={clsx('w-2.5 h-2.5 rounded-sm shrink-0', TONE_BG[toneOf(r, i)])} aria-hidden="true" />
+              <span className="flex-1 min-w-0 truncate text-left text-ink-800" title={r.label}>{r.label}</span>
+              <span className="tabular-nums font-semibold text-ink-900">{r.display ?? fmtNum(r.value)}</span>
+              <span className="w-9 text-right tabular-nums text-ink-700">{pct(r.value)}</span>
+              {r.sub !== undefined && <span className="hidden sm:inline w-24 text-right text-[11px] text-ink-700 truncate">{r.sub}</span>}
+            </>
+          );
+          const cls = clsx('w-full flex items-center gap-2 text-xs py-1 px-1 -mx-1 rounded', hover === r.key && 'bg-ink-50');
+          return (
+            <li key={r.key} onMouseEnter={() => setHover(r.key)} onMouseLeave={() => setHover(null)}>
+              {r.onClick
+                ? <button type="button" onClick={r.onClick} className={clsx(cls, 'hover:bg-ink-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500')}>{inner}</button>
+                : <div className={cls}>{inner}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export interface DotColumn { key: string; label: string; dots: { id: string; value: number; alert: boolean; title: string }[] }
 
 /**

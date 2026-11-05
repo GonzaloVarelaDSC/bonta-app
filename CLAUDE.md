@@ -5662,3 +5662,20 @@ sheet/bloqueos/importes casi sin uso; comentarios casi todos de prueba.
 Verificado en el navegador local con datos ficticios: hoja del cliente con imagen,
 planilla con imagen → imprime sola, con error → aviso + imprime igual, y un
 trabajo "Planificado" para hoy se ve Crítico con "por fecha". Build/lint limpios.
+
+---
+
+## 81. Actualización 04/11 (cont.) — gráficos de torta en Métricas; exportación con contact sheet sigue sin reproducir
+
+1. **Métricas: anillos (torta) donde se mira "parte de un total"** (pedido de
+   Gonzalo: no todo barras; **las líneas con puntos se quedan, le gustan**).
+   `DonutChart` nuevo en `Metrics/charts.tsx` (mismas filas que `BarList`, total
+   al centro, leyenda con cantidad y %, hover resalta, click abre los trabajos,
+   máx. 7 porciones + "Otros"). Usado en: Resumen → "Dónde están hoy los
+   abiertos"; Producción → Bloqueos por motivo; Importes → Por tipo de trabajo;
+   Clientes → detalle del cliente, tipos de trabajo. Quedan en barras los rankings
+   y porcentajes (top clientes, a tiempo por prioridad, vueltas para atrás).
+2. **Exportar PDF con contact sheet:** Gonzalo dice que sigue sin andar ("no
+   bueno"). No se pudo reproducir: Claude in Chrome sin navegador conectado y el
+   navegador integrado bloqueado contra bonta-app.vercel.app (§30.6). Queda
+   pendiente conectar Chrome y probar en un trabajo real con contact sheet.
