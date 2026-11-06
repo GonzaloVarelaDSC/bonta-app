@@ -225,8 +225,9 @@ export function ProductsView({ products, onToggle }: { products: Product[]; onTo
 // útiles según el material elegido y avisos si una medida no entra en la máquina.
 // Solo informan, nunca bloquean nada.
 function ProductHints({ product, jobTypeId, materialLabels }: { product: Product; jobTypeId?: JobTypeId; materialLabels: string[] }) {
-  const hints = materialHints(materialLabels);
-  const warnings = sizeWarnings(jobTypeId, materialLabels, product.label, product.sizeItems);
+  const knowledge = useStore((s) => s.knowledge);
+  const hints = materialHints(knowledge, materialLabels);
+  const warnings = sizeWarnings(knowledge, jobTypeId, materialLabels, product.label, product.sizeItems);
   if (hints.length === 0 && warnings.length === 0) return null;
   return (
     <div className="space-y-1.5">

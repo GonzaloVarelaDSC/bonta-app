@@ -5724,3 +5724,41 @@ Probado: lector con el Excel y el XML reales de la OT 20.408 y un Excel armado c
 los 8 ítems de la 20.392; en el navegador con datos de demo (escritorio y 390 px):
 importar, deshacer, archivo inválido, N° repetido, y crear la ficha (sale con el N°
 y los 2 productos). Build y lint limpios. **No probado contra Supabase** (alta real).
+
+---
+
+## 83. Actualización 06/11 — "Materiales y máquinas" editable desde la app
+
+Gonzalo pidió poder modificar a mano las medidas de materiales y máquinas, sobre
+todo para los avisos al cargar productos. Antes estaban fijas en
+`src/data/materialsKnowledge.ts` (§71).
+
+- **Migración `031_app_settings_materials.sql` — HAY QUE CORRERLA** (pendiente de
+  confirmar): tabla genérica `app_settings (key, value jsonb, updated_at,
+  updated_by)`; la base de materiales va en la fila `key = 'materials_knowledge'`.
+  RLS: todos leen, admin/coordinador escriben (`canEditKnowledge`). Mergeada en
+  001/002. **Sin la migración la app no se rompe**: se usa el valor inicial del
+  código y al guardar sale un error traducido.
+- **Datos estructurados** (`materialsKnowledge.ts`, `MaterialsKnowledge`):
+  materiales (material, espesor, largo y ancho en cm — largo vacío = rollo, ancho
+  admite varios valores "60, 100, 150" —, estado, nota, **aviso al cargar**),
+  máquinas (largo/ancho máx. en cm, estado, nota y **cuándo avisar**: tipos de
+  trabajo y/o "material contiene" + "nombre del producto contiene"), reglas
+  (título, puntos, estado) y pendientes. `DEFAULT_KNOWLEDGE` = lo de §71 pasado a
+  este formato; `normalizeKnowledge` completa lo que falte de un valor guardado.
+- **Avisos** (`sizeWarnings`/`materialHints`, ahora reciben la base): por máquina
+  (si la pieza no entra en su formato) y **nuevo** por material (si la pieza es más
+  grande que la placa o que el rollo más ancho de ese material; si hay varias
+  placas del mismo material, avisa solo si no entra en ninguna). Si el dato no está
+  "Confirmado", el aviso dice "dato a confirmar". Los textos de "aviso al cargar"
+  salen del campo de cada material (antes estaban en el código).
+- **Pantalla** (`Manual/MaterialsPage.tsx`): botón "Editar medidas" (solo
+  admin/coordinador) → todo editable (agregar/quitar materiales, máquinas, reglas;
+  pendientes uno por renglón), barra fija con Guardar/Cancelar, "Última
+  modificación: fecha · nombre". Store: `knowledge`, `knowledgeMeta`,
+  `saveKnowledge`; se carga en `get_loadAll` (best-effort).
+
+Verificado en el navegador local (escritorio y 390 px): editar MDF 5 mm a 260 × 183
+confirmado, guardar y en Carga rápida una pieza de 300 × 200 en MDF muestra "es más
+grande que una placa de MDF 5 mm (260 × 183 cm)". Build/lint limpios. No probado
+contra Supabase real (falta correr la 031).

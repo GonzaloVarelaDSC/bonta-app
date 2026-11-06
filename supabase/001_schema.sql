@@ -330,3 +330,11 @@ create table if not exists job_prices (
   updated_by uuid not null references profiles(id),
   updated_at timestamptz not null default now()
 );
+
+-- Ajustes de la app (031): base de materiales y máquinas editable.
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references profiles(id)
+);

@@ -263,3 +263,12 @@ drop policy if exists job_prices_update on job_prices;
 create policy job_prices_update on job_prices for update to authenticated using (public.can_set_quote_price()) with check (updated_by = auth.uid());
 drop policy if exists job_prices_delete on job_prices;
 create policy job_prices_delete on job_prices for delete to authenticated using (public.can_set_quote_price());
+
+-- Ajustes de la app (031): todos leen, admin/coordinador escriben.
+alter table app_settings enable row level security;
+drop policy if exists app_settings_select on app_settings;
+create policy app_settings_select on app_settings for select to authenticated using (true);
+drop policy if exists app_settings_insert on app_settings;
+create policy app_settings_insert on app_settings for insert to authenticated with check (is_admin_or_coordinador());
+drop policy if exists app_settings_update on app_settings;
+create policy app_settings_update on app_settings for update to authenticated using (is_admin_or_coordinador()) with check (is_admin_or_coordinador());

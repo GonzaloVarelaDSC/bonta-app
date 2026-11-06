@@ -9,9 +9,12 @@ import { mapProfile, mapClient, mapComment, mapActivity, mapNotification, mapJob
 import type { StatusEvent } from '../lib/metrics';
 import { friendlyError } from '../lib/errors';
 import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/catalog';
+import { DEFAULT_KNOWLEDGE, normalizeKnowledge, type MaterialsKnowledge } from '../data/materialsKnowledge';
 import { PRIORITY_META } from '../lib/priority';
 import { fmtDate } from '../lib/dates';
 import type { Client, ProductionConfig, MetricGoal, JobPrice } from '../types';
+
+const KNOWLEDGE_KEY = 'materials_knowledge';
 
 // Slug simple para el id de un catálogo nuevo (job_types/materials.id es texto
 // libre, no autonumérico) — sin tildes/espacios, y con un sufijo numérico si ya
@@ -39,6 +42,10 @@ interface StoreState {
   clients: Client[];
   jobTypes: JobType[];
   materials: Material[];
+  // Base de materiales y máquinas (pantalla "Materiales y máquinas"). Arranca con
+  // DEFAULT_KNOWLEDGE y se reemplaza por lo guardado en app_settings si existe.
+  knowledge: MaterialsKnowledge;
+  knowledgeMeta: { updatedAt: string; updatedBy: string | null } | null;
   jobs: Job[];
   comments: Comment[];
   activityLog: ActivityLogEntry[];
@@ -67,6 +74,7 @@ interface StoreState {
   addJobType: (label: string) => Promise<void>;
   renameJobType: (id: string, label: string) => Promise<void>;
   addMaterial: (label: string) => Promise<void>;
+  saveKnowledge: (k: MaterialsKnowledge) => Promise<void>;
   renameMaterial: (id: string, label: string) => Promise<void>;
 
   findOrCreateClient: (name: string) => Promise<string>;
@@ -452,6 +460,8 @@ export const useStore = create<StoreState>()((set, get) => ({
   clients: [],
   jobTypes: DEFAULT_JOB_TYPES,
   materials: DEFAULT_MATERIALS,
+  knowledge: DEFAULT_KNOWLEDGE,
+  knowledgeMeta: null,
   jobs: [],
   comments: [],
   activityLog: [],
@@ -642,6 +652,17 @@ export const useStore = create<StoreState>()((set, get) => ({
     const { error } = await supabase.from('job_types').update({ label }).eq('id', id);
     if (error) throw error;
     set((s) => ({ jobTypes: s.jobTypes.map((t) => t.id === id ? { ...t, label } : t) }));
+  },
+
+  saveKnowledge: async (k) => {
+    const actor = get().currentUser;
+    if (!actor) throw new Error('No hay sesión iniciada.');
+    const value = normalizeKnowledge(k);
+    const updatedAt = new Date().toISOString();
+    const { error } = await supabase.from('app_settings')
+      .upsert({ key: KNOWLEDGE_KEY, value, updated_at: updatedAt, updated_by: actor.id });
+    if (error) throw error;
+    set(() => ({ knowledge: value, knowledgeMeta: { updatedAt, updatedBy: actor.id } }));
   },
 
   addMaterial: async (rawLabel) => {
@@ -1367,6 +1388,12 @@ async function get_loadAll(set: (fn: (s: StoreState) => Partial<StoreState>) => 
       supabase.from('job_types').select('*').order('label'),
       supabase.from('materials').select('*').order('label'),
     ]);
+    // Base de materiales: best-effort, igual que los catálogos (sin la migración
+    // 031 se sigue con el valor inicial del código).
+    const { data: kRow, error: e5 } = await supabase.from('app_settings')
+      .select('value, updated_at, updated_by').eq('key', KNOWLEDGE_KEY).maybeSingle();
+    if (e5) console.warn('[materiales] no se pudo leer la base de materiales, se usa el valor inicial:', e5.message);
+    else if (kRow) set(() => ({ knowledge: normalizeKnowledge(kRow.value), knowledgeMeta: { updatedAt: kRow.updated_at, updatedBy: kRow.updated_by } }));
     if (e1) throw e1;
     if (e2) throw e2;
     // Catálogos: si el fetch falla (ej. tabla sin migrar todavía en una base

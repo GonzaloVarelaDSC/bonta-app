@@ -7,6 +7,8 @@ export function canAssign(role: RoleId) { return role === 'admin' || role === 'c
 export function canManageUsers(role: RoleId) { return role === 'admin'; }
 // Espejo de las policies job_types_write/materials_write (002_policies.sql) — solo admin.
 export function canManageCatalog(role: RoleId) { return role === 'admin'; }
+// Base de materiales y máquinas: espejo de la policy app_settings_write (031).
+export function canEditKnowledge(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
 export function canApproveFiles(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
 export function canUploadFiles(role: RoleId) { return role !== 'instalacion'; }
 export function canSeeStats(role: RoleId) { return role === 'admin' || role === 'coordinador'; }
