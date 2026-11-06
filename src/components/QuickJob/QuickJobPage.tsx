@@ -8,6 +8,9 @@ import { friendlyError } from '../../lib/errors';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
 import { ConfirmDialog } from '../Common/Modal';
+import { CopernicoImportBox } from './CopernicoImport';
+import { canEditAnyJob } from '../../lib/permissions';
+import type { CopernicoImport } from '../../lib/copernicoImport';
 import { Section } from '../Common/Section';
 import type { JobTypeId, Priority, Product } from '../../types';
 
@@ -56,6 +59,8 @@ export function QuickJobPage() {
   const jobTypes = visibleJobTypes(useStore((s) => s.jobTypes));
   const createJob = useStore((s) => s.createJob);
   const findOrCreateClient = useStore((s) => s.findOrCreateClient);
+  const setJobCode = useStore((s) => s.setJobCode);
+  const setToast = (toast: string) => useStore.setState({ toast });
 
   const [clientName, setClientName] = useState('');
   const [name, setName] = useState('');
@@ -71,6 +76,25 @@ export function QuickJobPage() {
   const [priorityTouched, setPriorityTouched] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([emptyProduct()]);
+
+  // Importación del Excel de ítems de Copérnico: guarda lo que había antes para
+  // poder deshacer, y el N° de OT para cargarlo apenas se crea la ficha.
+  const [otCode, setOtCode] = useState<string | null>(null);
+  const beforeImport = useRef<{ products: Product[]; jobTypeId: JobTypeId } | null>(null);
+  function applyImport(r: CopernicoImport) {
+    if (!beforeImport.current) beforeImport.current = { products, jobTypeId };
+    setProducts(r.products);
+    if (r.jobTypeId) setJobTypeId(r.jobTypeId);
+    setOtCode(r.otCode);
+  }
+  function undoImport() {
+    if (beforeImport.current) {
+      setProducts(beforeImport.current.products);
+      setJobTypeId(beforeImport.current.jobTypeId);
+    }
+    beforeImport.current = null;
+    setOtCode(null);
+  }
 
   const [requiresInstallation, setRequiresInstallation] = useState(false);
   const [installAddress, setInstallAddress] = useState('');
@@ -162,6 +186,13 @@ export function QuickJobPage() {
         requiresInstallation, installAddress, installContactPhone, installDate,
         createdByUserId, responsibleUserId, assignedUserIds: [], assignedNames,
       });
+      // El N° de OT no es parte del alta (columna aparte, ver setJobCode). Si
+      // falla (ej. ya hay otra ficha con ese número) la ficha queda creada igual
+      // y se avisa, en vez de perder todo lo cargado.
+      if (otCode && canEditAnyJob(user.role)) {
+        try { await setJobCode(job.id, otCode, user.id); }
+        catch (err) { setToast(`La ficha se creó, pero no pude cargarle el N° ${otCode}: ${friendlyError(err)}`); }
+      }
       navigate(`/trabajos/${job.id}`);
     } catch (err: any) {
       setSubmitError(friendlyError(err));
@@ -179,6 +210,8 @@ export function QuickJobPage() {
       <p className="text-sm text-ink-700 mb-4">Todo en una sola pantalla — pensada para cargar un trabajo mientras estás al teléfono o el cliente está al lado.</p>
 
       <div className="space-y-4">
+        <CopernicoImportBox onImport={applyImport} onUndo={undoImport} />
+
         <Section title="Cliente y trabajo">
           <div>
             <label htmlFor="qj-client" className={labelCls}>Cliente</label>

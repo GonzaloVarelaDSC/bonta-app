@@ -5687,3 +5687,40 @@ trabajo "Planificado" para hoy se ve Crítico con "por fecha". Build/lint limpio
    (`#13077a`, medido de `logo-mark.png`, + `logo-bg` `#eeedf8`) en
    `tailwind.config.js`. La pestaña en la que estás parado se pinta con fondo
    `logo-bg`, texto `logo` en negrita y subrayado azul, en Métricas y en la ficha.
+
+---
+
+## 82. Actualización 06/11 — importar los ítems de una OT de Copérnico en Carga rápida (rama `importar-ot-copernico`)
+
+Gonzalo no quiere tipear dos veces lo que ya cargó en Copérnico. Copérnico no tiene
+API: lo único que sale es **Exportar** en la grilla de ítems de la orden (ventana
+"Items Orden Grafica"), en Excel o XML. **Trae solo los ítems** — cliente, trabajo y
+fecha de entrega no vienen y se siguen cargando a mano.
+
+1. **`lib/copernicoImport.ts`** (nuevo, sin dependencias): lee el Excel (Copérnico lo
+   guarda como `.xls` pero es un `.xlsx`: zip + XML, se descomprime con
+   `DecompressionStream('deflate-raw')`) o el XML (viene roto: columnas sin título
+   como `<>Epson V7000</>`, se lee cada `<Row>` por posición). Hay 4 columnas sin
+   título (código/nombre de máquina, código/nombre de material): máquina = último
+   texto antes de "Cantidad", material = texto entre "Cantidad" y "Ancho". Medidas en
+   metros → cm con coma decimal. Agrupa por máquina + material + notas: un producto
+   por grupo con todas sus medidas (la OT 20.392 de 8 ítems queda en 2 productos, uno
+   por sucursal). Notas del producto = "Máquina: X · Material: Y" + Notas Impresión.
+   **N° de OT** = número del nombre de la imagen de "Print Referencia"
+   (`\\servercop\imagenes\20392.jpg`). Equivalencias máquina → tipo de trabajo y
+   material → material de la app en dos tablas arriba del archivo
+   (`MACHINE_TO_JOB_TYPE`, `MATERIAL_KEYWORDS`); si en Configuración existe un
+   material/tipo con el mismo nombre exacto que en Copérnico, se usa ese directo.
+2. **`QuickJob/CopernicoImport.tsx`** (nuevo): caja arriba de Carga rápida para soltar
+   o elegir el archivo. Después de importar muestra el resumen (ítems → productos,
+   tipo elegido, N° de OT), avisos (material sin equivalente, varias máquinas, ítems
+   sin medida), **aviso si ya hay una ficha con ese N°** (con link) y "Deshacer"
+   (vuelve los productos y el tipo a como estaban). No crea nada solo.
+3. **`QuickJobPage.tsx`**: al crear, si vino N° de OT y el usuario es
+   admin/coordinador, llama a `setJobCode` después de `createJob`; si falla, la ficha
+   queda creada y sale un toast.
+
+Probado: lector con el Excel y el XML reales de la OT 20.408 y un Excel armado con
+los 8 ítems de la 20.392; en el navegador con datos de demo (escritorio y 390 px):
+importar, deshacer, archivo inválido, N° repetido, y crear la ficha (sale con el N°
+y los 2 productos). Build y lint limpios. **No probado contra Supabase** (alta real).
