@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 19/10/2026 (sección 77 — segunda pasada de celular; la 72 sigue siendo el resumen de estado general).
+la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**; la 72 es el cierre anterior).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5762,3 +5762,74 @@ Verificado en el navegador local (escritorio y 390 px): editar MDF 5 mm a 260 ×
 confirmado, guardar y en Carga rápida una pieza de 300 × 200 en MDF muestra "es más
 grande que una placa de MDF 5 mm (260 × 183 cm)". Build/lint limpios. No probado
 contra Supabase real (falta correr la 031).
+---
+
+## 84. CIERRE DE SESIÓN 08/11 — estado completo para retomar en un chat nuevo
+
+**Leer esto primero.** Resume la sesión larga del 28/10–08/11 (secciones 78–81) **y suma lo que hizo
+otra sesión en paralelo el 06/11 (secciones 82–83)**. Todo commiteado y pusheado
+a `origin/main`; working tree limpio.
+
+### Qué quedó hecho y confirmado en producción
+- **En vivo reparado** (§78): migración 030 corrida (publicación Realtime con
+  `jobs`, `activity_log`, `notifications`). Avisos flotantes de estado, de
+  modificaciones de ficha y de menciones. Carga de diseño = sin empezar + en
+  diseño. Kanban de costado. **Falta probar con dos cuentas reales** (que otra
+  persona cambie algo/mencione mientras Gonzalo tiene la app abierta).
+- **Contact sheet**: se exporta bien en la planilla de producción (confirmado por
+  Gonzalo en la app real, trabajo "Bajo acrilico") y sale también en la hoja para
+  el cliente (sección "Imágenes del trabajo") — §80/§81.
+- **Prioridad que sube sola por la fecha** (§80): ≤1 día/atrasado → Crítico, ≤3 →
+  Urgente, ≤7 → Normal; nunca baja lo elegido; no en "En espera" ni en
+  Listo/Instalación/Entregado/Cancelado; "↗ por fecha" al lado.
+- **Métricas con tortas** donde es parte de un total; las líneas con puntos se
+  quedan (le gustan a Gonzalo) — §81.
+- **Pestaña activa en azul del logo** (`logo` `#13077a`) en Métricas y ficha — §81.
+- **Importar OT de Copérnico en Carga rápida** (§82, otra sesión): lee el Excel/XML
+  que exporta Copérnico y arma los productos + N° de OT. No probado contra Supabase.
+- **Materiales y máquinas editable desde la app** (§83, otra sesión).
+- Migraciones **001–030 aplicadas**. **`031_app_settings_materials.sql` pendiente de
+  que Gonzalo la corra** (sin ella, editar materiales tira error al guardar). Verificar:
+  `select key from app_settings;`.
+
+### Herramientas nuevas disponibles
+- **Claude in Chrome instalado y conectado** en la compu de Gonzalo (04/11): sirve
+  para mirar la app real con su sesión, **solo lectura** (GET a la API con el token
+  de su `localStorage` + anon key del bundle; nunca escribir). Para navegar dentro
+  de la SPA sin perder overrides: `history.pushState` + `PopStateEvent`. Si se va a
+  abrir una hoja que llama `window.print()`, pisarlo antes (`window.print = () =>
+  console.log(...)`) porque el diálogo de imprimir bloquea la extensión.
+- El navegador integrado sigue bloqueado contra `bonta-app.vercel.app` (§30.6);
+  para la app real usar Chrome.
+
+### Lo que está esperando a Gonzalo
+1. **Cuestionario** (§79): `cuestionario/Cuestionario-Estudio-Bonta.xlsx` y `.pdf`
+   (gitignoreados). Cuando lo devuelva: **no implementar de una**; proponer primero
+   un plan por bloques (qué se toca, en qué orden, qué probar) y esperar su OK. Base
+   también para futuros "agentes" que revisen la app y traigan propuestas.
+2. **(7) Copérnico** — ya existe el camino Copérnico → app (importar OT, §82). Falta
+   el sentido app → Copérnico ("Copiar para Copérnico") si sigue haciendo falta;
+   preguntado en el cuestionario, bloque C.
+3. **Materiales**: ahora se cargan desde la pantalla "Materiales y máquinas" (§83,
+   necesita la 031). Nunca inventar medidas; esperar datos.
+4. Preguntas abiertas de celular (§77) y regenerar capturas del Manual
+   (`video/generador/manual.mjs`) — cambiaron Kanban, avisos flotantes, pestañas.
+5. **Skill "taste"**: Gonzalo pidió instalarla; no está en el catálogo. Se le pidió
+   el link; revisar el contenido antes de instalar, solo para este proyecto.
+6. **"Claude Design"**: preguntó cómo se usa (sin responder todavía). Es el tipo de
+   Artifact "Design" (lienzo con pantallas/mockups en claude.ai): se le pide un
+   diseño y Claude lo crea como artifact privado que él puede abrir y comentar.
+   También existe "Design System" (tokens, componentes). Ofrecerle armar el design
+   system de Bonta a partir de `tailwind.config.js` si le interesa.
+
+### Arreglos internos pendientes (no visibles)
+Backport de `handle_new_user()` a `001_schema.sql`; limpiar lo sin uso
+(`job_files`/acciones de archivos, `quality_checks`/`QC_TEMPLATE`,
+`job_stages`, `credits_as_assigner`); `fetchAllJobs` no pagina (>1000 trabajos).
+
+### Forma de trabajar (recordatorio)
+Chat corto, rioplatense, **sin narrar el proceso** (§6). Cada ronda: build + lint,
+commit con `git -c user.name="Gonzalo Varela" -c user.email="gonzaa.gd@gmail.com"`,
+push a `main`, sección nueva acá. Verificación local con datos ficticios:
+`preview_start bonta-dev` + `eval(await (await import('/video/generador/demo-setup.js?raw')).default)()`
+(y `metrics-demo.js` para Métricas) desde la consola.
