@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**; la 72 es el cierre anterior).
+la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**, y la 85; la 72 es el cierre anterior).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5833,3 +5833,17 @@ commit con `git -c user.name="Gonzalo Varela" -c user.email="gonzaa.gd@gmail.com
 push a `main`, sección nueva acá. Verificación local con datos ficticios:
 `preview_start bonta-dev` + `eval(await (await import('/video/generador/demo-setup.js?raw')).default)()`
 (y `metrics-demo.js` para Métricas) desde la consola.
+
+---
+
+## 85. Actualización 08/11 — skill externa "taste-skill" instalada (solo en este proyecto)
+
+Gonzalo pidió `npx skills add Leonxlnx/taste-skill`. Instalada con `-a claude-code`
+en `.claude/skills/design-taste-frontend/` (MIT, revisada antes: sin envío de datos;
+trae un hook de Stop que solo actúa si existe `.taste-skill/build.json`). Pesa 39 MB
+(1631 archivos), así que **la carpeta está en `.gitignore`** y solo se commitea
+`skills-lock.json`; en otra compu se restaura con `npx skills experimental_install`.
+**Ojo:** es para webs de empresa/landings (hero, una sección por pantalla, fotos,
+efectos). En la app de Bonta mandan las decisiones de la sección 4 (Inter, paleta,
+herramienta de trabajo): no aplicarla a pantallas de la app salvo que Gonzalo la pida
+explícitamente. Sí sirve para la web pública del estudio.

@@ -33,3 +33,6 @@ video/*.mp4
 
 # Cuestionario con datos internos (repo público)
 cuestionario/
+
+# Skill externa taste-skill (39 MB): se instala local, no va al repo. Restaurar con: npx skills experimental_install
+.claude/skills/design-taste-frontend/
