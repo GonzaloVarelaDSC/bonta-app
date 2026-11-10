@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox, ClipboardCheck, Wrench, PackageCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Flame, Zap, CalendarClock, TriangleAlert, Factory, CircleCheckBig, CircleHelp, PenTool, Inbox, ClipboardCheck, Wrench, PackageCheck, Moon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
@@ -113,14 +115,25 @@ export function DashboardPage() {
     { key: 'waitingInfo', label: 'Esperando información', value: counts.waitingInfo, icon: CircleHelp, tone: 'wait' },
   ];
   const cards = [...flowCards, ...attentionCards];
+  const activeCount = scoped.filter((j) => j.status !== 'TERMINADO' && j.status !== 'CANCELADO').length;
 
   return (
     <div className="p-4 sm:p-6 max-w-[1800px] mx-auto">
-      <div className="flex items-baseline justify-between mb-1">
-        <h1 className="text-xl font-display font-bold text-ink-900">Dashboard de producción</h1>
-        <span className="text-xs text-ink-700 hidden sm:inline">Actualizado en vivo</span>
+      <div className="flex items-end justify-between gap-3 mb-4 sm:mb-5">
+        <div>
+          <h1 className="text-xl font-display font-bold text-ink-900 tracking-tight">Dashboard de producción</h1>
+          {/* Subtítulo con información útil del día, no instrucciones de uso. */}
+          <p className="text-sm text-ink-700 mt-0.5 first-letter:uppercase">
+            {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+            <span aria-hidden> · </span>{activeCount} {activeCount === 1 ? 'trabajo activo' : 'trabajos activos'}
+            {counts.dueToday > 0 && <><span aria-hidden> · </span><span className="font-semibold text-ink-900">{counts.dueToday} para hoy</span></>}
+            {counts.overdue > 0 && <><span aria-hidden> · </span><span className="font-semibold text-crit-text">{counts.overdue} {counts.overdue === 1 ? 'atrasado' : 'atrasados'}</span></>}
+          </p>
+        </div>
+        <span className="text-xs text-ink-700 hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-plan dot-live" aria-hidden />Actualizado en vivo
+        </span>
       </div>
-      <p className="text-sm text-ink-700 mb-4 sm:mb-5">Tocá una tarjeta para filtrar la lista de abajo.</p>
 
       {/* Una sola fila (Gonzalo, 12/10: no quería dos filas): primero los 7 del
           flujo en orden del Kanban, después los 5 de atención, separados por un
@@ -130,12 +143,17 @@ export function DashboardPage() {
           se desliza de costado, en el mismo orden. */}
       <ScrollFadeX
         wrapperClassName="-mx-4 sm:mx-0 mb-5" fadeFrom="from-ink-50"
-        className="flex gap-2 overflow-x-auto snap-x scroll-px-4 px-4 pt-1 pb-2 sm:p-0 sm:grid sm:grid-cols-6 xl:grid-cols-12 sm:overflow-visible"
+        className="flex gap-2 overflow-x-auto snap-x scroll-px-4 px-4 pt-1 pb-2 sm:p-0 sm:grid sm:grid-cols-6 xl:grid-cols-[repeat(7,minmax(0,1fr))_1px_repeat(5,minmax(0,1fr))] xl:gap-2.5 sm:overflow-visible"
       >
         {cards.map((c, i) => (
-          <KpiCard key={c.key} label={c.label} value={c.value} icon={c.icon} tone={c.tone} compact
-            active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
-            className={clsx('w-[6.5rem] shrink-0 snap-start sm:w-auto', i === flowCards.length && 'xl:ml-2')} />
+          <Fragment key={c.key}>
+            {/* Divisor entre las etapas del flujo y los cubos de atención. */}
+            {i === flowCards.length && <span aria-hidden className="hidden xl:block w-px self-stretch my-1 bg-ink-300" />}
+            <KpiCard label={c.label} value={c.value} icon={c.icon} tone={c.tone}
+              variant={i < flowCards.length ? 'flow' : 'alert'}
+              active={filter === c.key} onClick={() => setFilter(filter === c.key ? null : c.key)}
+              className={clsx('w-[7.5rem] shrink-0 snap-start sm:w-auto', i === flowCards.length && 'max-xl:ml-1 sm:ml-0')} />
+          </Fragment>
         ))}
       </ScrollFadeX>
 
@@ -144,26 +162,26 @@ export function DashboardPage() {
       {counts.silent > 0 && (
         <button
           onClick={() => setFilter(filter === 'silent' ? null : 'silent')}
-          className="w-full mb-5 text-left bg-wait-bg border border-wait/30 rounded-lg px-4 py-2.5 text-sm text-wait-text flex items-center gap-2 hover:brightness-95 transition"
+          className="w-full mb-5 text-left bg-wait-bg border border-wait/30 rounded-ctl px-4 py-2.5 text-sm text-wait-text flex items-center gap-2.5 hover:border-wait/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
-          <span>💤</span>
+          <Moon size={15} aria-hidden className="shrink-0" />
           <span><strong>{counts.silent}</strong> {counts.silent === 1 ? 'trabajo lleva' : 'trabajos llevan'} más de 48h sin ningún movimiento ni comentario — puede que nadie los esté mirando.</span>
         </button>
       )}
 
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-ink-800">
+        <span className="text-sm font-semibold text-ink-900">
           {filter ? `Filtrado: ${cards.find((c) => c.key === filter)?.label ?? 'sin movimiento'}` : 'Trabajos activos, ordenados por prioridad'}
           <span className="text-ink-700 font-normal"> · {filtered.length}</span>
         </span>
         <div className="flex items-center gap-3">
-          {filter && <button onClick={() => setFilter(null)} className="text-xs text-brand-600 hover:underline">Ver todos</button>}
-          <div role="group" aria-label="Qué trabajos ver" className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
+          {filter && <button onClick={() => setFilter(null)} className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 max-md:min-h-touch">Ver todos</button>}
+          <div role="group" aria-label="Qué trabajos ver" className="inline-flex rounded-ctl border border-ink-300 bg-white p-0.5 shadow-card">
             {(['mine', 'byMe', 'all'] as ScopeMode[]).map((m) => (
               <button
                 key={m} onClick={() => changeScope(m)} aria-pressed={scope === m}
-                className={`text-sm sm:text-xs font-semibold px-3.5 py-2 sm:px-2.5 sm:py-1 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  scope === m ? 'bg-ink-950 text-white' : 'text-ink-700 hover:text-ink-900'
+                className={`text-sm sm:text-xs font-semibold px-3.5 max-sm:min-h-touch sm:h-7 sm:px-3 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  scope === m ? 'bg-ink-950 text-white' : 'text-ink-700 hover:text-ink-900 hover:bg-ink-50'
                 }`}
               >
                 {SCOPE_LABELS[m]}
@@ -174,7 +192,7 @@ export function DashboardPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-ink-100 shadow-card px-4 py-10 text-center text-sm text-ink-700">
+        <div className="bg-white rounded-card border border-ink-200 shadow-card px-4 py-10 text-center text-sm text-ink-700">
           No hay trabajos que coincidan con este filtro.
         </div>
       ) : (

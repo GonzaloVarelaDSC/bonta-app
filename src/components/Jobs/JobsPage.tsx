@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import clsx from 'clsx';
+import { Plus, Search, Archive, Lock } from 'lucide-react';
+import { btn, fieldCls, selectCls as baseSelectCls } from '../Common/ui';
 import { useStore } from '../../store/useStore';
 import { visibleJobs, canCreateJobs } from '../../lib/permissions';
 import { effectivePriority, PRIORITY_META } from '../../lib/priority';
@@ -50,28 +52,41 @@ export function JobsPage() {
     });
   }, [jobs, priorityFilter, statusFilter, clientFilter, respFilter, search, clients, showArchived, onlyBlocked]);
 
-  const selectCls = 'min-w-0 text-sm border border-ink-200 rounded-lg px-2.5 py-2 sm:py-1.5 bg-white text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-500';
+  const selectCls = clsx(baseSelectCls, 'min-w-0 sm:w-auto');
+  // Filtros sí/no como chips (mismo lenguaje que el segmentado del Dashboard),
+  // en vez de checkboxes nativos sueltos.
+  const chipCls = (on: boolean) => clsx(
+    'inline-flex items-center gap-1.5 h-ctl max-md:h-auto max-md:min-h-touch px-3 rounded-full border text-xs font-semibold cursor-pointer select-none transition-colors',
+    'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500',
+    on ? 'bg-ink-950 border-ink-950 text-white' : 'bg-white border-ink-300 text-ink-800 hover:border-ink-450'
+  );
 
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-display font-bold text-ink-900">Trabajos</h1>
+      <div className="flex items-end justify-between gap-3 mb-4 sm:mb-5">
+        <div>
+          <h1 className="text-xl font-display font-bold text-ink-900 tracking-tight">Trabajos</h1>
+          <p className="text-sm text-ink-700 mt-0.5">{filtered.length} {filtered.length === 1 ? 'trabajo' : 'trabajos'}{showArchived ? ' · con archivados' : ''}</p>
+        </div>
         {canCreateJobs(user.role) && (
-          <button onClick={() => navigate('/trabajos/rapido')} className="inline-flex items-center gap-1.5 bg-ink-950 text-white text-sm font-semibold px-3.5 py-2 rounded-lg hover:bg-ink-800 transition-colors">
-            <Plus size={16} /> Nuevo trabajo
+          <button onClick={() => navigate('/trabajos/rapido')} className={btn('primary')}>
+            <Plus size={16} aria-hidden /> Nuevo trabajo
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap">
-        <input
-          value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." aria-label="Buscar"
-          type="search" enterKeyHint="search" autoComplete="off"
-          className="col-span-2 text-sm border border-ink-200 rounded-lg px-3 py-2 sm:py-1.5 w-full sm:w-56 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
+      <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap sm:items-center">
+        <div className="relative col-span-2 sm:w-60">
+          <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-700" />
+          <input
+            value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar N°, cliente o trabajo" aria-label="Buscar"
+            type="search" enterKeyHint="search" autoComplete="off"
+            className={clsx(fieldCls, 'pl-9')}
+          />
+        </div>
         <select aria-label="Prioridad" className={selectCls} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}>
           <option value="all">Toda prioridad</option>
-          {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+          {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <select aria-label="Estado" className={selectCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
           <option value="all">Todo estado</option>
@@ -86,22 +101,23 @@ export function JobsPage() {
           {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
         <label
-          className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1 min-h-11 sm:min-h-0"
-          title="Entregados hace 3 días o más — se ocultan por default para no acumular"
+          className={clsx(chipCls(showArchived), 'justify-center')}
+          title="Entregados hace 5 días o más — se ocultan por default para no acumular"
         >
-          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" />
-          Ver archivados{!showArchived && archivedCount > 0 ? ` (${archivedCount})` : ''}
+          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="sr-only" />
+          <Archive size={13} aria-hidden />
+          Archivados{!showArchived && archivedCount > 0 ? ` (${archivedCount})` : ''}
         </label>
         {blockedCount > 0 && (
-          <label className="flex items-center gap-1.5 text-xs text-ink-700 self-center px-1 min-h-11 sm:min-h-0">
-            <input type="checkbox" checked={onlyBlocked} onChange={(e) => setOnlyBlocked(e.target.checked)} className="rounded" />
-            🔒 Solo bloqueados ({blockedCount})
+          <label className={clsx(chipCls(onlyBlocked), 'justify-center')}>
+            <input type="checkbox" checked={onlyBlocked} onChange={(e) => setOnlyBlocked(e.target.checked)} className="sr-only" />
+            <Lock size={13} aria-hidden />
+            Solo bloqueados ({blockedCount})
           </label>
         )}
-        <span className="col-span-2 sm:ml-auto text-xs text-ink-700 self-center">{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
-      <div className="bg-white rounded-xl border border-ink-100 shadow-card overflow-hidden">
+      <div className="bg-white rounded-card border border-ink-200/80 shadow-card overflow-hidden">
         <JobsTable jobs={filtered} />
       </div>
     </div>

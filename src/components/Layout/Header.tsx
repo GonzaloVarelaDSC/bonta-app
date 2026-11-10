@@ -70,18 +70,18 @@ export function Header({ onMenuClick, navOpen }: { onMenuClick?: () => void; nav
 
   return (
     <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] shrink-0 bg-white border-b border-ink-100 flex items-center gap-1 sm:gap-4 px-2 sm:px-6" ref={boxRef}>
-      <button onClick={onMenuClick} aria-label="Abrir menú" aria-expanded={!!navOpen} className="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg hover:bg-ink-50 text-ink-700 shrink-0">
+      <button onClick={onMenuClick} aria-label="Abrir menú" aria-expanded={!!navOpen} className="lg:hidden w-11 h-11 flex items-center justify-center rounded-ctl hover:bg-ink-100 text-ink-700 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
         <Menu size={20} />
       </button>
       <div className="relative flex-1 min-w-0 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-700" />
+        <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-700" />
         <input
           value={query}
           onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
           onFocus={() => setShowResults(true)}
           placeholder="Buscar trabajo, cliente..." aria-label="Buscar"
           type="search" enterKeyHint="search" autoComplete="off" autoCorrect="off" spellCheck={false}
-          className="w-full pl-9 pr-3 h-10 rounded-lg bg-ink-50 border border-transparent text-sm focus:bg-white focus:border-brand-400 focus:outline-none transition-colors"
+          className="w-full pl-9 pr-3 h-10 rounded-ctl bg-ink-50 border border-ink-200 text-sm hover:border-ink-300 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:outline-none transition-colors"
         />
         {showResults && results.length > 0 && (
           <div className="fixed left-3 right-3 top-[calc(4rem+env(safe-area-inset-top))] max-h-[60vh] overflow-y-auto sm:absolute sm:left-auto sm:right-auto sm:top-auto sm:max-h-none sm:mt-1.5 sm:w-full bg-white rounded-lg shadow-pop border border-ink-100 sm:overflow-hidden z-30">
@@ -104,10 +104,10 @@ export function Header({ onMenuClick, navOpen }: { onMenuClick?: () => void; nav
       <div className="hidden sm:block flex-1" />
 
       <div className="relative">
-        <button onClick={() => setShowNotifs((v) => !v)} aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`} aria-expanded={showNotifs} className="relative w-11 h-11 sm:w-auto sm:h-auto sm:p-2 flex items-center justify-center rounded-lg hover:bg-ink-50 text-ink-700">
+        <button onClick={() => setShowNotifs((v) => !v)} aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`} aria-expanded={showNotifs} className="relative w-11 h-11 sm:w-auto sm:h-auto sm:p-2 flex items-center justify-center rounded-ctl hover:bg-ink-100 text-ink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
           <Bell size={19} />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-crit text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-crit-text text-white text-2xs font-bold ring-2 ring-white flex items-center justify-center">
               {unread}
             </span>
           )}
@@ -141,13 +141,13 @@ export function Header({ onMenuClick, navOpen }: { onMenuClick?: () => void; nav
       </div>
 
       <div className="relative">
-        <button onClick={() => setShowAccount((v) => !v)} aria-label={`Cuenta de ${user.name}`} aria-expanded={showAccount} className="flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 min-h-11 rounded-lg hover:bg-ink-50">
+        <button onClick={() => setShowAccount((v) => !v)} aria-label={`Cuenta de ${user.name}`} aria-expanded={showAccount} className="flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 min-h-11 rounded-ctl hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
           <Avatar name={user.name} color={user.avatarColor} size={32} />
           <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-ink-900 leading-tight">{user.name}</div>
             {/* El puesto "de la jerga" (Dirección, Diseño, Coordinación) vive en
                 `sector`; `role` es el permiso del sistema y se ve en Usuarios. */}
-            <div className="text-[11px] text-ink-700 leading-tight">{user.sector || ROLES.find((r) => r.id === user.role)?.label}</div>
+            <div className="text-meta text-ink-700 leading-tight">{user.sector || ROLES.find((r) => r.id === user.role)?.label}</div>
           </div>
           <ChevronDown size={14} className="text-ink-700" />
         </button>

@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
-import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, MessageCircle, XCircle } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, Pencil, FileOutput, ArrowLeft, ArrowRight, MessageCircle, XCircle, Star, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { JobSpecs } from '../../store/useStore';
 import { canViewJob, canChangePriority, canBlock, canDeleteJob, canEditAnyJob, canAssign, canSetQuoteValue } from '../../lib/permissions';
 import { statusOptionsFor, tryChangeJobStatus } from '../../lib/statusChange';
-import { effectivePriority, PRIORITY_META } from '../../lib/priority';
+import { effectivePriority } from '../../lib/priority';
 import { calculateRisk } from '../../lib/risk';
 import { friendlyError } from '../../lib/errors';
-import { PriorityBadge, StatusBadge, CountdownBadge, RiskBadge, Avatar, SampleReviewBadge, BlockedBadge, EscalatedHint } from '../Common/Badges';
+import { PriorityBadge, PrioritySelect, StatusSelect, CountdownBadge, RiskBadge, Avatar, BlockedBadge, EscalatedHint } from '../Common/Badges';
+import { btn, fieldCls, selectCls } from '../Common/ui';
 import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
-import { STATUS_LABELS, BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
+import { CodeStamp } from '../Common/EditableCode';
+import { BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
@@ -50,6 +52,7 @@ export function JobDetailPage() {
   const unblockJob = useStore((s) => s.unblockJob);
   const completeInstallation = useStore((s) => s.completeInstallation);
   const restoreJob = useStore((s) => s.restoreJob);
+  const setJobCode = useStore((s) => s.setJobCode);
   const loadJobComments = useStore((s) => s.loadJobComments);
   const loadJobActivity = useStore((s) => s.loadJobActivity);
   const [restoring, setRestoring] = useState(false);
@@ -132,63 +135,75 @@ export function JobDetailPage() {
               <ArrowLeft size={15} aria-hidden /> Volver a Trabajos
             </Link>
           )}
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-xs text-ink-700">{job.code ?? 'Sin N° de trabajo'}</span>
-                {job.sourceQuoteId && (
-                  <Link to={`/presupuestos/${job.sourceQuoteId}`} className="text-[11px] text-brand-600 hover:underline">
-                    Generado desde un presupuesto →
-                  </Link>
-                )}
-              </div>
-              <div className="flex items-start gap-1.5">
-                <h1 className="text-lg font-display font-bold text-ink-900 leading-snug">{job.name}</h1>
+          {/* Cabecera compacta (rediseño 08/11): N° como sello + nombre + editar
+              en una línea; cliente · asignó → responsable en la siguiente; las
+              acciones a la derecha. Prioridad/estado/entrega/muestra van en la
+              tira de casilleros de abajo, una sola vez. */}
+          <div className="flex items-start justify-between gap-x-6 gap-y-3 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap">
+                <CodeStamp job={job} editable={canEditAnyJob(user.role)} onSave={(code) => setJobCode(job.id, code, user.id)} />
+                <h1 className="text-xl font-display font-bold text-ink-900 leading-snug tracking-tight">{job.name}</h1>
                 {canEditAnyJob(user.role) && (
                   <button onClick={() => setEditingHeader(true)} aria-label="Editar cliente y nombre del trabajo" title="Editar cliente y nombre"
-                    className="-mt-1.5 lg:mt-1 p-2.5 lg:p-1 rounded text-ink-700 hover:text-ink-900 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    className="w-11 h-11 lg:w-7 lg:h-7 -my-2 lg:my-0 inline-flex items-center justify-center rounded-ctl text-ink-700 hover:text-ink-900 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
                     <Pencil size={15} aria-hidden />
                   </button>
                 )}
               </div>
-              <div className="text-sm text-ink-700 mt-0.5">{client?.name} {job.clientImportant && <span title="Cliente prioritario">⭐</span>}</div>
-              {(creator || responsible) && (
-                <div
-                  className="flex items-center gap-2 mt-2 bg-brand-100 text-brand-700 rounded-full pl-1 pr-3 py-1 text-xs font-semibold w-fit"
-                  title={creator && responsible ? `${creator.name} asignó este trabajo a ${responsible.name}` : creator ? `Asignado por ${creator.name}` : `Responsable: ${responsible!.name}`}
-                >
-                  {creator && (
-                    <span className="flex items-center gap-1.5">
-                      <Avatar name={creator.name} color={creator.avatarColor} size={20} /> {creator.name}
+              <div className="mt-1.5 flex items-center gap-x-2.5 gap-y-1.5 flex-wrap text-sm">
+                <span className="font-semibold text-ink-800 inline-flex items-center gap-1.5">{client?.name}{job.clientImportant && <Star size={13} className="text-norm-text fill-norm" aria-label="Cliente prioritario" />}</span>
+                {(creator || responsible) && (
+                  <>
+                    <span className="text-ink-700" aria-hidden>·</span>
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs text-ink-900 font-semibold"
+                      title={creator && responsible ? `${creator.name} asignó este trabajo a ${responsible.name}` : creator ? `Asignado por ${creator.name}` : `Responsable: ${responsible!.name}`}
+                    >
+                      {creator && <><span className="font-normal text-ink-700">Asignó</span><Avatar name={creator.name} color={creator.avatarColor} size={20} decorative />{creator.name.split(' ')[0]}</>}
+                      {creator && responsible && <ArrowRight size={12} className="text-ink-700" aria-label="a" />}
+                      {responsible && <><span className="font-normal text-ink-700">Responsable</span><Avatar name={responsible.name} color={responsible.avatarColor} size={20} decorative />{responsible.name}</>}
                     </span>
-                  )}
-                  {creator && responsible && <span className="text-brand-600" aria-hidden>→</span>}
-                  {responsible && (
-                    <span className="flex items-center gap-1.5">
-                      <Avatar name={responsible.name} color={responsible.avatarColor} size={20} /> {responsible.name}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="text-[11px] text-ink-700 mt-1 pl-1">Asigna → Responsable</div>
+                  </>
+                )}
+                {job.sourceQuoteId && (
+                  <Link to={`/presupuestos/${job.sourceQuoteId}`} className="text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline">
+                    Generado desde un presupuesto →
+                  </Link>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* En el celular prioridad y estado ya se leen en sus selects de
-                  abajo: repetirlos como badge solo empujaba todo hacia abajo. */}
-              <span className={canChangePriority(user.role) ? 'hidden lg:contents' : 'contents'}><PriorityBadge priority={effectivePriority(job)} /></span>
-              <EscalatedHint job={job} />
-              <span className="hidden lg:contents"><StatusBadge status={job.status} /></span>
-              {activeBlock && <BlockedBadge blocked reason={BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]} />}
-              <CountdownBadge iso={job.committedDate} status={job.status} />
-              <RiskBadge risk={calculateRisk(job)} />
-              <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} />
+            {/* Acciones: en escritorio una fila ordenada a la derecha (de la más
+                común a la más delicada); en el celular, botones parejos de 44px. */}
+            <div className="grid grid-cols-2 gap-2 w-full lg:w-auto lg:flex lg:items-center lg:flex-wrap lg:justify-end">
+              {CLIENT_MSG_STATUSES.includes(job.status) && (
+                <button onClick={() => setShowClientMsg(true)} className={`col-span-2 ${btn('secondary', 'sm')} text-plan-text border-plan/40 hover:bg-plan-bg`}>
+                  <MessageCircle size={14} aria-hidden /> Mensaje para el cliente
+                </button>
+              )}
+              <a href={`/trabajos/${job.id}/exportar`} target="_blank" rel="noopener noreferrer" className={btn('secondary', 'sm')}>
+                <FileOutput size={14} aria-hidden /> Exportar
+              </a>
+              {/* Cancelar es una decisión administrativa, no un paso más de la
+                  cadena — por eso tiene su propio botón (ver lib/statusChange.ts).
+                  Revertir un cancelado sigue siendo por el select de estado. */}
+              {canEditAnyJob(user.role) && job.status !== 'CANCELADO' && job.status !== 'TERMINADO' && (
+                <button onClick={() => setShowCancelConfirm(true)} className={btn('secondary', 'sm')}>
+                  <XCircle size={14} aria-hidden /> Cancelar
+                </button>
+              )}
+              {!activeBlock && (
+                <button onClick={() => setShowBlock(true)} className={`${btn('danger', 'sm')} col-span-2 lg:col-span-1`}>
+                  <Lock size={14} aria-hidden /> Bloquear
+                </button>
+              )}
             </div>
           </div>
 
           {job.deletedAt && (
             <div className="mt-3 flex items-center justify-between gap-3 bg-crit-bg text-crit-text text-sm rounded-lg px-3 py-2.5">
               <span>
-                🗑️ Este trabajo está <strong>eliminado</strong> desde el {fmtDate(job.deletedAt)}
+                <Trash2 size={14} aria-hidden className="inline -mt-0.5 mr-1" />Este trabajo está <strong>eliminado</strong> desde el {fmtDate(job.deletedAt)}
                 {users.find((u) => u.id === job.deletedBy) ? ` (${users.find((u) => u.id === job.deletedBy)!.name})` : ''} —
                 no aparece en Trabajos/Kanban/Dashboard. También podés verlo desde <Link to="/historico" className="underline">Histórico</Link>.
               </span>
@@ -217,7 +232,7 @@ export function JobDetailPage() {
           {activeBlock && (
             <div className="mt-3 flex items-start justify-between gap-3 bg-crit-bg text-crit-text text-sm rounded-lg px-3 py-2.5">
               <div>
-                <div className="font-semibold">🔴 BLOQUEADO — {BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]}</div>
+                <div className="font-semibold flex items-center gap-1.5"><Lock size={14} aria-hidden />Bloqueado — {BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]}</div>
                 <div className="text-xs mt-0.5">{activeBlock.description}</div>
               </div>
               {(canBlock() || user.role === 'coordinador' || user.role === 'admin') && (
@@ -231,75 +246,53 @@ export function JobDetailPage() {
             </div>
           )}
 
-          {/* En escritorio, selects y acciones van en una sola tira (como antes); en el celular, dos grillas. */}
-          <div className="mt-3 lg:flex lg:items-center lg:gap-3 lg:flex-wrap">
-          <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 lg:contents">
-            <label className="min-w-0 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:block">
-              <span className="lg:sr-only">Estado</span>
-              <select
-                value={job.status}
-                onChange={(e) => tryChangeJobStatus(job, e.target.value as JobStatus, setStatus, user.id)}
-                className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal`}
-              >
-                {statusOptionsFor(job).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-              </select>
-            </label>
-            {canChangePriority(user.role) && (
-              <label className="min-w-0 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:block lg:order-first">
-                <span className="lg:sr-only">Prioridad</span>
-                <select
-                  value={effectivePriority(job)}
-                  onChange={async (e) => { try { await setPriority(job.id, e.target.value as Priority, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                  className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal max-w-full`}
-                >
-                  {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
-                </select>
-              </label>
-            )}
-            <label className="col-span-2 flex flex-col gap-1 text-xs font-medium text-ink-700 lg:inline-flex lg:flex-row lg:items-center lg:gap-1.5 lg:font-normal">
-              Muestra al cliente
+          {/* Tira de casilleros con rótulo (como la OT impresa): Prioridad /
+              Estado / Entrega + contador / Muestra / Riesgo. Cada dato una sola
+              vez, y prioridad/estado/muestra se cambian ahí mismo. */}
+          <div className="mt-4 grid grid-cols-2 lg:grid-cols-[auto_auto_auto_minmax(0,1fr)_auto] gap-px bg-ink-200 border border-ink-200 rounded-card overflow-hidden">
+            <div className="bg-white px-3 py-2 min-w-0 max-lg:order-2">
+              <div className="text-meta font-medium text-ink-700 mb-1">Prioridad</div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {canChangePriority(user.role)
+                  ? <PrioritySelect size="md" priority={effectivePriority(job)}
+                      onChange={async (p: Priority) => { try { await setPriority(job.id, p, user.id); } catch (err) { alert(friendlyError(err)); } }} />
+                  : <PriorityBadge priority={effectivePriority(job)} />}
+                <EscalatedHint job={job} />
+              </div>
+            </div>
+            <div className="bg-white px-3 py-2 min-w-0 max-lg:order-1 max-lg:col-span-2">
+              <div className="text-meta font-medium text-ink-700 mb-1">Estado</div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <StatusSelect
+                  status={job.status} options={statusOptionsFor(job)} className="max-w-full"
+                  onChange={(s) => tryChangeJobStatus(job, s, setStatus, user.id)}
+                />
+                {activeBlock && <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[activeBlock.reason as BlockReason]} />}
+              </div>
+            </div>
+            <div className="bg-white px-3 py-2 min-w-0 max-lg:order-4">
+              <div className="text-meta font-medium text-ink-700 mb-1">Entrega</div>
+              <div className="flex items-center gap-2 flex-wrap min-h-ctl-sm">
+                <span className="text-sm font-semibold text-ink-900 whitespace-nowrap tabular">{fmtDate(job.committedDate)}</span>
+                <CountdownBadge iso={job.committedDate} status={job.status} compact />
+              </div>
+            </div>
+            <label className="bg-white px-3 py-2 min-w-0 block max-lg:order-5">
+              <span className="block text-meta font-medium text-ink-700 mb-1">Muestra al cliente</span>
               <select
                 value={job.sampleReview}
                 onChange={async (e) => { try { await setSampleReview(job.id, e.target.value as SampleReview, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                className={`w-full lg:w-auto min-h-[44px] lg:min-h-0 text-sm lg:text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white font-normal`}
+                className={`${selectCls} lg:h-ctl-sm text-xs lg:min-w-[11rem] lg:max-w-[15rem]`}
               >
                 {(Object.keys(SAMPLE_REVIEW_META) as SampleReview[]).map((k) => (
                   <option key={k} value={k}>{SAMPLE_REVIEW_META[k].option}</option>
                 ))}
               </select>
             </label>
-          </div>
-
-          {/* Acciones menos frecuentes: en el celular, botones parejos de 44 px. */}
-          <div className="grid grid-cols-2 gap-2 mt-3 lg:contents">
-            {!activeBlock && (
-              <button onClick={() => setShowBlock(true)} className="inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-crit-text bg-crit-bg hover:brightness-95">
-                <Lock size={14} aria-hidden /> Bloquear trabajo
-              </button>
-            )}
-            {/* Cancelar es una decisión administrativa, no un paso más de la
-                cadena de producción — por eso tiene su propio botón en vez de
-                compartir el select de estado con los 7 pasos del flujo normal
-                (mismo criterio que "Bloquear trabajo", ver lib/statusChange.ts).
-                Revertir un cancelado sigue siendo por el select (aparece como
-                opción extra mientras el trabajo esté en ese estado). */}
-            {canEditAnyJob(user.role) && job.status !== 'CANCELADO' && job.status !== 'TERMINADO' && (
-              <button onClick={() => setShowCancelConfirm(true)} className="inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-ink-700 bg-ink-100 hover:bg-ink-200">
-                <XCircle size={14} aria-hidden /> Cancelar trabajo
-              </button>
-            )}
-            {CLIENT_MSG_STATUSES.includes(job.status) && (
-              <button onClick={() => setShowClientMsg(true)} className="col-span-2 inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-plan-text bg-plan-bg hover:brightness-95">
-                <MessageCircle size={14} aria-hidden /> Mensaje para el cliente
-              </button>
-            )}
-            <a
-              href={`/trabajos/${job.id}/exportar`} target="_blank" rel="noopener noreferrer"
-              className="col-span-2 inline-flex items-center justify-center gap-1 text-sm lg:text-xs font-semibold rounded-md px-2.5 py-1.5 min-h-[44px] lg:min-h-0 text-ink-700 bg-ink-100 hover:bg-ink-200"
-            >
-              <FileOutput size={14} aria-hidden /> Exportar para cliente
-            </a>
-          </div>
+            <div className="bg-white px-3 py-2 min-w-0 max-lg:order-3">
+              <div className="text-meta font-medium text-ink-700 mb-1">Riesgo</div>
+              <div className="min-h-ctl-sm flex items-center"><RiskBadge risk={calculateRisk(job)} /></div>
+            </div>
           </div>
 
           {/* Pestañas con "volumen" tipo Chrome: la activa se levanta (fondo del
@@ -331,21 +324,21 @@ export function JobDetailPage() {
                 <Field label="Generado por" value={creator?.name ?? '—'} />
                 {canAssign(user.role) ? (
                   <div>
-                    <label htmlFor="job-responsible" className="block text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Responsable interno</label>
+                    <label htmlFor="job-responsible" className="block text-xs text-ink-700 font-medium mb-1">Responsable interno</label>
                     <select
                       id="job-responsible" value={job.responsibleUserId}
                       onChange={async (e) => { try { await changeResponsible(job.id, e.target.value, user.id); } catch (err) { alert(friendlyError(err)); } }}
-                      className="min-h-[44px] lg:min-h-0 border border-ink-200 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className={`${selectCls} sm:max-w-xs`}
                     >
                       {!users.some((u) => u.id === job.responsibleUserId && u.isProducer && u.active) && <option value={job.responsibleUserId}>{responsible?.name ?? '—'}</option>}
                       {users.filter((u) => u.isProducer && u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
-                    {lastHandover && <div className="text-[11px] text-ink-700 mt-1">{lastHandover}</div>}
+                    {lastHandover && <div className="text-meta text-ink-700 mt-1">{lastHandover}</div>}
                   </div>
                 ) : (
                   <div>
                     <Field label="Responsable interno" value={responsible?.name} />
-                    {lastHandover && <div className="text-[11px] text-ink-700 mt-1">{lastHandover}</div>}
+                    {lastHandover && <div className="text-meta text-ink-700 mt-1">{lastHandover}</div>}
                   </div>
                 )}
                 <Field label="Asignados" value={[...job.assignedUserIds.map((id) => users.find((u) => u.id === id)?.name).filter(Boolean), ...job.assignedNames].join(', ') || '—'} />
@@ -353,7 +346,7 @@ export function JobDetailPage() {
                 <Field label="Fecha solicitada por cliente" value={fmtDate(job.requestedDate)} />
                 {canChangePriority(user.role) ? (
                   <div>
-                    <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">Fecha comprometida</div>
+                    <div className="text-xs text-ink-700 font-medium mb-1">Fecha comprometida</div>
                     <input
                       type="date" value={job.committedDate.slice(0, 10)}
                       onChange={async (e) => {
@@ -361,7 +354,7 @@ export function JobDetailPage() {
                         try { await updateCommittedDate(job.id, new Date(`${e.target.value}T18:00`).toISOString(), user.id); }
                         catch (err) { alert(friendlyError(err)); }
                       }}
-                      className="min-h-[44px] lg:min-h-0 text-ink-800 bg-white lg:bg-transparent border border-ink-200 lg:border-transparent hover:border-ink-200 focus:border-ink-300 rounded px-2 lg:px-1.5 lg:-ml-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className={`${fieldCls} sm:max-w-xs`}
                     />
                   </div>
                 ) : (
@@ -384,7 +377,7 @@ export function JobDetailPage() {
                   copia editable, así que no reintroduce la duplicación del punto 1. */}
               {(job.products.length > 0 || job.specialRequirements) && (
                 <div className="max-w-3xl mt-6 pt-5 border-t border-ink-100">
-                  <div className="text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5">
+                  <div className="text-meta uppercase tracking-wide text-ink-700 font-semibold mb-2.5">
                     Detalle técnico
                   </div>
                   <ProductsView products={job.products} />
@@ -475,7 +468,7 @@ export function JobDetailPage() {
 function Field({ label, value, block, highlightMissing }: { label: string; value?: string; block?: boolean; highlightMissing?: boolean }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-ink-700 font-medium mb-0.5">{label}</div>
+      <div className="text-xs text-ink-700 font-medium mb-1">{label}</div>
       <div className={`text-ink-800 ${block ? 'leading-relaxed whitespace-pre-wrap break-words' : ''} ${highlightMissing ? 'text-wait-text italic' : ''}`}>
         {value || (highlightMissing ? 'Falta completar' : '—')}
       </div>
@@ -527,7 +520,7 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
         )}
         <ProductsView products={job.products} onToggle={onToggle} />
         <div>
-          <div className="text-[11px] uppercase tracking-wide text-ink-700 font-semibold mb-2.5">Requisitos especiales</div>
+          <div className="text-meta uppercase tracking-wide text-ink-700 font-semibold mb-2.5">Requisitos especiales</div>
           <p className="text-ink-800">{job.specialRequirements || '—'}</p>
         </div>
         <button

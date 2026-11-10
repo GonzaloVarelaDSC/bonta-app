@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { SlidersHorizontal, Undo2, X, ArrowRight, Trash2 } from 'lucide-react';
+import { SlidersHorizontal, Undo2, X, ArrowRight, Trash2, Lock } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
@@ -13,6 +13,7 @@ import { KANBAN_COLUMNS, BLOCK_REASON_LABELS, type ColumnTone } from '../../data
 import { Avatar, CountdownBadge } from '../Common/Badges';
 import { ScrollFadeX } from '../Common/ScrollFade';
 import { ConfirmDialog } from '../Common/Modal';
+import { selectCls } from '../Common/ui';
 import type { BlockReason, Client, Job, JobStatus, Priority } from '../../types';
 import { tryChangeJobStatus } from '../../lib/statusChange';
 import { friendlyError } from '../../lib/errors';
@@ -26,13 +27,13 @@ import { fmtDate } from '../../lib/dates';
 // contraste de sobra en los badges de estado (5.6-7.8:1) — antes era texto
 // blanco sobre el tono sólido, que en 4 de los 6 tonos no llegaba a 4.5:1.
 const COLUMN_TONE_CLASSES: Record<ColumnTone, { header: string; body: string; count: string }> = {
-  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-wait-bg/40', count: 'bg-wait-bg text-wait-text border border-wait/30' },
-  info: { header: 'bg-info-bg text-info-text', body: 'bg-info-bg/40', count: 'bg-info-bg text-info-text border border-info/30' },
-  norm: { header: 'bg-norm-bg text-norm-text', body: 'bg-norm-bg/40', count: 'bg-norm-bg text-norm-text border border-norm/30' },
-  review: { header: 'bg-review-bg text-review-text', body: 'bg-review-bg/40', count: 'bg-review-bg text-review-text border border-review/30' },
-  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-plan-bg/40', count: 'bg-plan-bg text-plan-text border border-plan/30' },
-  site: { header: 'bg-site-bg text-site-text', body: 'bg-site-bg/40', count: 'bg-site-bg text-site-text border border-site/30' },
-  done: { header: 'bg-ink-100 text-ink-700', body: 'bg-ink-100/50', count: 'bg-ink-200 text-ink-700 border border-ink-300' },
+  wait: { header: 'bg-wait-bg text-wait-text', body: 'bg-ink-100/60', count: 'bg-wait-bg text-wait-text border border-wait/30' },
+  info: { header: 'bg-info-bg text-info-text', body: 'bg-ink-100/60', count: 'bg-info-bg text-info-text border border-info/30' },
+  norm: { header: 'bg-norm-bg text-norm-text', body: 'bg-ink-100/60', count: 'bg-norm-bg text-norm-text border border-norm/30' },
+  review: { header: 'bg-review-bg text-review-text', body: 'bg-ink-100/60', count: 'bg-review-bg text-review-text border border-review/30' },
+  plan: { header: 'bg-plan-bg text-plan-text', body: 'bg-ink-100/60', count: 'bg-plan-bg text-plan-text border border-plan/30' },
+  site: { header: 'bg-site-bg text-site-text', body: 'bg-ink-100/60', count: 'bg-site-bg text-site-text border border-site/30' },
+  done: { header: 'bg-ink-100 text-ink-800', body: 'bg-ink-100/60', count: 'bg-ink-200 text-ink-700 border border-ink-300' },
 };
 
 const READY_STATUSES: JobStatus[] = ['LISTO_PARA_ENTREGA', 'LISTO_PARA_INSTALACION', 'EN_INSTALACION'];
@@ -53,57 +54,57 @@ function CardBody({ job, client }: { job: Job; client?: Client }) {
   const users = useStore((s) => s.users);
   const creator = users.find((u) => u.id === job.createdByUserId);
   const resp = users.find((u) => u.id === job.responsibleUserId);
+  // Rediseño "Pulido" (08/11): el cliente va primero (es lo que se busca en el
+  // tablero) con el contador a su derecha; el N° pasa a texto gris de referencia
+  // (el bronce queda para acciones, no para datos). Las dos variantes de
+  // "muestra" se distinguen por texto, no solo por color.
+  const sample = job.sampleReview === 'in_production'
+    ? { text: 'Muestra en prod.', cls: 'bg-info-bg text-info-text border-info/30', title: 'Muestra en producción — todavía no se avisó al cliente' }
+    : job.sampleReview === 'awaiting'
+      ? { text: 'Muestra: falta OK', cls: 'bg-norm-bg text-norm-text border-norm/40', title: 'Muestra enviada — falta el OK del cliente' }
+      : null;
   return (
     <>
-      <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
-        <span className={clsx(
-          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-tight shrink-0',
-          job.code ? 'bg-brand-100 text-brand-600 border border-brand-300/60' : 'bg-ink-100 text-ink-700 border border-ink-200'
-        )}>
+      <div className="text-sm font-semibold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+        <span className={clsx('font-mono text-meta tracking-tight shrink-0 mr-auto', job.code ? 'text-ink-700' : 'text-ink-700 italic')}>
           {job.code ?? 'Sin N°'}
         </span>
         <CountdownBadge iso={job.committedDate} status={job.status} compact />
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-start gap-1.5 min-w-0">
-        <span className="flex-1 min-w-[7rem] text-sm font-bold text-ink-900 leading-snug break-words line-clamp-2">{client?.name ?? 'Sin cliente'}</span>
-        {(job.sampleReview === 'in_production' || job.sampleReview === 'awaiting') && (
-          <span
-            className={clsx(
-              'shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5',
-              job.sampleReview === 'in_production' ? 'bg-info-bg text-info-text' : 'bg-norm-bg text-norm-text'
-            )}
-            title={job.sampleReview === 'in_production' ? 'Muestra en producción — todavía no se avisó al cliente' : 'Muestra enviada — falta el OK del cliente'}
-          >
-            muestra
+        {sample && (
+          <span className={clsx('shrink-0 inline-flex items-center text-meta font-semibold rounded-full border px-1.5 leading-4', sample.cls)} title={sample.title}>
+            {sample.text}
           </span>
         )}
         {isBlocked(job) && (
           <span
-            className="shrink-0 text-[10px] font-semibold bg-crit-bg text-crit-text rounded px-1.5 py-0.5"
+            className="shrink-0 inline-flex items-center gap-1 text-meta font-semibold bg-crit-bg text-crit-text border border-crit/30 rounded-full px-1.5 leading-4"
             title={`Bloqueado — ${BLOCK_REASON_LABELS[job.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]}`}
           >
-            bloqueado
+            <Lock size={10} aria-hidden />Bloqueado
           </span>
         )}
       </div>
-      {(creator || resp) && (
-        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-ink-700 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
-          {creator && (
-            <span className="inline-flex items-center gap-1 min-w-0">
-              <Avatar name={creator.name} color={creator.avatarColor} size={14} />
-              <span className="truncate">{creator.name.split(' ')[0]}</span>
-            </span>
-          )}
-          {creator && resp && <ArrowRight size={10} className="text-ink-400 shrink-0" aria-hidden />}
-          {resp && (
-            <span className="inline-flex items-center gap-1 min-w-0">
-              <Avatar name={resp.name} color={resp.avatarColor} size={14} />
-              <span className="truncate">{resp.name.split(' ')[0]}</span>
-            </span>
-          )}
-        </div>
-      )}
-      <div className="mt-1.5 text-[10px] font-medium text-ink-700 truncate">{dateLabel(job)}</div>
+      <div className="mt-2 pt-2 border-t border-ink-100 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 min-w-0 text-meta text-ink-700">
+        {(creator || resp) ? (
+          <span className="flex items-center gap-1 min-w-0" title={creator && resp ? `${creator.name} asignó a ${resp.name}` : undefined}>
+            {creator && (
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <Avatar name={creator.name} color={creator.avatarColor} size={10} decorative />
+                <span className="truncate">{creator.name.split(' ')[0]}</span>
+              </span>
+            )}
+            {creator && resp && <ArrowRight size={10} className="text-ink-700 shrink-0" aria-hidden />}
+            {resp && (
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <Avatar name={resp.name} color={resp.avatarColor} size={10} decorative />
+                <span className="truncate font-medium text-ink-800">{resp.name.split(' ')[0]}</span>
+              </span>
+            )}
+          </span>
+        ) : <span />}
+        <span className="shrink-0 whitespace-nowrap">{dateLabel(job)}</span>
+      </div>
     </>
   );
 }
@@ -135,13 +136,13 @@ function KanbanCard({ job }: { job: Job }) {
       }}
       aria-label={`Abrir ficha — ${client?.name ?? 'Sin cliente'}, ${job.name}`}
       className={clsx(
-        'bg-white rounded-lg shadow-card px-3 py-2 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-pop hover:border-ink-200 transition-shadow select-none [-webkit-touch-callout:none]',
+        'bg-white rounded-ctl shadow-card px-3 py-2.5 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-lift hover:border-ink-300 transition-[box-shadow,border-color] select-none [-webkit-touch-callout:none]',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
         // Antes un trabajo bloqueado "saltaba" a la columna Pendiente (Fase 3,
         // 17/09 — bloquear ya no pisa `status`, así que se queda en su columna
         // real) — el borde rojo compensa esa señal visual que se perdió, para
         // que siga siendo imposible no notarlo en el board.
-        isBlocked(job) ? 'border-2 border-crit' : 'border border-ink-100',
+        isBlocked(job) ? 'border-2 border-crit' : 'border border-ink-200/80',
         isDragging && 'opacity-30'
       )}
     >
@@ -155,7 +156,7 @@ function KanbanCard({ job }: { job: Job }) {
 // quedar recortada por el overflow-y-auto de su columna de origen.
 function KanbanCardOverlay({ job, client }: { job: Job; client?: Client }) {
   return (
-    <div className="bg-white rounded-lg border border-ink-200 shadow-pop px-3 py-2 w-60 overflow-hidden scale-105 cursor-grabbing">
+    <div className="bg-white rounded-ctl border border-ink-300 shadow-pop px-3 py-2.5 w-60 overflow-hidden rotate-1 cursor-grabbing">
       <CardBody job={job} client={client} />
     </div>
   );
@@ -172,7 +173,7 @@ const CARD_MAX = 260;
 const CARD_GAP = 8;
 const EMPTY_COL_W = 150;
 // Alto aproximado de una ficha + espacio; con esto se calcula cuántas filas entran.
-const CARD_SLOT_H = 128;
+const CARD_SLOT_H = 150;
 // Encabezado de la columna (título + margen) y relleno del área de fichas.
 const COLUMN_CHROME_H = 52;
 
@@ -218,8 +219,8 @@ function KanbanColumnView({ colKey, label, tone, jobs, className, rows }: { colK
     : undefined;
   return (
     <div className={clsx('flex flex-col h-full min-h-0 min-w-0', className)} style={sizing}>
-      <div className={clsx('flex items-start justify-between gap-2 rounded-lg px-2.5 py-1.5 mb-2', toneCls.header)}>
-        <span className="text-[13px] font-semibold leading-tight">{label}</span>
+      <div className={clsx('flex items-center justify-between gap-2 rounded-ctl px-2.5 py-1.5 mb-2', toneCls.header)}>
+        <span className="text-sm font-semibold leading-tight">{label}</span>
         <span className={clsx('text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center tabular shrink-0', toneCls.count)}>
           {jobs.length}
         </span>
@@ -227,9 +228,9 @@ function KanbanColumnView({ colKey, label, tone, jobs, className, rows }: { colK
       <div
         ref={setNodeRef}
         className={clsx(
-          'flex-1 min-h-0 overflow-y-auto rounded-xl p-2 border-2 transition-colors',
+          'flex-1 min-h-0 overflow-y-auto rounded-card p-2 border-2 border-dashed transition-colors',
           rows ? 'grid content-start' : 'space-y-2',
-          isOver ? 'bg-brand-100/60 border-brand-300' : `${toneCls.body} border-transparent`
+          isOver ? 'bg-brand-50 border-brand-400' : `${toneCls.body} border-transparent`
         )}
         style={rows && jobs.length > 0 ? {
           gridAutoFlow: 'column', gridTemplateRows: `repeat(${Math.min(rows, jobs.length)}, auto)`,
@@ -291,42 +292,42 @@ function FiltersButton({
       <button
         type="button" onClick={() => setOpen((v) => !v)}
         className={clsx(
-          'inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2.5 sm:px-2.5 sm:py-1.5 border transition-colors',
-          activeCount > 0 ? 'bg-brand-100 text-brand-600 border-brand-300' : 'bg-white text-ink-700 border-ink-200 hover:border-ink-300'
+          'inline-flex items-center gap-1.5 text-xs font-semibold rounded-ctl px-3 max-md:min-h-touch md:h-ctl-sm border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          activeCount > 0 ? 'bg-brand-50 text-brand-700 border-brand-400' : 'bg-white text-ink-800 border-ink-300 hover:border-ink-450'
         )}
       >
         <SlidersHorizontal size={13} /> Filtros
         {activeCount > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-brand-500 text-white text-[10px] font-bold tabular">{activeCount}</span>
+          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-brand-600 text-white text-2xs font-bold tabular">{activeCount}</span>
         )}
       </button>
       {open && (
         <div className="absolute right-0 sm:right-auto sm:left-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-pop border border-ink-100 z-30 p-3 space-y-3">
           <div>
-            <label className="block text-[11px] font-medium text-ink-700 mb-1">Prioridad</label>
+            <label className="block text-xs font-medium text-ink-800 mb-1">Prioridad</label>
             <select
               value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
-              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className={selectCls}
             >
               <option value="all">Toda prioridad</option>
-              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-ink-700 mb-1">Responsable</label>
+            <label className="block text-xs font-medium text-ink-800 mb-1">Responsable</label>
             <select
               value={respFilter} onChange={(e) => setRespFilter(e.target.value)}
-              className="w-full text-xs border border-ink-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className={selectCls}
             >
               <option value="all">Todo responsable</option>
               {users.filter((u) => u.active && u.isProducer).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
           <label
-            className="flex items-center gap-1.5 text-xs text-ink-700 pt-1 border-t border-ink-100"
-            title="Entregados hace 3 días o más — se ocultan por default para no acumular en el board"
+            className="flex items-center gap-2 text-xs text-ink-800 pt-2 border-t border-ink-100 max-md:min-h-touch"
+            title="Entregados hace 5 días o más — se ocultan por default para no acumular en el board"
           >
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" />
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="w-4 h-4 accent-brand-600" />
             Ver archivados (Entregado)
           </label>
           {activeCount > 0 && (
@@ -430,8 +431,8 @@ export function KanbanPage() {
     <div className="p-4 sm:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-xl font-display font-bold text-ink-900">Kanban</h1>
-          <span className="text-xs font-semibold text-ink-700 bg-ink-100 rounded-full px-2 py-0.5 tabular">{activeCount} trabajos activos</span>
+          <h1 className="text-xl font-display font-bold text-ink-900 tracking-tight">Kanban</h1>
+          <span className="text-xs font-semibold text-ink-800 bg-white border border-ink-200 rounded-full px-2.5 py-0.5 tabular">{activeCount} trabajos activos</span>
           <FiltersButton
             priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
             respFilter={respFilter} setRespFilter={setRespFilter} users={users}

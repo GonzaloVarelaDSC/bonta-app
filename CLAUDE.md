@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**, y la 85; la 72 es el cierre anterior).
+la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**, la 85 y la 86 (rediseño visual); la 72 es el cierre anterior).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5847,3 +5847,41 @@ trae un hook de Stop que solo actúa si existe `.taste-skill/build.json`). Pesa 
 efectos). En la app de Bonta mandan las decisiones de la sección 4 (Inter, paleta,
 herramienta de trabajo): no aplicarla a pantallas de la app salvo que Gonzalo la pida
 explícitamente. Sí sirve para la web pública del estudio.
+
+---
+
+## 86. Actualización 10/11 — rediseño visual (auditoría + 3 propuestas + juez → versión final)
+
+Gonzalo pidió auditar la app con la skill taste + design-critique/accessibility-review/
+design-system y comparar propuestas sin tocar main. Proceso: 3 agentes de auditoría
+(informes en el scratchpad de la sesión: crítica visual, accesibilidad WCAG, sistema),
+3 propuestas en worktrees (A pulido, B hoja de taller, C denso), un juez ciego que eligió
+A como base, y la versión final = A + de C (cabecera compacta de la ficha, tarjeta de
+Trabajos en celular, Carga de diseño en franja fina, subtítulo del Dashboard con el dato
+del día) + de B (tira Prioridad/Estado/Entrega/Muestra/Riesgo en la ficha, N° como sello
+`CodeStamp` en `Common/EditableCode.tsx`). Comparación publicada como artifact privado.
+
+Qué cambió (todo visual, sin tocar store/lógica/rutas/permisos/Supabase):
+- **Sistema**: `Common/ui.ts` (recetas de botón primario bronce/secundario/fantasma/peligro,
+  campo, select, rótulo). Tokens nuevos en `tailwind.config.js` (sin borrar ninguno):
+  `brand-50`/`brand-200` (se usaban y no existían → 15 fondos/hovers que no se veían),
+  `ink-450` (borde de campos 3:1), tamaños `meta`/`2xs`/`kpi`, radios `ctl`/`card`/`modal`,
+  alturas 28/36/44, sombra `lift`.
+- **Sin emojis** en prioridad/contador/bloqueo/muestra (punto o ícono lucide). Gonzalo
+  dudó pero lo aceptó; si pide volverlos, es en `Common/Badges.tsx`.
+- **Contador en días** (`lib/dates.ts`): "Vence hoy", "Mañana", "Faltan N días",
+  "Atrasado N días" (antes horas y minutos; las entregas son solo fecha).
+- **Cubos del Dashboard**: flujo en neutro con punto de color, atención pintada solo si
+  > 0. El rótulo usa todo el ancho y el punto/ícono va al lado del número — pedido
+  explícito de Gonzalo: **las palabras nunca se parten con guion** (`hyphens-none`).
+- **Ficha**: prioridad y estado aparecen una sola vez (en la tira), botones
+  Exportar · Cancelar · Bloquear en una fila.
+- **Tacho de Trabajos rojo siempre** (`crit-text`, §13.4 sigue vigente).
+- **Kanban**: se mantiene §78.4 (fichas llenan filas y siguen al costado);
+  `CARD_SLOT_H` 128 → 150 porque la ficha bloqueada se cortaba.
+- Menú: "Trabajos" ya no se marca junto con Carga rápida (`end`), se sacó
+  "Fase 1 — MVP interno".
+
+Pendientes conocidos: en celular se corta el filtro "Todo responsable"; en el Kanban el
+N° y el contador a veces bajan a 2 líneas; regenerar capturas del Manual
+(`video/generador/manual.mjs`) — cambiaron Dashboard, ficha, Trabajos y Kanban.

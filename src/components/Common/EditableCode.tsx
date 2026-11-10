@@ -2,24 +2,41 @@ import { useState } from 'react';
 import type { Job } from '../../types';
 import { friendlyError } from '../../lib/errors';
 
-type EditableCodeSize = 'sm' | 'md';
+type EditableCodeSize = 'sm' | 'md' | 'stamp';
 
 const READ_ONLY_CLS: Record<EditableCodeSize, string> = {
   sm: 'font-mono text-xs text-ink-700',
-  md: 'font-mono text-sm font-semibold text-ink-900',
+  md: 'font-mono text-[13px] font-medium text-ink-700',
+  stamp: 'font-mono text-[13px] font-semibold text-ink-900',
 };
 const INPUT_CLS: Record<EditableCodeSize, string> = {
   sm: 'font-mono text-xs w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500',
   md: 'font-mono text-sm w-28 border border-brand-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500',
+  stamp: 'font-mono text-[13px] w-32 border-0 bg-transparent px-0 py-0 focus:outline-none',
 };
 const WITH_CODE_CLS: Record<EditableCodeSize, string> = {
-  sm: 'font-mono text-xs text-ink-700 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300',
-  md: 'font-mono text-sm font-semibold text-ink-900 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap',
+  sm: 'font-mono text-xs text-ink-700 hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-450 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+  md: 'font-mono text-[13px] font-medium text-ink-700 hover:text-brand-600 underline decoration-dotted underline-offset-4 decoration-ink-450 whitespace-nowrap rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+  stamp: 'font-mono text-[13px] font-semibold text-ink-900 hover:text-brand-700 whitespace-nowrap rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
 };
 const WITHOUT_CODE_CLS: Record<EditableCodeSize, string> = {
-  sm: 'text-xs text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300',
-  md: 'text-sm text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-300 whitespace-nowrap',
+  sm: 'text-xs text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-450 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+  md: 'text-sm text-ink-700 italic hover:text-brand-600 underline decoration-dotted underline-offset-2 decoration-ink-450 whitespace-nowrap rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+  stamp: 'text-[13px] text-ink-700 italic hover:text-brand-700 whitespace-nowrap rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
 };
+
+/**
+ * N° de trabajo como "sello" (rediseño 08/11): pastilla oscura "N°" + número en
+ * mono, como en la OT impresa. Sigue siendo editable igual que EditableCode.
+ */
+export function CodeStamp(props: { job: Job; editable: boolean; onSave: (code: string) => void | Promise<void>; stopClickPropagation?: boolean }) {
+  return (
+    <span className="inline-flex items-stretch rounded-md border border-ink-900 overflow-hidden shrink-0 bg-white">
+      <span className="bg-ink-900 text-white text-2xs font-bold tracking-wide px-1.5 flex items-center" aria-hidden>N°</span>
+      <span className="px-1.5 py-px flex items-center"><span className="sr-only">N° de trabajo </span><EditableCode {...props} size="stamp" /></span>
+    </span>
+  );
+}
 
 /**
  * Input inline para cargar/editar el N° de trabajo / orden de Copernico —

@@ -28,6 +28,9 @@ export default {
           600: '#7d7979',
           500: '#9b9797',
           400: '#bab6b6',
+          // Borde de campos editables (input/select): el gris más claro que llega a
+          // 3:1 sobre blanco (WCAG 1.4.11). ink-200/300 quedan para separadores.
+          450: '#8f8b8b',
           300: '#d7d3d3',
           200: '#eae7e7',
           100: '#f0eded',
@@ -41,7 +44,11 @@ export default {
           500: '#a06f24',
           400: '#c28d41',
           300: '#e1ad66',
+          // 200 y 50 se usaban (hovers, fondos de chips) y no existían: Tailwind no
+          // generaba esas clases. Agregados en el rediseño "Pulido" (08/11).
+          200: '#f0d3a6',
           100: '#fff3e4',
+          50: '#fdf8f1',
         },
         crit: { DEFAULT: '#e0393e', bg: '#fdecec', text: '#8f1d21' },
         urg: { DEFAULT: '#e8792e', bg: '#fef1e6', text: '#93430f' },
@@ -61,8 +68,23 @@ export default {
         review: { DEFAULT: '#8454d6', bg: '#f3eefc', text: '#5b32a8' },
         site: { DEFAULT: '#0f9488', bg: '#e6f7f5', text: '#0b6d63' },
       },
+      // Escala cerrada (rediseño 08/11): 10 solo para contadores dentro de una
+      // pieza, 11 = meta/eyebrow en escritorio, el resto la escala de Tailwind.
+      fontSize: {
+        '2xs': ['10px', { lineHeight: '14px' }],
+        meta: ['11px', { lineHeight: '16px' }],
+        kpi: ['24px', { lineHeight: '1' }],
+      },
+      // Tres roles de radio: control (botón, campo), tarjeta, modal. Pills = full.
+      borderRadius: { ctl: '0.5rem', card: '0.75rem', modal: '1rem' },
+      // Alturas de control 28 / 36 / 44 y el mínimo táctil del celular.
+      height: { 'ctl-sm': '28px', ctl: '36px', 'ctl-lg': '44px' },
+      minHeight: { touch: '44px', 'ctl-sm': '28px', ctl: '36px' },
+      minWidth: { touch: '44px' },
       boxShadow: {
         card: '0 1px 2px rgba(15,23,32,0.06), 0 1px 1px rgba(15,23,32,0.04)',
+        // Hover de tarjetas clickeables: apenas más de elevación, sin moverlas.
+        lift: '0 4px 14px rgba(15,23,32,0.08), 0 1px 2px rgba(15,23,32,0.06)',
         pop: '0 12px 32px rgba(15,23,32,0.16), 0 2px 8px rgba(15,23,32,0.08)',
       },
       // Entrada sobria del aviso flotante de cambio de estado — apenas un fade con

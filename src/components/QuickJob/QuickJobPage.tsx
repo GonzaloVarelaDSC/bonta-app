@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, ArrowRight, Lightbulb } from 'lucide-react';
+import { Zap, ArrowRight, Lightbulb, Info } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { visibleJobTypes, ASSIGN_ALSO_NAMES } from '../../data/catalog';
 import { PRIORITY_META, datePriority } from '../../lib/priority';
@@ -8,6 +8,7 @@ import { friendlyError } from '../../lib/errors';
 import { ProductsEditor } from '../Common/ProductsEditor';
 import { Avatar } from '../Common/Badges';
 import { ConfirmDialog } from '../Common/Modal';
+import { btn, fieldCls, selectCls, labelCls as sharedLabelCls } from '../Common/ui';
 import { CopernicoImportBox } from './CopernicoImport';
 import { canEditAnyJob } from '../../lib/permissions';
 import type { CopernicoImport } from '../../lib/copernicoImport';
@@ -25,8 +26,10 @@ function emptyProduct(): Product {
   return { id: crypto.randomUUID(), label: '', materialIds: [], sizeItems: [{ quantity: '', width: '', height: '' }], notes: '', checked: false };
 }
 
-const inputCls = 'w-full border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
-const labelCls = 'block text-xs font-medium text-ink-700 mb-1.5';
+const inputCls = fieldCls;
+// El textarea comparte borde y foco con los campos, pero sin alto fijo.
+const textareaCls = 'w-full rounded-ctl border border-ink-450 bg-white px-3 py-2 text-sm text-ink-900 transition-colors hover:border-ink-700 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 resize-y';
+const labelCls = sharedLabelCls;
 const LAST_TYPE_KEY = 'bonta-qj-last-type';
 
 // Fecha local (no UTC) — con .toISOString() a secas la fecha puede correrse un
@@ -204,10 +207,10 @@ export function QuickJobPage() {
   return (
     <div className="p-4 sm:p-5 max-w-3xl mx-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <div className="flex items-center gap-2 mb-1">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-brand-100 text-brand-600 shrink-0"><Zap size={15} /></span>
-        <h1 className="text-lg font-display font-bold text-ink-900">Carga rápida</h1>
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-ctl bg-brand-100 text-brand-700 shrink-0"><Zap size={15} aria-hidden /></span>
+        <h1 className="text-xl font-display font-bold text-ink-900 tracking-tight">Carga rápida</h1>
       </div>
-      <p className="text-sm text-ink-700 mb-4">Todo en una sola pantalla — pensada para cargar un trabajo mientras estás al teléfono o el cliente está al lado.</p>
+      <p className="text-sm text-ink-700 mb-5">Lo único obligatorio es una medida. Si falta otro dato, te avisa antes de crear y lo completás después en la ficha.</p>
 
       <div className="space-y-4">
         <CopernicoImportBox onImport={applyImport} onUndo={undoImport} />
@@ -240,7 +243,7 @@ export function QuickJobPage() {
             <input ref={nameFieldRef} id="qj-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: 20 carteles para sucursales" autoComplete="off" enterKeyHint="next" /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label htmlFor="qj-type" className={labelCls}>Tipo de trabajo</label>
-              <select id="qj-type" className={inputCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
+              <select id="qj-type" className={selectCls} value={jobTypeId} onChange={(e) => selectJobType(e.target.value as JobTypeId)}>
                 {jobTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
@@ -250,7 +253,7 @@ export function QuickJobPage() {
                 {DATE_PRESETS.map((p) => (
                   <button
                     type="button" key={p.label} onClick={() => changeDate(addDaysLocal(p.days))}
-                    className={`text-xs sm:text-[11px] px-3 py-2 sm:px-2 sm:py-1 rounded-full border ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-200 text-ink-700 hover:border-ink-300'}`}
+                    className={`text-xs px-3 max-sm:min-h-touch sm:h-7 rounded-full border font-medium ${committedDate === addDaysLocal(p.days) ? 'bg-ink-950 text-white border-ink-950' : 'border-ink-300 text-ink-800 hover:border-ink-450'}`}
                   >
                     {p.label}
                   </button>
@@ -260,13 +263,13 @@ export function QuickJobPage() {
           </div>
           <div><label htmlFor="qj-description" className={labelCls}>Descripción y conversación con el cliente</label>
             <p id="qj-description-help" className="text-[11px] text-ink-700 -mt-0.5 mb-1">Qué hay que producir. También podés pegar acá el mail o el chat de WhatsApp con el cliente, tal cual — queda guardado en la ficha.</p>
-            <textarea id="qj-description" aria-describedby="qj-description-help" className={inputCls + ' resize-y'} rows={4} value={description} onChange={(e) => setDescription(e.target.value)}
+            <textarea id="qj-description" aria-describedby="qj-description-help" className={textareaCls} rows={4} value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Ej.: 3 corpóreos en acrílico para la vidriera… o pegá la conversación completa" /></div>
           <div><label htmlFor="qj-priority" className={labelCls}>Prioridad</label>
-            <select id="qj-priority" className={inputCls} value={priority} onChange={(e) => changePriority(e.target.value as Priority)}>
-              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label} — {v.sla}</option>)}
+            <select id="qj-priority" className={selectCls} value={priority} onChange={(e) => changePriority(e.target.value as Priority)}>
+              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label} — {v.sla}</option>)}
             </select>
-            <p className="text-[11px] text-ink-700 mt-1">
+            <p className="text-meta text-ink-700 mt-1">
               {priorityTouched
                 ? 'La elegiste a mano — la fecha ya no la cambia sola.'
                 : 'Se sugiere sola según la fecha de entrega. Podés forzarla (un trabajo grande puede ser crítico aunque falten días).'}
@@ -331,13 +334,13 @@ export function QuickJobPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-ink-700 mt-1">Opcional — gente del taller / instaladores que también trabaja en este pedido.</p>
+            <p className="text-meta text-ink-700 mt-1">Opcional — gente del taller / instaladores que también trabaja en este pedido.</p>
           </div>
         </Section>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-white/95 backdrop-blur border-t border-ink-100 px-4 sm:px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3 z-20">
-        <span className="min-w-0 text-[11px] sm:text-xs leading-snug text-ink-700">
+        <span className="min-w-0 text-xs leading-snug text-ink-900 flex items-start gap-1.5"><Info size={14} aria-hidden className="shrink-0 mt-px text-ink-700" />
           {!hasSizeData
             ? 'Cargá al menos una medida (cantidad, ancho o alto) para poder crear el trabajo'
             : softWarnings.length > 0
@@ -348,7 +351,7 @@ export function QuickJobPage() {
           {submitError && <span className="text-xs text-crit-text">{submitError}</span>}
           <button
             disabled={!hasSizeData || submitting} onClick={handleSubmitClick}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold bg-brand-500 text-white px-4 sm:px-5 py-3 sm:py-2.5 rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={btn('primary', 'lg')}
           >
             <Zap size={15} /> {submitting ? 'Creando...' : 'Crear trabajo'}
           </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowRight, Moon, Trash2 } from 'lucide-react';
 import type { Job } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
@@ -51,26 +51,30 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
           const client = clients.find((c) => c.id === j.clientId);
           const resp = users.find((u) => u.id === j.responsibleUserId);
           return (
-            <li key={j.id} className="px-4 py-3 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} />
-                <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
+            // Celular (rediseño 08/11): nombre primero (es el link a la ficha),
+            // debajo cliente · N° · prioridad, y una fila de estado +
+            // responsable + tacho. Sin el renglón de la flecha.
+            <li key={j.id} className="px-4 py-3">
+              <div className="flex items-start gap-2">
+                <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} className="flex-1 min-w-0 text-left text-[15px] font-semibold text-ink-900 leading-snug break-words focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+                  {j.name}{isSilent(j) && <Moon size={12} aria-label="Más de 48h sin movimiento" className="inline ml-1.5 -mt-0.5 text-wait-text" />}
+                </button>
                 {isClosedStatus(j.status)
-                  ? <span className="text-xs text-ink-700 ml-auto">{fmtDate(j.committedDate)}</span>
-                  : <span className="ml-auto"><CountdownBadge iso={j.committedDate} status={j.status} compact /></span>}
+                  ? <span className="text-xs text-ink-700 whitespace-nowrap mt-0.5">{fmtDate(j.committedDate)}</span>
+                  : <CountdownBadge iso={j.committedDate} status={j.status} compact />}
               </div>
-              <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-                <span className="block text-sm font-semibold text-ink-900 break-words">{client?.name ?? '—'}</span>
-                <span className="block text-sm text-ink-700 break-words">{j.name}{isSilent(j) && <span className="ml-1.5" title="Más de 48h sin movimiento">💤</span>}</span>
-              </button>
-              <div className="flex items-center gap-2 flex-wrap">
-                <StatusSelect status={j.status} options={statusOptionsFor(j)} onChange={(st) => tryChangeJobStatus(j, st, setStatus, currentUser!.id)} />
+              <div className="mt-1 flex items-center gap-x-2 gap-y-1 flex-wrap text-sm">
+                <span className="font-medium text-ink-800 break-words">{client?.name ?? '—'}</span>
+                <span className="text-ink-700" aria-hidden>·</span>
+                <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
+                <span className="text-ink-700" aria-hidden>·</span>
+                <PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} />
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <StatusSelect size="sm" className="min-w-0 shrink" status={j.status} options={statusOptionsFor(j)} onChange={(st) => tryChangeJobStatus(j, st, setStatus, currentUser!.id)} />
                 {isBlocked(j) && <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[j.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />}
-                {resp && <span className="flex items-center gap-1.5 text-xs text-ink-700"><Avatar name={resp.name} color={resp.avatarColor} size={20} />{resp.name.split(' ')[0]}</span>}
-                <span className="ml-auto flex items-center gap-2">
-                  <button type="button" onClick={() => navigate(`/trabajos/${j.id}`)} aria-label={`Ver ficha de ${j.name}`} className="text-ink-700 hover:text-brand-600 p-2.5 -my-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><ArrowRight size={16} /></button>
-                  {canDelete && <button type="button" onClick={() => setConfirmDelete(j)} aria-label={`Eliminar ${j.name}`} className="text-crit hover:text-crit-text p-2.5 -my-1 -mr-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Trash2 size={16} /></button>}
-                </span>
+                {resp && <span className="flex items-center gap-1.5 text-xs text-ink-800 shrink-0"><Avatar name={resp.name} color={resp.avatarColor} size={20} decorative />{resp.name.split(' ')[0]}</span>}
+                {canDelete && <button type="button" onClick={() => setConfirmDelete(j)} aria-label={`Eliminar ${j.name}`} className="ml-auto text-crit-text hover:bg-crit-bg w-11 h-11 -mr-2 inline-flex items-center justify-center rounded-ctl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Trash2 size={16} /></button>}
               </div>
             </li>
           );
@@ -80,21 +84,21 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
       <ScrollFadeX className="overflow-x-auto">
         <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-ink-700 border-b border-ink-100">
+          <tr className="text-left text-xs font-medium text-ink-700 bg-ink-50/70 border-b border-ink-200">
             <th className="px-4 py-2.5 font-medium">Prioridad</th>
-            <th className="px-2 py-2.5 font-medium">N°</th>
-            <th className="px-2 py-2.5 font-medium">Cliente</th>
-            <th className="px-2 py-2.5 font-medium">Trabajo</th>
-            <th className="px-2 py-2.5 font-medium">Estado</th>
-            <th className="px-2 py-2.5 font-medium">Responsable</th>
-            <th className="px-2 py-2.5 font-medium">Entrega</th>
-            {!compact && <th className="px-2 py-2.5 font-medium">Actualizado</th>}
+            <th className="px-2.5 py-2.5 font-medium">N°</th>
+            <th className="px-2.5 py-2.5 font-medium">Cliente</th>
+            <th className="px-2.5 py-2.5 font-medium">Trabajo</th>
+            <th className="px-2.5 py-2.5 font-medium">Estado</th>
+            <th className="px-2.5 py-2.5 font-medium">Responsable</th>
+            <th className="px-2.5 py-2.5 font-medium">Entrega</th>
+            {!compact && <th className="px-2.5 py-2.5 font-medium">Actualizado</th>}
             {/* Pegada al borde derecho del scroll horizontal (sticky) — en una
                 tabla de 8-9 columnas el tacho de eliminar quedaba al final,
                 fuera de la vista, y había que scrollear hasta el fondo para
                 encontrarlo (Gonzalo, 22/09). Con `sticky right-0` queda
                 siempre visible sin importar cuánto se scrollee la tabla. */}
-            <th className="px-2 py-2.5 font-medium sticky right-0 bg-white"><span className="sr-only">Acciones</span></th>
+            <th className="px-2 py-2.5 font-medium sticky right-0 bg-ink-50"><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
@@ -110,20 +114,21 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                   if ((e.target as HTMLElement).closest('select, button, input')) return;
                   navigate(`/trabajos/${j.id}`);
                 }}
-                className="group border-b border-ink-50 last:border-0 hover:bg-ink-50/70 cursor-pointer transition-colors"
+                className="group border-b border-ink-100 last:border-0 hover:bg-ink-50 cursor-pointer transition-colors"
               >
-                <td className="px-4 py-2.5"><div className="flex flex-col items-start gap-0.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} /></div></td>
-                <td className="px-2 py-2.5 whitespace-nowrap">
+                <td className="px-4 py-3"><div className="flex flex-col items-start gap-0.5"><PriorityBadge priority={effectivePriority(j)} size="sm" /><EscalatedHint job={j} /></div></td>
+                <td className="px-2.5 py-3 whitespace-nowrap">
                   <EditableCode job={j} editable={canEditCode} onSave={(code) => setJobCode(j.id, code, currentUser!.id)} stopClickPropagation />
                 </td>
-                <td className="px-2 py-2.5 text-ink-700 max-w-[150px] truncate" title={client?.name}>{client?.name}</td>
-                <td className="px-2 py-2.5 text-ink-900 font-medium max-w-[260px] truncate">
+                <td className="px-2.5 py-3 text-ink-800 max-w-[140px] truncate" title={client?.name}>{client?.name}</td>
+                <td className="px-2.5 py-3 text-ink-900 font-semibold max-w-[220px] truncate">
                   {j.name}
-                  {silent && <span className="ml-1.5 text-wait-text" title="Más de 48h sin movimiento">💤</span>}
+                  {silent && <Moon size={12} aria-label="Más de 48h sin movimiento" className="inline ml-1.5 -mt-0.5 text-wait-text" />}
                 </td>
-                <td className="px-2 py-2.5">
+                <td className="px-2.5 py-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <StatusSelect
+                      size="sm"
                       status={j.status} options={statusOptionsFor(j)}
                       onChange={(s) => tryChangeJobStatus(j, s, setStatus, currentUser!.id)}
                     />
@@ -132,21 +137,21 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                     )}
                   </div>
                 </td>
-                <td className="px-2 py-2.5">
-                  {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} /><span className="text-xs text-ink-700">{resp.name.split(' ')[0]}</span></div>}
+                <td className="px-2.5 py-3">
+                  {resp && <div className="flex items-center gap-1.5 whitespace-nowrap"><Avatar name={resp.name} color={resp.avatarColor} size={20} decorative /><span className="text-xs text-ink-800">{resp.name.split(' ')[0]}</span></div>}
                 </td>
-                <td className="px-2 py-2.5">
+                <td className="px-2.5 py-3">
                   {isClosedStatus(j.status)
-                    ? <span className="text-xs text-ink-700">{fmtDate(j.committedDate)}</span>
-                    : <CountdownBadge iso={j.committedDate} status={j.status} />}
+                    ? <span className="text-xs text-ink-700 whitespace-nowrap">{fmtDate(j.committedDate)}</span>
+                    : <CountdownBadge iso={j.committedDate} status={j.status} compact />}
                 </td>
-                {!compact && <td className="px-2 py-2.5 text-xs text-ink-700 whitespace-nowrap">{fmtShort(j.lastActivityAt)}</td>}
-                <td className="px-2 py-2.5 sticky right-0 bg-white group-hover:bg-ink-50/70 transition-colors">
-                  <div className="flex items-center gap-2">
+                {!compact && <td className="px-2.5 py-3 text-xs text-ink-700 whitespace-nowrap tabular">{fmtShort(j.lastActivityAt)}</td>}
+                <td className="px-2 py-3 sticky right-0 bg-white group-hover:bg-ink-50 transition-colors">
+                  <div className="flex items-center gap-0.5">
                     <button
                       type="button" onClick={() => navigate(`/trabajos/${j.id}`)}
                       aria-label={`Ver ficha de ${j.name}`}
-                      className="text-ink-700 hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
+                      className="w-7 h-7 inline-flex items-center justify-center text-ink-700 hover:text-brand-600 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-ctl"
                     >
                       <ArrowRight size={15} />
                     </button>
@@ -154,7 +159,7 @@ export function JobsTable({ jobs, compact }: { jobs: Job[]; compact?: boolean })
                       <button
                         type="button" onClick={() => setConfirmDelete(j)}
                         aria-label={`Eliminar ${j.name}`}
-                        className="text-crit hover:text-crit-text focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
+                        className="w-7 h-7 inline-flex items-center justify-center text-crit-text hover:bg-crit-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-ctl"
                       >
                         <Trash2 size={15} />
                       </button>

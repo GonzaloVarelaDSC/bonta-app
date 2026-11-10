@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { TrendingUp } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { TrendingUp, Timer, AlertTriangle, Lock, ShieldAlert } from 'lucide-react';
 import type { Job, Priority, RiskLevel, JobStatus, SampleReview, QuoteStatus } from '../../types';
 import { PRIORITY_META, chosenPriority, isEscalatedByDate } from '../../lib/priority';
 import { RISK_META } from '../../lib/risk';
@@ -7,29 +8,42 @@ import { STATUS_LABELS, SAMPLE_REVIEW_META, QUOTE_STATUS_LABELS } from '../../da
 import { countdown, fmtDate } from '../../lib/dates';
 import { isClosedStatus } from '../../lib/statusChange';
 
+// Rediseño "Pulido" (08/11): todos los pills comparten una misma receta —
+// fondo claro + texto -text + borde fino + punto/ícono adelante, rounded-full.
+// Sin emojis (cambiaban de aspecto según el sistema operativo).
+
 const TONE_CLASSES: Record<string, string> = {
-  crit: 'bg-crit-bg text-crit-text',
-  urg: 'bg-urg-bg text-urg-text',
-  norm: 'bg-norm-bg text-norm-text',
-  plan: 'bg-plan-bg text-plan-text',
-  wait: 'bg-wait-bg text-wait-text',
+  crit: 'bg-crit-bg text-crit-text border-crit/30',
+  urg: 'bg-urg-bg text-urg-text border-urg/40',
+  norm: 'bg-norm-bg text-norm-text border-norm/40',
+  plan: 'bg-plan-bg text-plan-text border-plan/30',
+  wait: 'bg-wait-bg text-wait-text border-wait/30',
+  info: 'bg-info-bg text-info-text border-info/30',
 };
 
 const PRIORITY_TONE: Record<Priority, keyof typeof TONE_CLASSES> = {
   CRITICO: 'crit', URGENTE: 'urg', NORMAL: 'norm', PLANIFICADO: 'plan', EN_ESPERA: 'wait',
 };
 
+// Punto de color de cada prioridad. urg/norm usan su variante -text: el DEFAULT
+// no llega a 3:1 como elemento gráfico.
+const PRIORITY_DOT: Record<Priority, string> = {
+  CRITICO: 'bg-crit', URGENTE: 'bg-urg-text', NORMAL: 'bg-norm-text', PLANIFICADO: 'bg-plan', EN_ESPERA: 'bg-wait',
+};
+
+
+function Dot({ cls }: { cls: string }) {
+  return <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', cls)} aria-hidden />;
+}
+
+const PILL = 'inline-flex items-center gap-1.5 rounded-full border font-semibold whitespace-nowrap';
+const PILL_SIZE = { sm: 'text-meta px-2 py-0.5', md: 'text-xs px-2.5 py-1' } as const;
+
 export function PriorityBadge({ priority, size = 'md' }: { priority: Priority; size?: 'sm' | 'md' }) {
   const meta = PRIORITY_META[priority];
   return (
-    <span
-      title={meta.sla}
-      className={clsx(
-        'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
-        TONE_CLASSES[PRIORITY_TONE[priority]],
-        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
-      )}>
-      <span aria-hidden>{meta.emoji}</span>{meta.label}
+    <span title={meta.sla} className={clsx(PILL, TONE_CLASSES[PRIORITY_TONE[priority]], PILL_SIZE[size])}>
+      <Dot cls={PRIORITY_DOT[priority]} />{meta.label}
     </span>
   );
 }
@@ -40,18 +54,25 @@ export function EscalatedHint({ job }: { job: Job }) {
   const chosen = PRIORITY_META[chosenPriority(job)].label;
   return (
     <span title={`Se cargó como ${chosen}; subió sola porque se acerca la fecha de entrega.`}
-      className="inline-flex items-center gap-0.5 text-[10px] font-medium text-ink-700 whitespace-nowrap">
-      <TrendingUp size={11} aria-hidden /> por fecha <span className="sr-only">(se cargó como {chosen})</span>
+      className="inline-flex items-center gap-0.5 text-meta font-medium text-ink-700 whitespace-nowrap">
+      <TrendingUp size={12} aria-hidden /> por fecha <span className="sr-only">(se cargó como {chosen})</span>
     </span>
   );
 }
 
+// Riesgo: neutro y con rótulo propio, para no confundirse con un pill de
+// prioridad (antes era un "● Alto" naranja idéntico a "Urgente").
 export function RiskBadge({ risk }: { risk: RiskLevel }) {
   const meta = RISK_META[risk];
-  const tone = risk === 'CRITICO' ? 'crit' : risk === 'ALTO' ? 'urg' : risk === 'MEDIO' ? 'norm' : 'plan';
+  const strong = risk === 'CRITICO' || risk === 'ALTO';
   return (
-    <span className={clsx('inline-flex items-center gap-1 rounded-full text-[11px] font-semibold px-2 py-0.5', TONE_CLASSES[tone])}>
-      <span aria-hidden>{meta.emoji}</span>{meta.label}
+    <span
+      title="Riesgo estimado según plazo, instalación y bloqueos"
+      className={clsx('inline-flex items-center gap-1 rounded-full border bg-white text-xs font-medium px-2.5 py-1 whitespace-nowrap',
+        strong ? 'border-ink-300 text-ink-900' : 'border-ink-200 text-ink-700')}
+    >
+      <ShieldAlert size={13} aria-hidden className={strong ? 'text-urg-text' : 'text-ink-700'} />
+      Riesgo {meta.label.toLowerCase()}
     </span>
   );
 }
@@ -59,26 +80,10 @@ export function RiskBadge({ risk }: { risk: RiskLevel }) {
 type StatusTone = 'crit' | 'urg' | 'info' | 'norm' | 'review' | 'wait' | 'plan' | 'site' | 'done';
 
 // Mismas 7 macro-etapas y mismo color que el Kanban (KANBAN_COLUMNS en
-// data/catalog.ts) — antes esta tabla solo tenía 5 tonos y agrupaba Producción/
-// Control de calidad/Instalación en el mismo azul "info", así que alguien que
-// aprendía "dorado = en producción" mirando el Kanban veía ese mismo trabajo en
-// azul en la Tabla/Dashboard/ficha (AUDITORIA_UXUI_2026-09-15.md, ítem #8).
-// `FALTA_INFORMACION` es la única excepción a propósito: el Kanban no tiene
-// columna propia para ese estado (se mezcla dentro de "Pendiente", tono `wait`,
-// porque ahí no hace falta resaltarlo — se ve por separado en otro lado), pero
-// fuera del Kanban sí importa que salte a la vista (naranja `urg`) porque no
-// tiene ninguna columna/sección propia donde ya esté agrupado. Iguales de un
-// vistazo, como en Linear/GitHub/Trello: gris = no arrancado, azul = diseño,
-// dorado = producción, violeta = control de calidad, verde = listo, verde
-// azulado = instalación, gris oscuro = entregado.
-// `BLOQUEADO` ya NO es un valor de `JobStatus` (Fase 3, 17/09) — bloquear un
-// trabajo ya no pisa su estado real (antes `blockJob` mandaba `status:
-// 'BLOQUEADO'` y `unblockJob` lo devolvía siempre a `EN_PRODUCCION` sin
-// importar en qué etapa estuviera en realidad — un trabajo bloqueado en
-// Control de calidad "perdía" su etapa real al desbloquearse). "Bloqueado" es
-// ahora un estado ortogonal, derivado de `blockRecords` (`isBlocked()` en
-// `lib/selectors.ts`) — se muestra como badge/indicador aparte (`BlockedBadge`
-// acá abajo), nunca reemplazando el estado real.
+// data/catalog.ts). `FALTA_INFORMACION` es la única excepción a propósito: fuera
+// del Kanban importa que salte a la vista (naranja `urg`). "Bloqueado" no es un
+// estado (Fase 3, 17/09): se muestra con `BlockedBadge`, nunca reemplazando el
+// estado real.
 const STATUS_TONE: Record<JobStatus, StatusTone> = {
   PENDIENTE: 'wait',
   FALTA_INFORMACION: 'urg',
@@ -97,27 +102,26 @@ export function statusTone(status: JobStatus): StatusTone {
 
 const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
   crit: 'border-crit/30 bg-crit-bg text-crit-text',
-  urg: 'border-urg/30 bg-urg-bg text-urg-text',
+  urg: 'border-urg/40 bg-urg-bg text-urg-text',
   info: 'border-info/30 bg-info-bg text-info-text',
-  norm: 'border-norm/30 bg-norm-bg text-norm-text',
+  norm: 'border-norm/40 bg-norm-bg text-norm-text',
   review: 'border-review/30 bg-review-bg text-review-text',
   wait: 'border-wait/30 bg-wait-bg text-wait-text',
   plan: 'border-plan/30 bg-plan-bg text-plan-text',
   site: 'border-site/30 bg-site-bg text-site-text',
-  // Sin token nuevo — "Entregado" ya se ve gris neutro en el Kanban (COLUMN_TONE_CLASSES.done
-  // en KanbanPage.tsx), acá se arma con las mismas clases `ink-*` que usa el resto de la app.
   done: 'border-ink-300 bg-ink-100 text-ink-700',
 };
 
 const STATUS_DOT_CLASSES: Record<StatusTone, string> = {
-  crit: 'bg-crit', urg: 'bg-urg', info: 'bg-info', norm: 'bg-norm', review: 'bg-review',
-  wait: 'bg-wait', plan: 'bg-plan', site: 'bg-site', done: 'bg-ink-500',
+  crit: 'bg-crit', urg: 'bg-urg-text', info: 'bg-info', norm: 'bg-norm-text', review: 'bg-review',
+  wait: 'bg-wait', plan: 'bg-plan', site: 'bg-site', done: 'bg-ink-700',
 };
 
-export function StatusBadge({ status }: { status: JobStatus }) {
+export function StatusBadge({ status, size = 'md' }: { status: JobStatus; size?: 'sm' | 'md' }) {
+  const tone = statusTone(status);
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 border', STATUS_TONE_CLASSES[statusTone(status)])}>
-      <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT_CLASSES[statusTone(status)])} aria-hidden />
+    <span className={clsx(PILL, STATUS_TONE_CLASSES[tone], PILL_SIZE[size])}>
+      <Dot cls={STATUS_DOT_CLASSES[tone]} />
       {STATUS_LABELS[status]}
     </span>
   );
@@ -128,54 +132,71 @@ export function statusSurfaceClasses(status: JobStatus): string {
   return STATUS_TONE_CLASSES[statusTone(status)];
 }
 
-/** Select de prioridad con los mismos colores que PriorityBadge — para cambiar la
- *  prioridad desde la lista sin abrir la ficha, sin que la fecha limite la opción
- *  (un trabajo a 10 días puede ser crítico igual si es muy grande). */
-export function PrioritySelect({ priority, onChange, disabled }: { priority: Priority; onChange: (p: Priority) => void; disabled?: boolean }) {
+// Select con forma de pill: punto de color superpuesto a la izquierda y chevron
+// propio (index.css) a la derecha. En celular sube a 44px de alto.
+const SELECT_PILL =
+  'select-chevron appearance-none rounded-full border font-semibold cursor-pointer ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ' +
+  'disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-touch';
+
+function PillSelectWrap({ dot, children, className }: { dot: string; children: ReactNode; className?: string }) {
   return (
-    <select
-      value={priority}
-      disabled={disabled}
-      aria-label="Prioridad"
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onChange={(e) => onChange(e.target.value as Priority)}
-      className={clsx(
-        'text-[11px] font-semibold rounded-full px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
-        TONE_CLASSES[PRIORITY_TONE[priority]]
-      )}
-    >
-      {(Object.keys(PRIORITY_META) as Priority[]).map((p) => (
-        <option key={p} value={p}>{PRIORITY_META[p].emoji} {PRIORITY_META[p].label}</option>
-      ))}
-    </select>
+    <span className={clsx('relative inline-flex items-center max-w-full', className)}>
+      <span className={clsx('pointer-events-none absolute left-2.5 w-1.5 h-1.5 rounded-full z-[1]', dot)} aria-hidden />
+      {children}
+    </span>
+  );
+}
+
+/** Select de prioridad con los mismos colores que PriorityBadge — para cambiar la
+ *  prioridad desde la lista sin abrir la ficha. El plazo de cada prioridad va en
+ *  el `title`, no en el texto de la opción (se cortaba en celular). */
+export function PrioritySelect({ priority, onChange, disabled, size = 'sm', className }: { priority: Priority; onChange: (p: Priority) => void; disabled?: boolean; size?: 'sm' | 'md'; className?: string }) {
+  return (
+    <PillSelectWrap dot={PRIORITY_DOT[priority]} className={className}>
+      <select
+        value={priority}
+        disabled={disabled}
+        aria-label="Prioridad"
+        title={PRIORITY_META[priority].sla}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onChange={(e) => onChange(e.target.value as Priority)}
+        className={clsx(SELECT_PILL, TONE_CLASSES[PRIORITY_TONE[priority]],
+          size === 'sm' ? 'text-meta pl-6 py-0.5 h-6' : 'text-xs pl-6 py-1 h-ctl-sm')}
+      >
+        {(Object.keys(PRIORITY_META) as Priority[]).map((p) => (
+          <option key={p} value={p}>{PRIORITY_META[p].label}</option>
+        ))}
+      </select>
+    </PillSelectWrap>
   );
 }
 
 /** Select de estado con los mismos colores que StatusBadge — para cambiar el estado sin salir de la tarjeta/tabla. */
-export function StatusSelect({ status, options, onChange, disabled }: { status: JobStatus; options: JobStatus[]; onChange: (s: JobStatus) => void; disabled?: boolean }) {
+export function StatusSelect({ status, options, onChange, disabled, size = 'md', className }: { status: JobStatus; options: JobStatus[]; onChange: (s: JobStatus) => void; disabled?: boolean; size?: 'sm' | 'md'; className?: string }) {
+  const tone = statusTone(status);
   return (
-    <select
-      value={status}
-      disabled={disabled}
-      aria-label="Estado"
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onChange={(e) => onChange(e.target.value as JobStatus)}
-      className={clsx(
-        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
-        STATUS_TONE_CLASSES[statusTone(status)]
-      )}
-    >
-      {options.map((s) => <option key={s} value={s}>● {STATUS_LABELS[s]}</option>)}
-    </select>
+    <PillSelectWrap dot={STATUS_DOT_CLASSES[tone]} className={className}>
+      <select
+        value={status}
+        disabled={disabled}
+        aria-label="Estado"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onChange={(e) => onChange(e.target.value as JobStatus)}
+        className={clsx(SELECT_PILL, STATUS_TONE_CLASSES[tone],
+          size === 'sm' ? 'text-meta pl-6 py-0.5 h-6' : 'text-xs pl-6 py-1 h-ctl-sm', 'max-w-full')}
+      >
+        {options.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+      </select>
+    </PillSelectWrap>
   );
 }
 
 // Estado de presupuesto — mismo lenguaje de pill+punto que StatusBadge/
-// StatusSelect de arriba, reusando los mismos tonos (`STATUS_TONE_CLASSES`).
-// Gris = borrador, azul = listo para enviar, violeta = enviado (esperando
-// respuesta), verde = confirmado, rojo = rechazado.
+// StatusSelect. Gris = borrador, azul = listo para enviar, violeta = enviado,
+// verde = confirmado, rojo = rechazado.
 const QUOTE_STATUS_TONE: Record<QuoteStatus, StatusTone> = {
   BORRADOR: 'wait',
   LISTO_PARA_ENVIAR: 'info',
@@ -185,130 +206,94 @@ const QUOTE_STATUS_TONE: Record<QuoteStatus, StatusTone> = {
 };
 
 export function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
+  const tone = QUOTE_STATUS_TONE[status];
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 border', STATUS_TONE_CLASSES[QUOTE_STATUS_TONE[status]])}>
-      <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT_CLASSES[QUOTE_STATUS_TONE[status]])} aria-hidden />
+    <span className={clsx(PILL, STATUS_TONE_CLASSES[tone], PILL_SIZE.md)}>
+      <Dot cls={STATUS_DOT_CLASSES[tone]} />
       {QUOTE_STATUS_LABELS[status]}
     </span>
   );
 }
 
-// "Confirmado" se saca de las opciones elegibles a mano — desde la conversión
-// Presupuesto → Trabajo (22/09) ese estado SOLO se alcanza a través de la
-// acción "Confirmar presupuesto" (genera el trabajo real, vinculado). Dejarlo
-// en este select hubiera permitido marcar "Confirmado" sin generar ningún
-// trabajo, un estado inconsistente — mismo criterio ya usado para
-// BLOQUEADO/CANCELADO en el select de estado de un trabajo (ver
-// lib/statusChange.ts).
+// "Confirmado" solo se alcanza con la acción "Confirmar presupuesto" (genera el
+// trabajo vinculado, 22/09) — por eso no está entre las opciones elegibles.
 const SELECTABLE_QUOTE_STATUSES = (Object.keys(QUOTE_STATUS_LABELS) as QuoteStatus[]).filter((s) => s !== 'CONFIRMADO');
 
 export function QuoteStatusSelect({ status, onChange, disabled }: { status: QuoteStatus; onChange: (s: QuoteStatus) => void; disabled?: boolean }) {
+  const tone = QUOTE_STATUS_TONE[status];
   return (
-    <select
-      value={status}
-      disabled={disabled}
-      aria-label="Estado del presupuesto"
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onChange={(e) => onChange(e.target.value as QuoteStatus)}
-      className={clsx(
-        'text-xs font-semibold rounded-full border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
-        STATUS_TONE_CLASSES[QUOTE_STATUS_TONE[status]]
-      )}
-    >
-      {SELECTABLE_QUOTE_STATUSES.map((s) => <option key={s} value={s}>● {QUOTE_STATUS_LABELS[s]}</option>)}
-    </select>
+    <PillSelectWrap dot={STATUS_DOT_CLASSES[tone]}>
+      <select
+        value={status}
+        disabled={disabled}
+        aria-label="Estado del presupuesto"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onChange={(e) => onChange(e.target.value as QuoteStatus)}
+        className={clsx(SELECT_PILL, STATUS_TONE_CLASSES[tone], 'text-xs pl-6 py-1 h-ctl-sm')}
+      >
+        {SELECTABLE_QUOTE_STATUSES.map((s) => <option key={s} value={s}>{QUOTE_STATUS_LABELS[s]}</option>)}
+      </select>
+    </PillSelectWrap>
   );
 }
 
-// Etiqueta de "cuánto falta / cuánto se atrasó" hasta la fecha de entrega. Una
-// vez que el trabajo está listo para entregar, entregado o cancelado deja de
-// tener sentido contar días — directamente no se muestra nada (Gonzalo, 08/09).
-// `compact` (Gonzalo, 15/09: la versión normal "rarísima, mucho espacio mal
-// usado" en la tarjeta angosta del Kanban) saca el emoji y baja tamaño/padding
-// al mismo nivel que el resto de los chips chicos de esa tarjeta (el N° de
-// Copernico, `text-[10px] px-1.5 py-0.5`) — el color ya comunica la urgencia,
-// no hace falta el ícono para leerlo de un vistazo en un espacio tan chico.
+// "Cuánto falta / cuánto se atrasó" hasta la fecha de entrega, en días (la
+// entrega es solo fecha). Listo/entregado/cancelado no muestran nada (08/09).
+// Nunca se parte en dos líneas.
 export function CountdownBadge({ iso, status, compact }: { iso: string; status?: JobStatus; compact?: boolean }) {
   if (status && isClosedStatus(status)) return null;
   const c = countdown(iso);
   const tone = c.tone === 'ok' ? 'plan' : c.tone;
-  // Cuando faltan pocos días (tono crit/urg) suma un borde del mismo color —
-  // el fondo pastel solo no llamaba suficiente la atención.
-  const urgent = tone === 'crit' || tone === 'urg';
-  if (compact) {
-    return (
-      <span className={clsx(
-        'inline-flex items-center rounded text-[10px] font-semibold px-1.5 py-0.5 tabular whitespace-nowrap shrink-0',
-        TONE_CLASSES[tone],
-        urgent && 'border border-current/30'
-      )}>
-        {c.label}
-      </span>
-    );
-  }
+  const Icon = c.overdue ? AlertTriangle : Timer;
   return (
     <span className={clsx(
-      'inline-flex items-center gap-1 rounded-md text-xs font-semibold px-2 py-1 tabular',
+      'inline-flex items-center gap-1 rounded-full border font-semibold tabular whitespace-nowrap shrink-0',
       TONE_CLASSES[tone],
-      urgent && 'border border-current/30'
+      compact ? 'text-meta px-2 py-0.5' : 'text-xs px-2.5 py-1'
     )}>
-      {c.overdue ? '⚠️' : '⏱️'} {c.label}
+      <Icon size={compact ? 11 : 12} aria-hidden />{c.label}
     </span>
   );
 }
 
-// Bloqueado ya no es un valor de `status` (ver comentario en STATUS_TONE) —
-// este badge es el indicador visual, independiente del estado real, para las
-// vistas que antes se enteraban de un bloqueo solo porque el status literal
-// decía "Bloqueado" (Tabla, Dashboard, Kanban). La ficha además tiene su propio
-// banner con el motivo completo — esto es la versión compacta para listas.
+// Bloqueado ya no es un valor de `status` — este badge es el indicador visual,
+// independiente del estado real. La ficha además tiene su banner con el motivo.
 export function BlockedBadge({ blocked, reason, size = 'md' }: { blocked: boolean; reason?: string; size?: 'sm' | 'md' }) {
   if (!blocked) return null;
   return (
-    <span
-      title={reason ? `Bloqueado — ${reason}` : 'Bloqueado'}
-      className={clsx(
-        'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
-        TONE_CLASSES.crit,
-        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
-      )}
-    >
-      <span aria-hidden>🔒</span>Bloqueado
+    <span title={reason ? `Bloqueado — ${reason}` : 'Bloqueado'} className={clsx(PILL, TONE_CLASSES.crit, PILL_SIZE[size])}>
+      <Lock size={size === 'sm' ? 11 : 12} aria-hidden />Bloqueado
     </span>
   );
 }
 
-// Pill discreto de "muestra/prueba al cliente" — no aparece si el trabajo no
-// tiene muestra en juego (`none`). Azul = en producción (todavía no se avisó
-// al cliente); ámbar = falta el OK del cliente; verde = aprobada.
+// Pill discreto de "muestra/prueba al cliente" — no aparece si no hay muestra en
+// juego. Azul = en producción; ámbar = falta el OK; verde = aprobada.
 export function SampleReviewBadge({ state, at, size = 'md' }: { state: SampleReview; at?: string; size?: 'sm' | 'md' }) {
   if (state === 'none') return null;
   const meta = SAMPLE_REVIEW_META[state];
   const tone = state === 'approved' ? 'plan' : state === 'awaiting' ? 'norm' : 'info';
   return (
-    <span
-      title={at ? `${meta.chip} · ${fmtDate(at)}` : meta.chip}
-      className={clsx(
-        'inline-flex items-center rounded-full font-semibold whitespace-nowrap border border-current/25',
-        TONE_CLASSES[tone],
-        size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1'
-      )}
-    >
+    <span title={at ? `${meta.chip} · ${fmtDate(at)}` : meta.chip} className={clsx(PILL, TONE_CLASSES[tone], PILL_SIZE[size])}>
       {meta.chip}
     </span>
   );
 }
 
-export function Avatar({ name, color, size = 28 }: { name: string; color: string; size?: number }) {
+// Avatar: con nombre al lado (casi siempre) se oculta al lector de pantalla para
+// no anunciar las iniciales dos veces. Debajo de 20px no hay iniciales (se leían
+// a 5-7px): queda el círculo de color.
+export function Avatar({ name, color, size = 28, decorative }: { name: string; color: string; size?: number; decorative?: boolean }) {
   const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full text-white font-semibold shrink-0"
-      style={{ background: color, width: size, height: size, fontSize: size * 0.38 }}
+      className="inline-flex items-center justify-center rounded-full text-white font-semibold shrink-0 ring-1 ring-black/5"
+      style={{ background: color, width: size, height: size, fontSize: Math.max(10, size * 0.4) }}
       title={name}
+      aria-hidden={decorative || undefined}
     >
-      {initials}
+      {size >= 20 ? initials : null}
     </span>
   );
 }

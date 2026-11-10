@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { ArrowRight, Phone } from 'lucide-react';
+import { ArrowRight, Moon, Phone } from 'lucide-react';
 import type { Job, Priority, BlockReason } from '../../types';
 import { useStore } from '../../store/useStore';
 import { effectivePriority } from '../../lib/priority';
@@ -12,30 +12,24 @@ import { fmtDate, fmtShort } from '../../lib/dates';
 import { isSilent } from '../../lib/risk';
 import { isBlocked } from '../../lib/selectors';
 import { BLOCK_REASON_LABELS } from '../../data/catalog';
-import { EditableCode } from '../Common/EditableCode';
+import { CodeStamp } from '../Common/EditableCode';
 
-// Cada ficha se marca con un borde de color a la izquierda según su prioridad —
-// mismo lenguaje que ya usan las tarjetas de KPI del Dashboard — para que se lea
-// el estado de todo el día de un vistazo, no solo lo urgente.
+// Cada ficha se marca con una franja de color a la izquierda según su prioridad.
+// urg/norm usan su variante -text: el DEFAULT no llega a 3:1 como borde.
 const PRIORITY_ACCENT: Record<Priority, string> = {
-  CRITICO: 'border-l-4 border-l-crit',
-  URGENTE: 'border-l-4 border-l-urg',
-  NORMAL: 'border-l-4 border-l-norm',
-  PLANIFICADO: 'border-l-4 border-l-plan',
-  EN_ESPERA: 'border-l-4 border-l-wait',
+  CRITICO: 'before:bg-crit',
+  URGENTE: 'before:bg-urg-text',
+  NORMAL: 'before:bg-norm-text',
+  PLANIFICADO: 'before:bg-plan',
+  EN_ESPERA: 'before:bg-wait',
 };
 
 /**
- * Fila de briefing diario, horizontal (como la tabla de antes) pero con toda la
- * información nueva: quién se lo asignó, para cuándo, qué tan urgente es, de qué
- * se trata y cómo contactar al cliente — todo de un vistazo, sin abrir la ficha.
- * Se arma en dos líneas internas (meta arriba, nombre+descripción abajo) para que
- * la descripción tenga lugar real y nada se empuje fuera de la tarjeta. El botón
- * "Ver ficha" se mantiene, pero además clickear cualquier zona no interactiva de
- * la tarjeta (todo lo que no sea el select de estado, el editor de N° o el botón
- * mismo) también abre la ficha — mismo resguardo `closest(...)` que ya usan
- * JobsTable y el Kanban. En el celular el botón se oculta: quedaba solo en un
- * renglón propio en cada ficha, y ahí tocar la tarjeta ya es el gesto natural.
+ * Fila de briefing diario. Rediseño "Pulido" (08/11): lo primero que se lee es
+ * el nombre del trabajo (un link real a la ficha, también en celular), debajo
+ * cliente · N° · descripción, y abajo de una regla fina los controles y datos
+ * (prioridad, estado, fechas, contacto, asigna → responsable). Clickear cualquier
+ * zona no interactiva también abre la ficha (mismo resguardo `closest(...)`).
  */
 export function DashboardJobCard({ job }: { job: Job }) {
   const navigate = useNavigate();
@@ -52,80 +46,88 @@ export function DashboardJobCard({ job }: { job: Job }) {
   const canEditCode = !!currentUser && canEditAnyJob(currentUser.role);
   const canEditPriority = !!currentUser && canChangePriority(currentUser.role);
   const priority = effectivePriority(job);
+  const href = `/trabajos/${job.id}`;
+  const assignTitle = creator && resp
+    ? `${creator.name} asignó este trabajo a ${resp.name}`
+    : creator ? `Asignado por ${creator.name}` : resp ? `Responsable: ${resp.name}` : '';
 
   return (
     <div
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest('select, button, input')) return;
-        navigate(`/trabajos/${job.id}`);
+        if ((e.target as HTMLElement).closest('select, button, input, a')) return;
+        navigate(href);
       }}
       className={clsx(
-        'bg-white rounded-xl border-t border-r border-b border-ink-100 shadow-card px-4 py-3 flex flex-col gap-2 cursor-pointer hover:shadow-pop transition-shadow',
+        'group relative overflow-hidden bg-white rounded-card border border-ink-200/80 shadow-card cursor-pointer transition-shadow hover:shadow-lift',
+        'before:absolute before:inset-y-0 before:left-0 before:w-[3px]',
         PRIORITY_ACCENT[priority]
       )}
     >
-      <div className="flex items-center gap-3 flex-wrap">
-        {canEditPriority
-          ? <PrioritySelect priority={priority} onChange={async (p) => { try { await setPriority(job.id, p, currentUser!.id); } catch (err) { alert(friendlyError(err)); } }} />
-          : <PriorityBadge priority={priority} size="sm" />}
-        <EscalatedHint job={job} />
-        {isSilent(job) && <span title="Más de 48h sin movimiento">💤</span>}
-        <StatusSelect
-          status={job.status} options={statusOptionsFor(job)}
-          onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
-        />
-        {isBlocked(job) && (
-          <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[job.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />
-        )}
-        <EditableCode job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} size="md" />
-        <span className="text-sm font-semibold text-ink-900 truncate max-w-[160px]">{client?.name}</span>
-        <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
-
-        <div className="flex flex-col items-start sm:items-end gap-0.5 sm:ml-auto">
-          <div className="flex items-center gap-x-2 gap-y-1 text-xs text-ink-800 font-medium flex-wrap sm:justify-end">
-            <span className="whitespace-nowrap">Asignado {fmtDate(job.createdAt)}</span>
-            <span className="text-ink-700 font-normal">·</span>
-            <span className="whitespace-nowrap">Entrega {fmtDate(job.committedDate)}</span>
-            <CountdownBadge iso={job.committedDate} status={job.status} />
+      <div className="pl-5 pr-4 pt-3.5 pb-3 flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <Link
+            to={href}
+            className="text-[15px] font-semibold text-ink-900 leading-snug tracking-tight hover:text-brand-700 hover:underline underline-offset-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {job.name}
+          </Link>
+          <div className="mt-1 flex items-center gap-x-2 gap-y-1 flex-wrap text-sm">
+            <span className="font-semibold text-ink-800 truncate max-w-[220px]" title={client?.name}>{client?.name}</span>
+            <span className="text-ink-700" aria-hidden>·</span>
+            <CodeStamp job={job} editable={canEditCode} onSave={(code) => setJobCode(job.id, code, currentUser!.id)} />
+            {isSilent(job) && (
+              <span title="Más de 48h sin ningún movimiento" className="inline-flex items-center gap-1 text-meta font-medium text-wait-text">
+                <Moon size={12} aria-hidden />Sin movimiento
+              </span>
+            )}
           </div>
-          {/* Hora exacta de creación (punto 2, 20/09) — mismo timestamp que
-              "Asignado" de arriba (createdAt), pero con la hora, en texto
-              secundario para no competir con el nombre/estado del trabajo. */}
-          <span className="hidden sm:inline text-[11px] text-ink-700 whitespace-nowrap">Creado {fmtShort(job.createdAt)}</span>
+          {job.description && (
+            <p className="text-sm text-ink-700 mt-1 leading-snug line-clamp-2 max-w-[80ch]">{job.description}</p>
+          )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate(`/trabajos/${job.id}`)}
-          className="shrink-0 hidden sm:flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
-        >
-          Ver ficha <ArrowRight size={12} />
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          <CountdownBadge iso={job.committedDate} status={job.status} />
+          <Link
+            to={href}
+            className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            Ver ficha <ArrowRight size={13} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
       </div>
 
-      <div className="flex items-start gap-4 flex-wrap">
-        <div className="min-w-[220px] flex-1">
-          <div className="text-sm font-semibold text-ink-900 leading-snug">{job.name}</div>
-          {job.description && (
-            <div className="text-sm text-ink-700 mt-0.5 leading-snug line-clamp-2">{job.description}</div>
+      <div className="pl-5 pr-4 py-2.5 border-t border-ink-100 bg-ink-50/50 flex items-center gap-x-4 gap-y-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {canEditPriority
+            ? <PrioritySelect priority={priority} onChange={async (p) => { try { await setPriority(job.id, p, currentUser!.id); } catch (err) { alert(friendlyError(err)); } }} />
+            : <PriorityBadge priority={priority} size="sm" />}
+          <EscalatedHint job={job} />
+          <StatusSelect
+            size="sm"
+            status={job.status} options={statusOptionsFor(job)}
+            onChange={(s) => currentUser && tryChangeJobStatus(job, s, setStatus, currentUser.id)}
+          />
+          {isBlocked(job) && (
+            <BlockedBadge blocked size="sm" reason={BLOCK_REASON_LABELS[job.blockRecords.find((b) => !b.closedAt)!.reason as BlockReason]} />
           )}
+          <SampleReviewBadge state={job.sampleReview} at={job.sampleReviewAt} size="sm" />
         </div>
 
-        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap text-xs text-ink-700 min-w-0">
+        <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap text-xs text-ink-700 sm:ml-auto">
+          <span className="whitespace-nowrap">Entrega <span className="font-semibold text-ink-900">{fmtDate(job.committedDate)}</span></span>
+          {/* Hora exacta de creación (20/09): mismo timestamp que "Asignado". */}
+          <span className="whitespace-nowrap">Asignado {fmtShort(job.createdAt)}</span>
           {(job.contactName || job.contactPhone) && (
-            <div className="flex items-center gap-1.5">
-              <Phone size={12} className="text-ink-700 shrink-0" />
-              <span className="truncate max-w-[160px]">{job.contactName}{job.contactName && job.contactPhone ? ' · ' : ''}{job.contactPhone}</span>
-            </div>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Phone size={12} aria-hidden className="shrink-0" />
+              <span className="truncate max-w-[180px]">{job.contactName}{job.contactName && job.contactPhone ? ' · ' : ''}{job.contactPhone}</span>
+            </span>
           )}
           {(creator || resp) && (
-            <span
-              className="flex items-center gap-1.5 bg-brand-100 text-brand-700 rounded-full pl-1 pr-3 py-0.5 font-semibold whitespace-nowrap"
-              title={creator && resp ? `${creator.name} asignó este trabajo a ${resp.name}` : creator ? `Asignado por ${creator.name}` : `Responsable: ${resp!.name}`}
-            >
-              {creator && <><Avatar name={creator.name} color={creator.avatarColor} size={18} /> {creator.name.split(' ')[0]}</>}
-              {creator && resp && <ArrowRight size={12} className="text-brand-600 mx-0.5" aria-hidden />}
-              {resp && <><Avatar name={resp.name} color={resp.avatarColor} size={18} /> {resp.name.split(' ')[0]}</>}
+            <span className="flex items-center gap-1.5 text-ink-800 font-medium whitespace-nowrap" title={assignTitle}>
+              {creator && <><Avatar name={creator.name} color={creator.avatarColor} size={20} decorative /> {creator.name.split(' ')[0]}</>}
+              {creator && resp && <ArrowRight size={12} className="text-ink-700" aria-label="asignó a" />}
+              {resp && <><Avatar name={resp.name} color={resp.avatarColor} size={20} decorative /> <span className="font-semibold text-ink-900">{resp.name.split(' ')[0]}</span></>}
             </span>
           )}
         </div>

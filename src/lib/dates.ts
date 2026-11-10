@@ -1,4 +1,4 @@
-import { differenceInMinutes, format, isToday, isTomorrow, isPast } from 'date-fns';
+import { differenceInCalendarDays, differenceInMinutes, format, isToday, isTomorrow, isPast } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function fmtDateTime(iso: string): string {
@@ -26,21 +26,23 @@ export interface Countdown {
 
 export function countdown(iso: string, now: Date = new Date()): Countdown {
   const mins = minutesRemaining(iso, now);
-  const abs = Math.abs(mins);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  const d = Math.floor(h / 24);
+  // La entrega es solo fecha (las 18:00 son referencia interna): la etiqueta
+  // cuenta días de calendario, nunca horas/minutos. El tono sigue por horas.
+  const days = differenceInCalendarDays(new Date(iso), now);
+  const plural = (n: number) => (n === 1 ? 'día' : 'días');
 
   if (mins < 0) {
-    const label = d >= 1 ? `Atrasado ${d}d ${h % 24}h` : `Atrasado ${h}h ${m}m`;
+    const late = Math.abs(days);
+    const label = late === 0 ? 'Venció hoy' : `Atrasado ${late} ${plural(late)}`;
     return { label, tone: 'crit', overdue: true };
   }
-  if (mins <= 4 * 60) return { label: `Faltan ${h}h ${m}m`, tone: 'crit', overdue: false };
+  const label = days <= 0 ? 'Vence hoy' : days === 1 ? 'Mañana' : `Faltan ${days} días`;
+  if (mins <= 4 * 60) return { label, tone: 'crit', overdue: false };
   // Hasta 2 días (48h) cuenta como urgente — antes eran solo 24h y el tramo de
   // "faltan 1-2 días" caía en el amarillo tranquilo de abajo, pasando desapercibido.
-  if (mins <= 48 * 60) return { label: d >= 1 ? `Faltan ${d}d ${h % 24}h` : `Faltan ${h}h ${m}m`, tone: 'urg', overdue: false };
-  if (mins <= 72 * 60) return { label: d >= 1 ? `Faltan ${d}d` : `Faltan ${h}h`, tone: 'norm', overdue: false };
-  return { label: `Faltan ${d}d`, tone: 'ok', overdue: false };
+  if (mins <= 48 * 60) return { label, tone: 'urg', overdue: false };
+  if (mins <= 72 * 60) return { label, tone: 'norm', overdue: false };
+  return { label, tone: 'ok', overdue: false };
 }
 
 export function dayLabel(iso: string): string {

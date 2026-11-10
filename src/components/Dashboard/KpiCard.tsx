@@ -1,64 +1,68 @@
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 
+type Tone = 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'review' | 'site' | 'done' | 'neutral';
+
 interface Props {
   label: string;
   value: number;
   icon: LucideIcon;
-  tone: 'crit' | 'urg' | 'norm' | 'plan' | 'wait' | 'info' | 'review' | 'site' | 'done' | 'neutral';
+  tone: Tone;
+  /** flow = etapa del Kanban (neutra, solo un punto de color); alert = requiere atención. */
+  variant?: 'flow' | 'alert';
   active?: boolean;
-  compact?: boolean;
   onClick?: () => void;
   className?: string;
 }
 
-// Borde perimetral con el color del estado, siempre visible (no solo al pasar el
-// mouse) — así cada tarjeta se identifica por color de un vistazo, como semáforo.
-const TONE_BORDER: Record<string, string> = {
-  crit: 'border-crit/50 hover:border-crit',
-  urg: 'border-urg/60 hover:border-urg',
-  norm: 'border-norm/60 hover:border-norm',
-  plan: 'border-plan/50 hover:border-plan',
-  wait: 'border-wait/50 hover:border-wait',
-  info: 'border-info/50 hover:border-info',
-  review: 'border-review/50 hover:border-review',
-  site: 'border-site/50 hover:border-site',
-  done: 'border-ink-300 hover:border-ink-400',
-  neutral: 'border-ink-300 hover:border-ink-400',
+// Rediseño "Pulido" (08/11): el semáforo pierde sentido si todo es semáforo.
+// Las 7 etapas del flujo van neutras (un punto con el color de su columna del
+// Kanban); el color fuerte queda solo para los cubos de atención y solo cuando
+// valen más de 0 — con 0 se ven grises.
+const DOT: Record<Tone, string> = {
+  crit: 'bg-crit', urg: 'bg-urg-text', norm: 'bg-norm-text', plan: 'bg-plan', wait: 'bg-wait',
+  info: 'bg-info', review: 'bg-review', site: 'bg-site', done: 'bg-ink-700', neutral: 'bg-ink-700',
 };
 
-const TONE_TEXT: Record<string, string> = {
-  crit: 'text-crit-text', urg: 'text-urg-text', norm: 'text-norm-text',
-  plan: 'text-plan-text', wait: 'text-wait-text', info: 'text-info-text',
-  review: 'text-review-text', site: 'text-site-text', done: 'text-ink-700', neutral: 'text-ink-800',
+const ALERT_ON: Record<Tone, string> = {
+  crit: 'bg-crit-bg border-crit/40 text-crit-text',
+  urg: 'bg-urg-bg border-urg/50 text-urg-text',
+  norm: 'bg-norm-bg border-norm/50 text-norm-text',
+  plan: 'bg-plan-bg border-plan/40 text-plan-text',
+  wait: 'bg-wait-bg border-wait/40 text-wait-text',
+  info: 'bg-info-bg border-info/40 text-info-text',
+  review: 'bg-review-bg border-review/40 text-review-text',
+  site: 'bg-site-bg border-site/40 text-site-text',
+  done: 'bg-ink-100 border-ink-300 text-ink-800',
+  neutral: 'bg-ink-100 border-ink-300 text-ink-800',
 };
 
-const TONE_ICON_BG: Record<string, string> = {
-  crit: 'bg-crit-bg text-crit-text', urg: 'bg-urg-bg text-urg-text', norm: 'bg-norm-bg text-norm-text',
-  plan: 'bg-plan-bg text-plan-text', wait: 'bg-wait-bg text-wait-text', info: 'bg-info-bg text-info-text',
-  review: 'bg-review-bg text-review-text', site: 'bg-site-bg text-site-text', done: 'bg-ink-100 text-ink-700', neutral: 'bg-ink-100 text-ink-700',
-};
-
-export function KpiCard({ label, value, icon: Icon, tone, active, compact, onClick, className }: Props) {
+export function KpiCard({ label, value, icon: Icon, tone, variant = 'flow', active, onClick, className }: Props) {
+  const lit = variant === 'alert' && value > 0;
   return (
     <button
       onClick={onClick}
       aria-pressed={!!active}
       className={clsx(
-        'text-left bg-white rounded-xl border-2 shadow-card transition-all',
-        compact ? 'px-2.5 py-2' : 'px-4 py-3.5',
-        TONE_BORDER[tone],
-        active && 'ring-2 ring-offset-1 ring-brand-500',
+        'group min-w-0 text-left rounded-card border px-2 py-2.5 transition-[box-shadow,border-color,background-color] duration-150',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
+        lit ? ALERT_ON[tone] : 'bg-white border-ink-200 text-ink-900 hover:border-ink-300',
+        'shadow-card hover:shadow-lift',
+        active && 'ring-2 ring-brand-500 ring-offset-1',
         className
       )}
     >
-      <div className={clsx('flex items-center', compact ? 'gap-1.5' : 'gap-2.5')}>
-        <span className={clsx('inline-flex items-center justify-center rounded-lg shrink-0', compact ? 'w-6 h-6' : 'w-7 h-7', TONE_ICON_BG[tone])}>
-          <Icon size={compact ? 13 : 15} strokeWidth={2.25} />
-        </span>
-        <span className={clsx(compact ? 'text-xl' : 'text-2xl', 'font-display font-extrabold tabular', TONE_TEXT[tone])}>{value}</span>
+      {/* El rótulo usa todo el ancho del cubo (el punto/ícono va al lado del número)
+          para que las palabras entren enteras: nunca se parten con guion. */}
+      <div className={clsx('min-h-[32px] text-meta font-medium leading-tight line-clamp-2 hyphens-none break-normal', lit ? 'text-current' : 'text-ink-700')} title={label}>
+        {label}
       </div>
-      <div className={clsx('text-ink-700 font-medium', compact ? 'text-[11px] leading-tight mt-1' : 'text-xs mt-1.5')}>{label}</div>
+      <div className={clsx('mt-1 flex items-center gap-1.5 text-kpi font-bold tabular tracking-tight', lit ? 'text-current' : value === 0 ? 'text-ink-700' : 'text-ink-900')}>
+        {value}
+        {variant === 'flow'
+          ? <span className={clsx('w-2 h-2 rounded-full', DOT[tone])} aria-hidden />
+          : <Icon size={14} strokeWidth={2.25} aria-hidden className={lit ? 'text-current' : 'text-ink-700'} />}
+      </div>
     </button>
   );
 }

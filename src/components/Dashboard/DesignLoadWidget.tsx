@@ -60,13 +60,13 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
   const allTied = counts.every((c) => c.designLoad === minCount);
 
   return (
-    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-4 mb-5 max-w-xl">
-      <div className="flex items-center gap-2 mb-0.5">
+    // Franja fina de una sola línea (rediseño 08/11): no le roba alto a la lista.
+    <div className="bg-white rounded-card border border-ink-200/80 shadow-card px-4 py-2.5 mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex items-center gap-2 shrink-0" title="Lo asignado que todavía tiene que pasar por diseño (sin empezar + en diseño), para repartir el próximo.">
         <PenTool size={14} className="text-info-text" aria-hidden />
         <h2 className="text-sm font-semibold text-ink-900">Carga de diseño</h2>
       </div>
-      <p className="text-xs text-ink-700 mb-3">Lo asignado que todavía tiene que pasar por diseño (sin empezar + en diseño), para repartir el próximo.</p>
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         {counts.map(({ user, designLoad, assigned, notStarted, inDesign, afterDesign }) => {
           const isLeast = !allTied && designLoad === minCount;
           const detail = [
@@ -80,7 +80,7 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
               aria-label={`${user.name}: carga de diseño ${designLoad}. ${assigned} asignado${assigned === 1 ? '' : 's'} en total: ${detail}.${isLeast ? ' Es quien menos carga tiene.' : ''}`}
             >
               <div className="flex items-center gap-1.5" aria-hidden>
-                <Avatar name={user.name} color={user.avatarColor} size={18} />
+                <Avatar name={user.name} color={user.avatarColor} size={20} decorative />
                 <span className="text-xs font-medium text-ink-800 whitespace-nowrap">{user.name.split(' ')[0]}</span>
                 <div className="w-16 h-1.5 rounded-full bg-ink-100 overflow-hidden shrink-0">
                   <div
@@ -89,15 +89,14 @@ export function DesignLoadWidget({ jobs, users }: { jobs: Job[]; users: User[] }
                   />
                 </div>
                 <span className="text-sm font-semibold text-ink-900 tabular">{designLoad}</span>
-                <span className="text-[11px] text-ink-700 whitespace-nowrap">· {assigned} asignado{assigned === 1 ? '' : 's'}</span>
+                <span className="text-meta text-ink-700 whitespace-nowrap">({detail}) · {assigned} asignado{assigned === 1 ? '' : 's'}</span>
               </div>
-              <p className="text-[11px] text-ink-700 mt-0.5 pl-6" aria-hidden>{detail}</p>
             </div>
           );
         })}
       </div>
       {!allTied && (
-        <p className="text-[11px] text-ink-700 mt-2">
+        <p className="text-meta text-ink-700 sm:ml-auto">
           <span className="font-semibold text-plan-text">{counts.find((c) => c.designLoad === minCount)?.user.name.split(' ')[0]}</span> tiene menos carga.
         </p>
       )}
