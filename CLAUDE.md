@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 08/11/2026 (**leer primero la sección 84 — cierre de sesión con el estado completo**, la 85 y la 86 (rediseño visual); la 72 es el cierre anterior).
+la contradiga más arriba**. Última actualización: 10/11/2026 (**leer primero la sección 87 — cierre del 10/11 —, después la 84 y la 86**; la 72 es el cierre anterior).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5885,3 +5885,30 @@ Qué cambió (todo visual, sin tocar store/lógica/rutas/permisos/Supabase):
 Pendientes conocidos: en celular se corta el filtro "Todo responsable"; en el Kanban el
 N° y el contador a veces bajan a 2 líneas; regenerar capturas del Manual
 (`video/generador/manual.mjs`) — cambiaron Dashboard, ficha, Trabajos y Kanban.
+
+---
+
+## 87. CIERRE DE SESIÓN 10/11 — estado para retomar (próximo chat: respuestas del cuestionario)
+
+**Leer primero esto, después §84 y §86.** Todo commiteado y pusheado a `origin/main`.
+
+- **Hecho en esta sesión:** skill taste instalada solo en el proyecto (§85) y rediseño
+  visual completo (§86) ya en producción. Claude Design explicado a Gonzalo: es el tipo
+  de Artifact "Design" (lienzo de pantallas/mockups) y "Design System" (tokens y
+  componentes); queda ofrecido armar el design system de Bonta desde
+  `tailwind.config.js` si lo pide.
+- **Worktrees de las propuestas** (`.claude/worktrees/agent-*`, ignorados por git):
+  A ya está mergeada; B y C quedaron sin commitear como referencia (sus diffs y
+  capturas están en el scratchpad de la sesión). Se pueden borrar sin perder nada
+  de main.
+- **Próximo chat — cuestionario (§79):** Gonzalo trae completado
+  `cuestionario/Cuestionario-Estudio-Bonta.xlsx` (gitignoreado; 108 preguntas en 16
+  temas + hojas Materiales, Máquinas y Productos típicos). Proceso acordado: leer las
+  respuestas, resumir lo que cambia respecto de lo que hoy hace la app, y **proponer un
+  plan por bloques (qué se toca, en qué orden, qué hay que probar) y esperar su OK antes
+  de implementar**. Los datos de materiales/máquinas que traiga van a la pantalla
+  "Materiales y máquinas" (§83) — nunca inventar medidas.
+- **Pendientes sueltos:** confirmar que corrió la migración `031_app_settings_materials.sql`
+  (`select key from app_settings;`); regenerar capturas del Manual
+  (`video/generador/manual.mjs`); probar los avisos en vivo con dos cuentas reales;
+  detalles de §86 (filtro "Todo responsable" en celular, N°/contador en 2 líneas en Kanban).

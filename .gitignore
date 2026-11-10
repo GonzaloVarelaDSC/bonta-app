@@ -36,3 +36,6 @@ cuestionario/
 
 # Skill externa taste-skill (39 MB): se instala local, no va al repo. Restaurar con: npx skills experimental_install
 .claude/skills/design-taste-frontend/
+
+# Copias de trabajo de agentes de Claude Code
+.claude/worktrees/
