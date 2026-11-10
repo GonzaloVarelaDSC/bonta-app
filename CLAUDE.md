@@ -5923,8 +5923,8 @@ cliente, preguntas abiertas, pendientes por persona) quedó **en stand by**: lo
 habla con los dueños, no reproponerlo. Lo que se hizo es el calendario de
 instalaciones, definido en un ida y vuelta de 18 preguntas.
 
-- **Base — migración `032_installations_calendar.sql`, HAY QUE CORRERLA** (pendiente
-  de confirmar). Se monta sobre la tabla `installations` que ya existía (una fila por
+- **Base — migración `032_installations_calendar.sql`, corrida (Gonzalo confirmó el 10/11)**
+  Se monta sobre la tabla `installations` que ya existía (una fila por
   OT), no hay otra tabla: agrega `end_date`, `locality`, `installer_names text[]`,
   `papers_ok`, `rescheduled` + `rescheduled_from/by/at`, check fin ≥ inicio e índice
   por fecha. Función `can_schedule_installations()` (admin, o coordinador no
