@@ -7,7 +7,7 @@ actualizando ronda a ronda desde entonces — la sección 1 a 8 son la base orig
 (puede tener frases con fecha vieja, ignorarlas) y las secciones numeradas al final
 (9 en adelante, cada una fechada) son el historial de cambios en orden cronológico;
 **la última —hoy, la de fecha más reciente— es la que manda sobre cualquier cosa que
-la contradiga más arriba**. Última actualización: 10/11/2026 (**leer primero la sección 87 — cierre del 10/11 —, después la 84 y la 86**; la 72 es el cierre anterior).
+la contradiga más arriba**. Última actualización: 10/11/2026 (**leer primero la sección 88 — módulo Instalaciones —, después la 87, la 84 y la 86**; la 72 es el cierre anterior).
 
 Fue escrito por la sesión de Claude Code que hizo casi todo el trabajo de UI/UX,
 deploy y ajustes de esta Fase 1, en una serie larga de intercambios con Gonzalo
@@ -5912,3 +5912,65 @@ N° y el contador a veces bajan a 2 líneas; regenerar capturas del Manual
   (`select key from app_settings;`); regenerar capturas del Manual
   (`video/generador/manual.mjs`); probar los avisos en vivo con dos cuentas reales;
   detalles de §86 (filtro "Todo responsable" en celular, N°/contador en 2 líneas en Kanban).
+
+---
+
+## 88. Actualización 10/11 — módulo Instalaciones (calendario que reemplaza el pizarrón)
+
+Contexto: Gonzalo devolvió el cuestionario (§79; resumen en la memoria
+`project-cuestionario-respuestas`). El bloque "de quién es cada paso" (dueño del
+cliente, preguntas abiertas, pendientes por persona) quedó **en stand by**: lo
+habla con los dueños, no reproponerlo. Lo que se hizo es el calendario de
+instalaciones, definido en un ida y vuelta de 18 preguntas.
+
+- **Base — migración `032_installations_calendar.sql`, HAY QUE CORRERLA** (pendiente
+  de confirmar). Se monta sobre la tabla `installations` que ya existía (una fila por
+  OT), no hay otra tabla: agrega `end_date`, `locality`, `installer_names text[]`,
+  `papers_ok`, `rescheduled` + `rescheduled_from/by/at`, check fin ≥ inicio e índice
+  por fecha. Función `can_schedule_installations()` (admin, o coordinador no
+  productor = todos menos Gastón; misma regla que el precio de presupuesto) y trigger
+  `installations_schedule_guard`: los datos de agenda solo los cambia quien puede
+  programar, y la marca de reprogramada no se puede sacar. "Marcar completada" y el
+  alta desde Carga rápida no cambiaron. Mergeado en 001/002. Verificación:
+  `select column_name from information_schema.columns where table_name='installations' and column_name in ('end_date','installer_names','papers_ok','rescheduled');` → 4.
+- **Instaladores**: `INSTALLER_NAMES` en `data/catalog.ts` (Alejandro, Martín, Pancho),
+  nombres sueltos porque Alejandro no tiene cuenta. `installation_assigned_users`
+  queda sin uso.
+- **Lógica pura** `lib/installations.ts`: fechas de solo-día (`parseDay`/`toDayKey`
+  — nunca `new Date('YYYY-MM-DD')`, en Argentina corre un día), `scheduledInstallations`,
+  `unscheduledInstallations`, `monthWeeks` (carriles por semana: franja continua para
+  varios días, nunca se ocultan) y `buildInstallationOrder` (lista blanca del PDF).
+- **Store**: `saveInstallation` (insert o update; marca reprogramada si cambia una
+  fecha ya puesta — poner la primera fecha no cuenta; si la OT no tenía "requiere
+  instalación" lo marca; optimista con rollback; Historial `instalacion_agenda` con
+  "antes → después") y `moveInstallation` (conserva duración y hora). Se toca
+  `jobs.last_activity_at` para que los demás lo vean en vivo. `instalacion_agenda`
+  dispara aviso flotante de modificación.
+- **Pantalla** `/instalaciones` (menú, debajo de Kanban, para todos):
+  `Installations/InstallationsPage.tsx` — escritorio: mes lun-dom, ‹ › y "Hoy", franja
+  "Sin fecha" (OT con instalación sin fecha, se arrastran a un día), lista "Próximos 7
+  días"; tarjeta = N° + cliente, completada tachada, reprogramada con ícono. Arrastre
+  con @dnd-kit (`pointerWithin`; si se agarra una franja de varios días por el medio
+  se corre lo que se movió el puntero), confirmación al reprogramar, sin confirmación
+  al poner la primera fecha. Click en un día vacío = nueva instalación ese día.
+  Celular: lista por día del mes (desde hoy, con "Ver días pasados"). Estado en la URL
+  (`?mes=2026-11&ot=<jobId>`).
+  `InstallationPanel.tsx`: panel lateral con Programación / Ubicación / Personal /
+  Papeles + historial; Editar solo con permiso; "Abrir OT". `InstallationDialogs.tsx`:
+  elegir OT (no crea OT) y exportar.
+- **PDF** `/instalaciones/orden?ids=…` (`InstallationExportPage.tsx`, fuera del layout):
+  una hoja por instalación, se ve en pantalla antes de imprimir (no imprime solo).
+  Exportar: una (desde el panel), una semana filtrada por quién instala, o selección a
+  mano. Campos solo de `InstallationOrder`: N°, cliente, trabajo, descripción de la OT
+  (decisión de Gonzalo: la conversación con el cliente se puede mostrar), productos
+  con medidas, contact sheet, período y hora, dirección, localidad, indicaciones,
+  contacto, quién instala. Nunca precios, comentarios, historial, papeles ni links.
+- **Ficha**, pestaña Instalación: muestra los datos nuevos y "Ver en Instalaciones".
+- **Probado** con `video/generador/installations-demo.js` (datos ficticios, ver uso en
+  el archivo): varios el mismo día, 3 y 6 días, reprogramar arrastrando (1 y 3 días,
+  agarrando por el medio), arrastre desde "Sin fecha", panel y edición, Gastón solo
+  lectura en la UI, órdenes sin datos internos aunque haya comentario e importe
+  cargados, celular 390. Build/lint limpios. **No probado contra Supabase** (falta
+  correr la 032 y probar con la cuenta de Gastón que la base rechaza cambios) ni el
+  PDF impreso real.
+- Pendientes: probar en real; si se usa, sumar instalaciones al Manual.

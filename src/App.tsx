@@ -22,6 +22,8 @@ import { QuoteDetailPage } from './components/Quotes/QuoteDetailPage';
 import { QuoteExportPage } from './components/Quotes/QuoteExportPage';
 import { RequireRole } from './components/Common/RequireRole';
 import { MetricsPage } from './components/Metrics/MetricsPage';
+import { InstallationsPage } from './components/Installations/InstallationsPage';
+import { InstallationExportPage } from './components/Installations/InstallationExportPage';
 import { useStore } from './store/useStore';
 import { supabaseConfigured } from './lib/supabaseClient';
 import { canManageUsers, canViewHistorico, canManageQuotes, canViewMetrics } from './lib/permissions';
@@ -49,6 +51,7 @@ export default function App() {
         <Route path="/trabajos/:id/exportar" element={<JobExportPage />} />
         <Route path="/trabajos/:id/produccion/exportar" element={<ProductionExportPage />} />
         <Route path="/presupuestos/:id/exportar" element={<QuoteExportPage />} />
+        <Route path="/instalaciones/orden" element={<InstallationExportPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/trabajos" element={<JobsPage />} />
@@ -56,6 +59,7 @@ export default function App() {
           <Route path="/trabajos/rapido" element={<QuickJobPage />} />
           <Route path="/trabajos/:id" element={<JobDetailPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
+          <Route path="/instalaciones" element={<InstallationsPage />} />
           <Route path="/chequeo-archivos" element={<ChequeoArchivosPage />} />
           <Route path="/manual" element={<ManualPage />} />
           <Route path="/materiales" element={<MaterialsPage />} />

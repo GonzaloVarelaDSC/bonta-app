@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  LayoutDashboard, ListChecks, Kanban, Users, Settings, FileCheck2, BookOpen, Zap, Archive, Receipt, Hammer, BarChart3,
+  LayoutDashboard, ListChecks, Kanban, Users, Settings, FileCheck2, BookOpen, Zap, Archive, Receipt, Hammer, BarChart3, CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -14,6 +14,7 @@ const ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/trabajos', label: 'Trabajos', icon: ListChecks },
   { to: '/kanban', label: 'Kanban', icon: Kanban },
+  { to: '/instalaciones', label: 'Instalaciones', icon: CalendarDays },
   { to: '/chequeo-archivos', label: 'Chequeo de archivos', icon: FileCheck2 },
   { to: '/manual', label: 'Manual de uso', icon: BookOpen },
   { to: '/materiales', label: 'Materiales y máquinas', icon: Hammer },

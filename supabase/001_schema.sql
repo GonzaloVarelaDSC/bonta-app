@@ -210,8 +210,19 @@ create table if not exists installations (
   notes text not null default '',
   completed boolean not null default false,
   completed_at timestamptz,
-  completed_notes text
+  completed_notes text,
+  -- Calendario de instalaciones (032)
+  end_date date,
+  locality text not null default '',
+  installer_names text[] not null default '{}',
+  papers_ok boolean not null default false,
+  rescheduled boolean not null default false,
+  rescheduled_from date,
+  rescheduled_by uuid references profiles(id),
+  rescheduled_at timestamptz,
+  constraint installations_end_after_start check (end_date is null or install_date is null or end_date >= install_date)
 );
+create index if not exists installations_install_date_idx on installations(install_date);
 
 create table if not exists installation_assigned_users (
   job_id uuid not null references installations(job_id) on delete cascade,

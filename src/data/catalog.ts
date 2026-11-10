@@ -137,6 +137,10 @@ export const PRODUCTION_PROCESSES: { id: string; label: string; short: string }[
 // Orden alfabético.
 export const ASSIGN_ALSO_NAMES = ['Ares', 'Ariel', 'Hector', 'Jose', 'Jose Garra', 'Rolli'];
 
+// Quién instala (módulo Instalaciones, 10/11). Nombres sueltos: Alejandro es
+// externo y no tiene cuenta. Para sumar o sacar a alguien, editar esta lista.
+export const INSTALLER_NAMES = ['Alejandro', 'Martín', 'Pancho'];
+
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   BORRADOR: 'Borrador',
   LISTO_PARA_ENVIAR: 'Listo para enviar',

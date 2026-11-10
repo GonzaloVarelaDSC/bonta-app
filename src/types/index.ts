@@ -141,10 +141,25 @@ export interface InstallationInfo {
   address: string;
   contactName: string;
   contactPhone: string;
+  /** Inicio, "YYYY-MM-DD" (solo fecha). */
   date?: string;
+  /** Fin, "YYYY-MM-DD". Igual a `date` si dura un día. */
+  endDate?: string;
+  /** Hora de inicio "HH:MM" (mismo horario todos los días). */
   time?: string;
+  locality: string;
   assignedUserIds: string[];
+  /** Quién instala, como nombres (INSTALLER_NAMES): los externos no tienen cuenta. */
+  installerNames: string[];
+  /** Indicaciones de acceso / para quien instala. */
   notes: string;
+  /** Papeles y permisos del lugar resueltos. */
+  papersOk: boolean;
+  /** Se marca sola al cambiar una fecha ya programada y no se borra. */
+  rescheduled: boolean;
+  rescheduledFrom?: string;
+  rescheduledBy?: string;
+  rescheduledAt?: string;
   completed: boolean;
   completedAt?: string;
   completedNotes?: string;

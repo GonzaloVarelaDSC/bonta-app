@@ -78,8 +78,15 @@ function mapInstallation(row: any): InstallationInfo | undefined {
   if (!row) return undefined;
   return {
     address: row.address ?? '', contactName: row.contact_name ?? '', contactPhone: row.contact_phone ?? '',
-    date: row.install_date ?? undefined, time: row.install_time ?? undefined,
+    date: row.install_date ?? undefined,
+    endDate: row.end_date ?? row.install_date ?? undefined,
+    time: row.install_time ? String(row.install_time).slice(0, 5) : undefined,
+    locality: row.locality ?? '',
     assignedUserIds: (row.installation_assigned_users ?? []).map((a: any) => a.user_id),
+    installerNames: row.installer_names ?? [],
+    papersOk: !!row.papers_ok,
+    rescheduled: !!row.rescheduled, rescheduledFrom: row.rescheduled_from ?? undefined,
+    rescheduledBy: row.rescheduled_by ?? undefined, rescheduledAt: row.rescheduled_at ?? undefined,
     notes: row.notes ?? '', completed: row.completed, completedAt: row.completed_at ?? undefined, completedNotes: row.completed_notes ?? undefined,
   };
 }

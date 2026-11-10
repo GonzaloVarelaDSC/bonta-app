@@ -12,7 +12,8 @@ import { DEFAULT_JOB_TYPES, DEFAULT_MATERIALS, STATUS_LABELS } from '../data/cat
 import { DEFAULT_KNOWLEDGE, normalizeKnowledge, type MaterialsKnowledge } from '../data/materialsKnowledge';
 import { PRIORITY_META } from '../lib/priority';
 import { fmtDate } from '../lib/dates';
-import type { Client, ProductionConfig, MetricGoal, JobPrice } from '../types';
+import { addDaysKey, durationDays, fmtPeriod, fmtTime } from '../lib/installations';
+import type { Client, ProductionConfig, MetricGoal, JobPrice, InstallationInfo } from '../types';
 
 const KNOWLEDGE_KEY = 'materials_knowledge';
 
@@ -102,6 +103,10 @@ interface StoreState {
   approveFileVersion: (jobId: string, fileId: string, versionId: string, byUserId: string) => Promise<void>;
   toggleQualityCheck: (jobId: string, key: string, byUserId: string) => Promise<void>;
   completeInstallation: (jobId: string, notes: string, byUserId: string) => Promise<void>;
+  /** Crea o actualiza la instalación (agenda) de una OT. Marca reprogramada si cambia una fecha ya puesta. */
+  saveInstallation: (jobId: string, input: InstallationInput) => Promise<void>;
+  /** Mueve la instalación a otro día conservando la duración y la hora. */
+  moveInstallation: (jobId: string, newStart: string) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (userId: string) => Promise<void>;
   setUserActive: (userId: string, active: boolean) => Promise<void>;
@@ -143,6 +148,22 @@ interface StoreState {
 
 export interface JobSpecs {
   products: Job['products']; specialRequirements: string;
+}
+
+/** Datos de agenda de una instalación (módulo Instalaciones). Fechas "YYYY-MM-DD". */
+export interface InstallationInput {
+  date: string | null; endDate: string | null; time: string | null;
+  address: string; locality: string; notes: string; contactName: string; contactPhone: string;
+  installerNames: string[]; papersOk: boolean;
+}
+
+export function installationInputOf(inst: InstallationInfo | undefined): InstallationInput {
+  return {
+    date: inst?.date ?? null, endDate: inst?.endDate ?? inst?.date ?? null, time: inst?.time ?? null,
+    address: inst?.address ?? '', locality: inst?.locality ?? '', notes: inst?.notes ?? '',
+    contactName: inst?.contactName ?? '', contactPhone: inst?.contactPhone ?? '',
+    installerNames: inst?.installerNames ?? [], papersOk: inst?.papersOk ?? false,
+  };
 }
 
 export interface NewJobInput {
@@ -263,10 +284,10 @@ const CHANGE_LABELS: Record<string, string> = {
   responsable: 'Responsable', prioridad: 'Prioridad', fecha: 'Fecha de entrega', datos: 'Datos de la ficha',
   especificaciones: 'Detalle del trabajo', produccion: 'Producción', armado: 'Armado', muestra: 'Muestra al cliente',
   numero: 'N° de trabajo', bloqueo: 'Bloqueo', desbloqueo: 'Bloqueo', producto: 'Producto', contact_sheet: 'Contact sheet',
-  instalacion: 'Instalación', asignacion: 'Asignados', eliminar: 'Ficha', restaurar: 'Ficha',
+  instalacion: 'Instalación', instalacion_agenda: 'Instalación', asignacion: 'Asignados', eliminar: 'Ficha', restaurar: 'Ficha',
 };
 // En estas el detalle es "Cambió X: antes → después" y alcanza con lo que sigue a los dos puntos.
-const SPLIT_ON_COLON = new Set(['responsable', 'prioridad', 'fecha', 'muestra', 'especificaciones']);
+const SPLIT_ON_COLON = new Set(['instalacion_agenda', 'responsable', 'prioridad', 'fecha', 'muestra', 'especificaciones']);
 // Varias modificaciones seguidas de la misma persona en la misma ficha van en un solo aviso.
 const GROUP_WINDOW_MS = 3 * 60 * 1000;
 
@@ -1093,6 +1114,69 @@ export const useStore = create<StoreState>()((set, get) => ({
     if (job) await insertNotifications([job.responsibleUserId].filter((id) => id !== byUserId), jobId, `${jobLabel(job)} — instalación completada.`);
     await refreshJob(set, jobId);
     await refreshMyNotifications(set, get);
+  },
+
+  saveInstallation: async (jobId, input) => {
+    const me = get().currentUser;
+    if (!me) throw new Error('Tu sesión venció. Volvé a entrar.');
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) throw new Error('No se encontró el trabajo.');
+    const prev = job.installation;
+    const date = input.date || null;
+    const endDate = date ? (input.endDate && input.endDate >= date ? input.endDate : date) : null;
+    const prevEnd = prev?.date ? (prev.endDate ?? prev.date) : null;
+    // Reprogramar = cambiar una fecha que ya estaba puesta. Ponerle la primera
+    // fecha a una instalación "sin fecha" no cuenta.
+    const reprogrammed = !!prev?.date && !!date && (prev.date !== date || prevEnd !== endDate);
+    const nowIso = new Date().toISOString();
+    const row: Record<string, unknown> = {
+      install_date: date, end_date: endDate, install_time: input.time || null,
+      address: input.address.trim(), locality: input.locality.trim(), notes: input.notes.trim(),
+      contact_name: input.contactName.trim(), contact_phone: input.contactPhone.trim(),
+      installer_names: input.installerNames, papers_ok: input.papersOk,
+    };
+    if (reprogrammed) Object.assign(row, { rescheduled: true, rescheduled_from: prev!.date, rescheduled_by: me.id, rescheduled_at: nowIso });
+
+    // Optimista: el calendario se acomoda al instante (sobre todo al arrastrar).
+    const nextInst: InstallationInfo = {
+      ...(prev ?? { assignedUserIds: [], completed: false, rescheduled: false }),
+      date: date ?? undefined, endDate: endDate ?? undefined, time: input.time || undefined,
+      address: row.address as string, locality: row.locality as string, notes: row.notes as string,
+      contactName: row.contact_name as string, contactPhone: row.contact_phone as string,
+      installerNames: input.installerNames, papersOk: input.papersOk,
+      ...(reprogrammed ? { rescheduled: true, rescheduledFrom: prev!.date, rescheduledBy: me.id, rescheduledAt: nowIso } : {}),
+    } as InstallationInfo;
+    set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? { ...j, requiresInstallation: true, installation: nextInst } : j) }));
+    try {
+      const { error } = prev
+        ? await supabase.from('installations').update(row).eq('job_id', jobId)
+        : await supabase.from('installations').insert({ job_id: jobId, ...row });
+      if (error) throw error;
+      const jobPatch: Record<string, unknown> = { last_activity_at: nowIso };
+      if (!job.requiresInstallation) jobPatch.requires_installation = true;
+      const { error: jobError } = await supabase.from('jobs').update(jobPatch).eq('id', jobId);
+      if (jobError && !job.requiresInstallation) throw jobError;
+    } catch (err) {
+      set((s) => ({ jobs: s.jobs.map((j) => j.id === jobId ? job : j) }));
+      throw err;
+    }
+
+    const period = date ? `${fmtPeriod(date, endDate!)} · ${fmtTime(input.time ?? undefined)}` : '';
+    const detail = reprogrammed
+      ? `Reprogramó la instalación: ${fmtPeriod(prev!.date!, prevEnd!)} → ${fmtPeriod(date!, endDate!)}.`
+      : !prev?.date && date ? `Programó la instalación: ${period}.`
+      : prev?.date && !date ? 'Instalación: le sacó la fecha.'
+      : 'Instalación: actualizó los datos.';
+    await insertActivity(set, jobId, me.id, 'instalacion_agenda', detail);
+    await refreshJob(set, jobId);
+  },
+
+  moveInstallation: async (jobId, newStart) => {
+    const job = get().jobs.find((j) => j.id === jobId);
+    if (!job) throw new Error('No se encontró el trabajo.');
+    const input = installationInputOf(job.installation);
+    const days = input.date ? durationDays(input.date, input.endDate ?? input.date) : 1;
+    await get().saveInstallation(jobId, { ...input, date: newStart, endDate: addDaysKey(newStart, days - 1) });
   },
 
   markNotificationRead: async (id) => {

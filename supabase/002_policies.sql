@@ -200,6 +200,50 @@ drop policy if exists installations_update on installations;
 create policy installations_update on installations for update to authenticated
   using (can_view_job(job_id) and (is_admin_or_coordinador() or my_role() = 'instalacion'));
 
+-- Calendario de instalaciones (032): los datos de agenda solo los cambia quien puede programar.
+-- Quién puede programar instalaciones.
+create or replace function can_schedule_installations()
+returns boolean as $
+  select coalesce(
+    (select role = 'admin' or (role = 'coordinador' and is_producer = false) from profiles where id = auth.uid()),
+    false
+  );
+$ language sql stable security definer set search_path = public;
+
+-- Guardia: los datos de agenda solo los cambia quien puede programar.
+-- (El alta del trabajo desde Carga rápida sigue pudiendo crear la fila inicial.)
+create or replace function installations_schedule_guard()
+returns trigger as $
+begin
+  if (new.install_date is distinct from old.install_date
+      or new.end_date is distinct from old.end_date
+      or new.install_time is distinct from old.install_time
+      or new.address is distinct from old.address
+      or new.locality is distinct from old.locality
+      or new.contact_name is distinct from old.contact_name
+      or new.contact_phone is distinct from old.contact_phone
+      or new.notes is distinct from old.notes
+      or new.installer_names is distinct from old.installer_names
+      or new.papers_ok is distinct from old.papers_ok
+      or new.rescheduled is distinct from old.rescheduled
+      or new.rescheduled_from is distinct from old.rescheduled_from
+      or new.rescheduled_by is distinct from old.rescheduled_by
+      or new.rescheduled_at is distinct from old.rescheduled_at)
+     and not can_schedule_installations() then
+    raise exception 'Tu usuario no tiene permiso para programar instalaciones.' using errcode = '42501';
+  end if;
+  -- La marca de reprogramada no se puede sacar.
+  if old.rescheduled and not new.rescheduled then
+    new.rescheduled := true;
+  end if;
+  return new;
+end;
+$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_installations_schedule_guard on installations;
+create trigger trg_installations_schedule_guard before update on installations
+  for each row execute procedure installations_schedule_guard();
+
 drop policy if exists install_assigned_select on installation_assigned_users;
 create policy install_assigned_select on installation_assigned_users for select to authenticated using (can_view_job(job_id));
 drop policy if exists install_assigned_write on installation_assigned_users;

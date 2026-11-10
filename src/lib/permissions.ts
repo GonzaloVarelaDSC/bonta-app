@@ -38,6 +38,14 @@ export function canSetQuoteValue(user: User) {
   return user.role === 'admin' || (user.role === 'coordinador' && !user.isProducer);
 }
 
+// Instalaciones (10/11): programar, mover y editar la agenda. Misma regla que el
+// valor del presupuesto (admin, o coordinador no productor: todos menos Gastón
+// hoy). Espejo de can_schedule_installations() + el trigger de 032. Un rol nuevo
+// (producción, instalación) queda en solo lectura.
+export function canScheduleInstallations(user: User) {
+  return user.role === 'admin' || (user.role === 'coordinador' && !user.isProducer);
+}
+
 /** ¿Puede este usuario ver este trabajo? Admin/coordinador ven todo; el resto solo lo suyo. */
 export function canViewJob(user: User, job: Job): boolean {
   if (user.role === 'admin' || user.role === 'coordinador') return true;

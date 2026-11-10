@@ -14,6 +14,7 @@ import { ProductsEditor, ProductsView } from '../Common/ProductsEditor';
 import { CodeStamp } from '../Common/EditableCode';
 import { BLOCK_REASON_LABELS, SAMPLE_REVIEW_META } from '../../data/catalog';
 import { fmtDateTime, fmtDate } from '../../lib/dates';
+import { fmtPeriod, fmtTime } from '../../lib/installations';
 import { missingFields } from '../../lib/selectors';
 import { CommentsPanel } from './CommentsPanel';
 import { BlockModal } from './BlockModal';
@@ -559,13 +560,21 @@ function ProductsTab({ job, onSave, onToggle }: { job: import('../../types').Job
 function InstallationTab({ job, onComplete }: { job: import('../../types').Job; onComplete: (notes: string) => void }) {
   const inst = job.installation!;
   const [showComplete, setShowComplete] = useState(false);
+  // La agenda (fechas, instaladores, papeles) se edita en el módulo Instalaciones.
+  const month = inst.date ? inst.date.slice(0, 7) : '';
   return (
     <div className="max-w-2xl space-y-4">
       <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm bg-white border border-ink-100 rounded-lg p-4">
-        <Field label="Dirección" value={inst.address} highlightMissing={!inst.address} />
-        <Field label="Contacto" value={`${inst.contactName} · ${inst.contactPhone}`} />
-        <Field label="Fecha" value={inst.date ? fmtDate(inst.date) : '—'} />
+        <Field label="Dirección" value={[inst.address, inst.locality].filter(Boolean).join(', ')} highlightMissing={!inst.address} />
+        <Field label="Contacto" value={[inst.contactName, inst.contactPhone].filter(Boolean).join(' · ') || '—'} />
+        <Field label="Fecha" value={inst.date ? `${fmtPeriod(inst.date, inst.endDate ?? inst.date, true)} · ${fmtTime(inst.time)}${inst.rescheduled ? ' · reprogramada' : ''}` : 'Sin fecha'} />
+        <Field label="Instala" value={inst.installerNames.join(', ') || '—'} />
+        <Field label="Papeles" value={inst.papersOk ? 'OK' : 'No OK'} />
+        {inst.notes && <Field label="Indicaciones" value={inst.notes} />}
       </div>
+      <Link to={`/instalaciones?${month ? `mes=${month}&` : ''}ot=${job.id}`} className={btn('secondary')}>
+        Ver en Instalaciones <ArrowRight size={15} aria-hidden />
+      </Link>
       {inst.completed ? (
         <div className="bg-plan-bg text-plan-text rounded-lg p-4 text-sm">
           <div className="font-semibold mb-1">✅ Instalación completada</div>
